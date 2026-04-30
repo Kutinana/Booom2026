@@ -11,7 +11,6 @@ public class PortalRenderFeature : ScriptableRendererFeature
         public Material material;
         public Transform transform;
         public Transform outerTransform;
-        public Material portalColorMaterial;
         [Min(1)]
         public int maxDepth = 2;
     }
@@ -26,10 +25,21 @@ public class PortalRenderFeature : ScriptableRendererFeature
         pass.renderPassEvent = RenderPassEvent.AfterRenderingOpaques;
     }
 
+    protected override void Dispose(bool disposing)
+    {
+        pass?.Dispose();
+        pass = null;
+    }
+
     public override void AddRenderPasses(
         ScriptableRenderer renderer,
         ref RenderingData renderingData)
     {
+        if (pass == null)
+        {
+            Create();
+        }
+
         renderer.EnqueuePass(pass);
     }
 }

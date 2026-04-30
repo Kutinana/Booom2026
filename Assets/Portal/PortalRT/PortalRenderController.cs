@@ -5,6 +5,7 @@ using UnityEngine;
 using UnityEngine.Rendering;
 using UnityEngine.Rendering.Universal;
 
+[ExecuteAlways]
 public class PortalRenderController : MonoBehaviour
 {
     [SerializeField]
@@ -13,13 +14,27 @@ public class PortalRenderController : MonoBehaviour
     private PortalRenderFeature portalFeature;
     private PortalPass portalPass;
 
-    [ExecuteAlways]
     private void Awake()
     {
         InitializePortalFeature();
     }
 
-    private void InitializePortalFeature()
+    private void OnEnable()
+    {
+        InitializePortalFeature();
+    }
+
+    private void OnDisable()
+    {
+        UnregisterPortalFeature();
+    }
+
+    private void OnDestroy()
+    {
+        UnregisterPortalFeature();
+    }
+
+    public void InitializePortalFeature()
     {
         if (portalPass != null)
         {
@@ -61,6 +76,48 @@ public class PortalRenderController : MonoBehaviour
         if (portalPass != null)
         {
             portalPass.settings = settings;
+        }
+    }
+
+    private void UnregisterPortalFeature()
+    {
+        if (portalFeature != null && ReferenceEquals(portalFeature.settings, settings))
+        {
+            portalFeature.settings = new PortalRenderFeature.Settings();
+        }
+
+        if (portalPass != null && ReferenceEquals(portalPass.settings, settings))
+        {
+            portalPass.settings = portalFeature != null ? portalFeature.settings : null;
+        }
+
+        portalFeature = null;
+        portalPass = null;
+    }
+
+    public static void ClearPortalFeature(Camera camera)
+    {
+        if (camera == null)
+        {
+            return;
+        }
+
+        UniversalAdditionalCameraData additionalCameraData = camera.GetUniversalAdditionalCameraData();
+        if (additionalCameraData == null)
+        {
+            return;
+        }
+
+        PortalRenderFeature feature = FindPortalRenderFeature(additionalCameraData.scriptableRenderer);
+        if (feature == null)
+        {
+            return;
+        }
+
+        feature.settings = new PortalRenderFeature.Settings();
+        if (feature.pass != null)
+        {
+            feature.pass.settings = feature.settings;
         }
     }
 

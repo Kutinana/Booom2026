@@ -137,10 +137,34 @@ public class PortalPass : ScriptableRenderPass
         return true;
     }
 
+    public void Dispose()
+    {
+        if (depthClearMaterial == null)
+        {
+            return;
+        }
+
+        if (Application.isPlaying)
+        {
+            Object.Destroy(depthClearMaterial);
+        }
+        else
+        {
+            Object.DestroyImmediate(depthClearMaterial);
+        }
+
+        depthClearMaterial = null;
+    }
+
     public override void Execute(
         ScriptableRenderContext context,
         ref RenderingData renderingData)
     {
+        if (settings == null)
+        {
+            return;
+        }
+
         if (settings.mesh == null)
         {
             return;
