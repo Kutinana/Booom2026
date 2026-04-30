@@ -10,6 +10,7 @@ public class PortalRenderFeature : ScriptableRendererFeature
         public Mesh mesh;
         public Material material;
         public Transform transform; // 放置这个 mesh 的位置
+        public Transform outerTransform; // portal 的外部位置（用于计算摄像机变换）
         public Material portalColorMaterial; // 用于绘制 portal 内部的材质
     }
 
