@@ -103,6 +103,13 @@ public class PortalPass : ScriptableRenderPass
             return false;
         }
 
+        Plane[] cullingPlanes = GeometryUtility.CalculateFrustumPlanes(cullingMatrix);
+        cullingParams.cullingPlaneCount = cullingPlanes.Length;
+        for (int i = 0; i < cullingPlanes.Length; i++)
+        {
+            cullingParams.SetCullingPlane(i, cullingPlanes[i]);
+        }
+
         cullingParams.cullingMatrix = cullingMatrix;
         cullingParams.origin = origin;
         cullingResults = context.Cull(ref cullingParams);
