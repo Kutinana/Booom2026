@@ -108,3 +108,7 @@ InitTestScene*.unity*
 
 # Cursor
 .cursor/
+
+#Portal tests
+/Assets/Portal/Test/*
+/Assets/Portal/Test.meta
