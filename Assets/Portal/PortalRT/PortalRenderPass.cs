@@ -9,6 +9,9 @@ public class PortalPass : ScriptableRenderPass
     private static readonly ShaderTagId UniversalForwardOnlyTag = new ShaderTagId("UniversalForwardOnly");
     private static readonly ShaderTagId SRPDefaultUnlitTag = new ShaderTagId("SRPDefaultUnlit");
     private static readonly int StencilRefId = Shader.PropertyToID("_StencilRef");
+    private static readonly int StencilCompId = Shader.PropertyToID("_StencilComp");
+    private static readonly int StencilReadMaskId = Shader.PropertyToID("_StencilReadMask");
+    private static readonly int StencilPassId = Shader.PropertyToID("_StencilPass");
 
     public Settings settings;
     private Material depthClearMaterial;
@@ -21,7 +24,8 @@ public class PortalPass : ScriptableRenderPass
     private void DrawSceneWithStencil(
         ScriptableRenderContext context,
         CullingResults cullResults,
-        Camera camera)
+        Camera camera,
+        int stencilReference)
     {
         var sortingSettings = new SortingSettings(camera)
         {
@@ -47,7 +51,7 @@ public class PortalPass : ScriptableRenderPass
         var stateBlock = new RenderStateBlock(RenderStateMask.Stencil | RenderStateMask.Depth)
         {
             depthState = new DepthState(true, CompareFunction.LessEqual),
-            stencilReference = 1,
+            stencilReference = stencilReference,
             stencilState = stencilState
         };
 
@@ -71,6 +75,11 @@ public class PortalPass : ScriptableRenderPass
         }
 
         return true;
+    }
+
+    private static Matrix4x4 GetCameraViewMatrix(Matrix4x4 cameraWorldMatrix)
+    {
+        return Matrix4x4.Scale(new Vector3(1f, 1f, -1f)) * cameraWorldMatrix.inverse;
     }
 
     private static bool TryCullPortalView(
@@ -152,61 +161,75 @@ public class PortalPass : ScriptableRenderPass
         try
         {
             Matrix4x4 portalMatrix = settings.transform.localToWorldMatrix;
-
-            cmd.SetGlobalInt(StencilRefId, 1);
-            cmd.DrawMesh(
-                settings.mesh,
-                portalMatrix,
-                settings.material,
-                0,
-                0
-            );
-            context.ExecuteCommandBuffer(cmd);
-            cmd.Clear();
-
-            cmd.DrawMesh(
-                settings.mesh,
-                portalMatrix,
-                depthClearMaterial,
-                0,
-                0
-            );
-            context.ExecuteCommandBuffer(cmd);
-            cmd.Clear();
-
-            var (pos, rot) = PortalCalcCamTransform.CalculateNewCameraTransform(
-                settings.outerTransform,
-                settings.transform,
-                cam
-            );
-
-            Matrix4x4 world = Matrix4x4.TRS(pos, rot, Vector3.one);
-            Matrix4x4 view = Matrix4x4.Scale(new Vector3(1f, 1f, -1f)) * world.inverse;
             Matrix4x4 proj = cam.projectionMatrix;
+            Matrix4x4 cameraWorld = cam.transform.localToWorldMatrix;
+            Matrix4x4 portalStep = settings.outerTransform.localToWorldMatrix * settings.transform.worldToLocalMatrix;
+            int maxDepth = settings.maxDepth < 1 ? 2 : settings.maxDepth;
 
-            if (!IsFinite(world) || !IsFinite(view) || !IsFinite(proj))
+            if (!IsFinite(cameraWorld) || !IsFinite(portalStep) || !IsFinite(proj))
             {
                 return;
             }
 
-            if (!TryCullPortalView(context, cam, view, proj, pos, out CullingResults portalCullResults))
+            for (int depth = 1; depth <= maxDepth; depth++)
             {
-                return;
+                cmd.SetGlobalInt(StencilRefId, depth == 1 ? 1 : depth - 1);
+                cmd.SetGlobalInt(StencilReadMaskId, 255);
+                cmd.SetGlobalInt(StencilCompId, depth == 1 ? (int)CompareFunction.Always : (int)CompareFunction.Equal);
+                cmd.SetGlobalInt(StencilPassId, depth == 1 ? (int)StencilOp.Replace : (int)StencilOp.IncrementSaturate);
+                cmd.DrawMesh(
+                    settings.mesh,
+                    portalMatrix,
+                    settings.material,
+                    0,
+                    0
+                );
+                context.ExecuteCommandBuffer(cmd);
+                cmd.Clear();
+
+                cmd.SetGlobalInt(StencilRefId, depth);
+                cmd.DrawMesh(
+                    settings.mesh,
+                    portalMatrix,
+                    depthClearMaterial,
+                    0,
+                    0
+                );
+                context.ExecuteCommandBuffer(cmd);
+                cmd.Clear();
+
+                cameraWorld = portalStep * cameraWorld;
+                Vector3 portalCameraPosition = cameraWorld.GetColumn(3);
+                Matrix4x4 view = GetCameraViewMatrix(cameraWorld);
+
+                if (!IsFinite(cameraWorld) || !IsFinite(view))
+                {
+                    return;
+                }
+
+                if (!TryCullPortalView(context, cam, view, proj, portalCameraPosition, out CullingResults portalCullResults))
+                {
+                    return;
+                }
+
+                cmd.SetViewProjectionMatrices(view, proj);
+                cmd.SetGlobalVector("_WorldSpaceCameraPos", portalCameraPosition);
+                context.ExecuteCommandBuffer(cmd);
+                cmd.Clear();
+
+                DrawSceneWithStencil(
+                    context,
+                    portalCullResults,
+                    cam,
+                    depth
+                );
             }
-
-            cmd.SetViewProjectionMatrices(view, proj);
-            cmd.SetGlobalVector("_WorldSpaceCameraPos", pos);
-            context.ExecuteCommandBuffer(cmd);
-            cmd.Clear();
-
-            DrawSceneWithStencil(
-                context,
-                portalCullResults,
-                cam
-            );
 
             cmd.SetViewProjectionMatrices(cam.worldToCameraMatrix, proj);
             cmd.SetGlobalVector("_WorldSpaceCameraPos", cam.transform.position);
+            cmd.SetGlobalInt(StencilCompId, (int)CompareFunction.Always);
+            cmd.SetGlobalInt(StencilReadMaskId, 255);
+            cmd.SetGlobalInt(StencilPassId, (int)StencilOp.Replace);
             context.ExecuteCommandBuffer(cmd);
         }
         finally

@@ -9,9 +9,11 @@ public class PortalRenderFeature : ScriptableRendererFeature
     {
         public Mesh mesh;
         public Material material;
-        public Transform transform; // 放置这个 mesh 的位置
-        public Transform outerTransform; // portal 的外部位置（用于计算摄像机变换）
-        public Material portalColorMaterial; // 用于绘制 portal 内部的材质
+        public Transform transform;
+        public Transform outerTransform;
+        public Material portalColorMaterial;
+        [Min(1)]
+        public int maxDepth = 2;
     }
 
     public Settings settings = new Settings();
@@ -21,8 +23,6 @@ public class PortalRenderFeature : ScriptableRendererFeature
     public override void Create()
     {
         pass = new PortalPass(settings);
-
-        // 插在不透明物体之后（方便看见）
         pass.renderPassEvent = RenderPassEvent.AfterRenderingOpaques;
     }
 

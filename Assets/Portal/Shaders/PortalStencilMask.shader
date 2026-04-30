@@ -12,9 +12,11 @@ Shader "Custom/PortalStencilMask"
 
             Stencil
             {
-                Ref [_StencilRef]     // 从 C# 传进来
-                Comp Always
-                Pass Replace
+                Ref [_StencilRef]
+                ReadMask [_StencilReadMask]
+                WriteMask 255
+                Comp [_StencilComp]
+                Pass [_StencilPass]
             }
         }
     }
