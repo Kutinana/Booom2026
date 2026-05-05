@@ -7,6 +7,7 @@ public class PortalPass : ScriptableRenderPass
 {
     private static readonly ShaderTagId UniversalForwardTag = new ShaderTagId("UniversalForward");
     private static readonly ShaderTagId UniversalForwardOnlyTag = new ShaderTagId("UniversalForwardOnly");
+    private static readonly ShaderTagId Universal2DTag = new ShaderTagId("Universal2D");
     private static readonly ShaderTagId SRPDefaultUnlitTag = new ShaderTagId("SRPDefaultUnlit");
     private static readonly int StencilRefId = Shader.PropertyToID("_StencilRef");
     private static readonly int StencilCompId = Shader.PropertyToID("_StencilComp");
@@ -21,23 +22,22 @@ public class PortalPass : ScriptableRenderPass
         this.settings = settings;
     }
 
-    private void DrawSceneWithStencil(
-        ScriptableRenderContext context,
-        CullingResults cullResults,
-        Camera camera,
-        int stencilReference)
+    private static DrawingSettings CreateDrawingSettings(Camera camera, SortingCriteria sortingCriteria)
     {
         var sortingSettings = new SortingSettings(camera)
         {
-            criteria = SortingCriteria.CommonOpaque
+            criteria = sortingCriteria
         };
 
         var drawingSettings = new DrawingSettings(UniversalForwardTag, sortingSettings);
         drawingSettings.SetShaderPassName(1, UniversalForwardOnlyTag);
-        drawingSettings.SetShaderPassName(2, SRPDefaultUnlitTag);
+        drawingSettings.SetShaderPassName(2, Universal2DTag);
+        drawingSettings.SetShaderPassName(3, SRPDefaultUnlitTag);
+        return drawingSettings;
+    }
 
-        var filteringSettings = new FilteringSettings(RenderQueueRange.opaque);
-
+    private static RenderStateBlock CreateStencilStateBlock(int stencilReference, bool overrideDepth)
+    {
         var stencilState = new StencilState(
             true,
             255,
@@ -48,18 +48,65 @@ public class PortalPass : ScriptableRenderPass
             StencilOp.Keep
         );
 
-        var stateBlock = new RenderStateBlock(RenderStateMask.Stencil | RenderStateMask.Depth)
+        var stateBlock = new RenderStateBlock(overrideDepth ? RenderStateMask.Stencil | RenderStateMask.Depth : RenderStateMask.Stencil)
         {
-            depthState = new DepthState(true, CompareFunction.LessEqual),
             stencilReference = stencilReference,
             stencilState = stencilState
         };
+
+        if (overrideDepth)
+        {
+            stateBlock.depthState = new DepthState(true, CompareFunction.LessEqual);
+        }
+
+        return stateBlock;
+    }
+
+    private void DrawRenderQueueWithStencil(
+        ScriptableRenderContext context,
+        CullingResults cullResults,
+        Camera camera,
+        int stencilReference,
+        RenderQueueRange renderQueueRange,
+        SortingCriteria sortingCriteria,
+        bool overrideDepth)
+    {
+        var drawingSettings = CreateDrawingSettings(camera, sortingCriteria);
+        var filteringSettings = new FilteringSettings(renderQueueRange);
+        var stateBlock = CreateStencilStateBlock(stencilReference, overrideDepth);
 
         context.DrawRenderers(
             cullResults,
             ref drawingSettings,
             ref filteringSettings,
             ref stateBlock
+        );
+    }
+
+    private void DrawSceneWithStencil(
+        ScriptableRenderContext context,
+        CullingResults cullResults,
+        Camera camera,
+        int stencilReference)
+    {
+        DrawRenderQueueWithStencil(
+            context,
+            cullResults,
+            camera,
+            stencilReference,
+            RenderQueueRange.opaque,
+            SortingCriteria.CommonOpaque,
+            true
+        );
+
+        DrawRenderQueueWithStencil(
+            context,
+            cullResults,
+            camera,
+            stencilReference,
+            RenderQueueRange.transparent,
+            SortingCriteria.CommonTransparent,
+            false
         );
     }
 

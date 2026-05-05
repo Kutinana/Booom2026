@@ -22,7 +22,7 @@ public class PortalRenderFeature : ScriptableRendererFeature
     public override void Create()
     {
         pass = new PortalPass(settings);
-        pass.renderPassEvent = RenderPassEvent.AfterRenderingOpaques;
+        pass.renderPassEvent = RenderPassEvent.AfterRenderingTransparents;
     }
 
     protected override void Dispose(bool disposing)
