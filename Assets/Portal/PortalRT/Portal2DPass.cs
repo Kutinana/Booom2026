@@ -3,10 +3,9 @@ using UnityEngine.Rendering;
 using UnityEngine.Rendering.Universal;
 using static PortalRenderFeature;
 
-public class PortalPass : ScriptableRenderPass
+public class Portal2DPass : ScriptableRenderPass
 {
-    private static readonly ShaderTagId UniversalForwardTag = new ShaderTagId("UniversalForward");
-    private static readonly ShaderTagId UniversalForwardOnlyTag = new ShaderTagId("UniversalForwardOnly");
+    private static readonly ShaderTagId Universal2DTag = new ShaderTagId("Universal2D");
     private static readonly ShaderTagId SRPDefaultUnlitTag = new ShaderTagId("SRPDefaultUnlit");
     private static readonly int StencilRefId = Shader.PropertyToID("_StencilRef");
     private static readonly int StencilCompId = Shader.PropertyToID("_StencilComp");
@@ -16,7 +15,7 @@ public class PortalPass : ScriptableRenderPass
     public Settings settings;
     private Material depthClearMaterial;
 
-    public PortalPass(Settings settings)
+    public Portal2DPass(Settings settings)
     {
         this.settings = settings;
     }
@@ -29,14 +28,13 @@ public class PortalPass : ScriptableRenderPass
     {
         var sortingSettings = new SortingSettings(camera)
         {
-            criteria = SortingCriteria.CommonOpaque
+            criteria = SortingCriteria.CommonTransparent
         };
 
-        var drawingSettings = new DrawingSettings(UniversalForwardTag, sortingSettings);
-        drawingSettings.SetShaderPassName(1, UniversalForwardOnlyTag);
-        drawingSettings.SetShaderPassName(2, SRPDefaultUnlitTag);
+        var drawingSettings = new DrawingSettings(Universal2DTag, sortingSettings);
+        drawingSettings.SetShaderPassName(1, SRPDefaultUnlitTag);
 
-        var filteringSettings = new FilteringSettings(RenderQueueRange.opaque);
+        var filteringSettings = new FilteringSettings(RenderQueueRange.transparent);
 
         var stencilState = new StencilState(
             true,
@@ -48,9 +46,8 @@ public class PortalPass : ScriptableRenderPass
             StencilOp.Keep
         );
 
-        var stateBlock = new RenderStateBlock(RenderStateMask.Stencil | RenderStateMask.Depth)
+        var stateBlock = new RenderStateBlock(RenderStateMask.Stencil)
         {
-            depthState = new DepthState(true, CompareFunction.LessEqual),
             stencilReference = stencilReference,
             stencilState = stencilState
         };
@@ -160,12 +157,7 @@ public class PortalPass : ScriptableRenderPass
         ScriptableRenderContext context,
         ref RenderingData renderingData)
     {
-        if (settings == null)
-        {
-            return;
-        }
-
-        if (settings.mesh == null)
+        if (settings == null || settings.mesh == null)
         {
             return;
         }
@@ -177,17 +169,12 @@ public class PortalPass : ScriptableRenderPass
         }
 
         Camera cam = renderingData.cameraData.camera;
-        if (cam == null)
+        if (cam == null || !EnsureDepthClearMaterial())
         {
             return;
         }
 
-        if (!EnsureDepthClearMaterial())
-        {
-            return;
-        }
-
-        CommandBuffer cmd = CommandBufferPool.Get("SimplePortalPass");
+        CommandBuffer cmd = CommandBufferPool.Get("Portal2DPass");
 
         try
         {

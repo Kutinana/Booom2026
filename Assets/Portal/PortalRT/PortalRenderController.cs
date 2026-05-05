@@ -65,7 +65,7 @@ public class PortalRenderController : MonoBehaviour
             return;
         }
 
-        portalFeature.settings = settings;
+        portalFeature.ApplySettings(settings);
 
         if (portalFeature.pass == null)
         {
@@ -73,17 +73,14 @@ public class PortalRenderController : MonoBehaviour
         }
 
         portalPass = portalFeature.pass;
-        if (portalPass != null)
-        {
-            portalPass.settings = settings;
-        }
+        portalFeature.ApplySettings(settings);
     }
 
     private void UnregisterPortalFeature()
     {
         if (portalFeature != null && ReferenceEquals(portalFeature.settings, settings))
         {
-            portalFeature.settings = new PortalRenderFeature.Settings();
+            portalFeature.ApplySettings(new PortalRenderFeature.Settings());
         }
 
         if (portalPass != null && ReferenceEquals(portalPass.settings, settings))
@@ -114,11 +111,7 @@ public class PortalRenderController : MonoBehaviour
             return;
         }
 
-        feature.settings = new PortalRenderFeature.Settings();
-        if (feature.pass != null)
-        {
-            feature.pass.settings = feature.settings;
-        }
+        feature.ApplySettings(new PortalRenderFeature.Settings());
     }
 
     private static PortalRenderFeature FindPortalRenderFeature(ScriptableRenderer renderer)
