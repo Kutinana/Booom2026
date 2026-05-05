@@ -81,7 +81,20 @@ public class DialogueSystem : MonoBehaviour
             PlayNextLine();
         }
     }
+    void ResizeDialogueBox(string text)
+    {
+        // 获取文本理想尺寸（限制最大宽度）
+        Vector2 preferredSize = textBox.GetPreferredValues(text, maxWidth, 0);
 
+        float width = Mathf.Min(preferredSize.x, maxWidth);
+        float height = preferredSize.y;
+
+        // 加上内边距
+        width += padding.x;
+        height += padding.y;
+
+        dialoguePanelRect.sizeDelta = new Vector2(width, height);
+    }
     void PlayNextLine()
     {
         if (dialogueQueue.Count == 0)
@@ -100,8 +113,8 @@ public class DialogueSystem : MonoBehaviour
         List<DialogueCommand> commands =
             DialogueUtility.ProcessInputString(line, out string processedText);
 
-      
-        
+
+        ResizeDialogueBox(processedText);
 
         typingCoroutine = StartCoroutine(
             animator.AnimateTextIn(commands, processedText, typingClip, null)
