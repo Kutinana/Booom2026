@@ -1,5 +1,5 @@
 fileFormatVersion: 2
-guid: 2168fd747370e494f871973fc82ccdd7
+guid: ca3ed9c00a04c0c4b8b3432d66651ba0
 TextureImporter:
   internalIDToNameTable: []
   externalObjects: {}
@@ -97,7 +97,7 @@ TextureImporter:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: Taco1bitAnimWout-rising_0
+      name: Taco1bitAnimWoutHappy-Happy_0
       rect:
         serializedVersion: 2
         x: 0
@@ -111,14 +111,14 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: 0
       bones: []
-      spriteID: ea3666052cdc2c64c88101d5882b39ad
-      internalID: -1235588000
+      spriteID: e815eed91717b91479d59b9944cdc9c6
+      internalID: 1036694616
       vertices: []
       indices: 
       edges: []
       weights: []
     - serializedVersion: 2
-      name: Taco1bitAnimWout-rising_1
+      name: Taco1bitAnimWoutHappy-Happy_1
       rect:
         serializedVersion: 2
         x: 48
@@ -132,14 +132,14 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: 0
       bones: []
-      spriteID: 334837ca8a5cac04eb34523a2634172d
-      internalID: -123205429
+      spriteID: 279a7559baaf16c4b9ffe447562dc0a0
+      internalID: -118789861
       vertices: []
       indices: 
       edges: []
       weights: []
     - serializedVersion: 2
-      name: Taco1bitAnimWout-rising_2
+      name: Taco1bitAnimWoutHappy-Happy_2
       rect:
         serializedVersion: 2
         x: 96
@@ -153,14 +153,14 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: 0
       bones: []
-      spriteID: 199712b943b1e7e4fb1379c8e5837351
-      internalID: 1827014844
+      spriteID: ae6aa999ca0ada74690f006c4f13e372
+      internalID: -1009367788
       vertices: []
       indices: 
       edges: []
       weights: []
     - serializedVersion: 2
-      name: Taco1bitAnimWout-rising_3
+      name: Taco1bitAnimWoutHappy-Happy_3
       rect:
         serializedVersion: 2
         x: 144
@@ -174,14 +174,14 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: 0
       bones: []
-      spriteID: 15526bf315799f34f99c86f746bce7b3
-      internalID: 144723203
+      spriteID: 907c1692de7b6524a8315720284cafcc
+      internalID: -389871736
       vertices: []
       indices: 
       edges: []
       weights: []
     - serializedVersion: 2
-      name: Taco1bitAnimWout-rising_4
+      name: Taco1bitAnimWoutHappy-Happy_4
       rect:
         serializedVersion: 2
         x: 192
@@ -195,14 +195,14 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: 0
       bones: []
-      spriteID: 4800474267de5524d9296633405afbb0
-      internalID: 1696176159
+      spriteID: b04a939a13a8b904b9558134b871c67e
+      internalID: -1684958062
       vertices: []
       indices: 
       edges: []
       weights: []
     - serializedVersion: 2
-      name: Taco1bitAnimWout-rising_5
+      name: Taco1bitAnimWoutHappy-Happy_5
       rect:
         serializedVersion: 2
         x: 240
@@ -216,14 +216,14 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: 0
       bones: []
-      spriteID: 4a09c8e4a3fc0ba4ca8cad5545b9ee0b
-      internalID: -1899636826
+      spriteID: 95ac19cc0b2ed3f4f86f7e73f0ee7ef0
+      internalID: -832834007
       vertices: []
       indices: 
       edges: []
       weights: []
     - serializedVersion: 2
-      name: Taco1bitAnimWout-rising_6
+      name: Taco1bitAnimWoutHappy-Happy_6
       rect:
         serializedVersion: 2
         x: 288
@@ -237,8 +237,134 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: 0
       bones: []
-      spriteID: ba170ee7fe05ab04b95699f601b7c4bc
-      internalID: -810730481
+      spriteID: b652f90a50d2a874d9d919f4976d85dc
+      internalID: 2031857290
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Taco1bitAnimWoutHappy-Happy_7
+      rect:
+        serializedVersion: 2
+        x: 336
+        y: 0
+        width: 48
+        height: 48
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: d4e0f4a4453de4b468cdc1828dd2913f
+      internalID: -732314165
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Taco1bitAnimWoutHappy-Happy_8
+      rect:
+        serializedVersion: 2
+        x: 384
+        y: 0
+        width: 48
+        height: 48
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 029fbb5d7d23b194391dfbc64a06778a
+      internalID: 1906343580
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Taco1bitAnimWoutHappy-Happy_9
+      rect:
+        serializedVersion: 2
+        x: 432
+        y: 0
+        width: 48
+        height: 48
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: dfdd33bfb4264f749b931cd57e6c13f5
+      internalID: -589276848
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Taco1bitAnimWoutHappy-Happy_10
+      rect:
+        serializedVersion: 2
+        x: 480
+        y: 0
+        width: 48
+        height: 48
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: a9673fcdb66e4cc47ba148910b4963f1
+      internalID: -750230118
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Taco1bitAnimWoutHappy-Happy_11
+      rect:
+        serializedVersion: 2
+        x: 528
+        y: 0
+        width: 48
+        height: 48
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 2a2e74baa6da22542a3ed18b9f82c678
+      internalID: 630265843
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Taco1bitAnimWoutHappy-Happy_12
+      rect:
+        serializedVersion: 2
+        x: 576
+        y: 0
+        width: 48
+        height: 48
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 70e47be714818ee4c8e3841c19b8babb
+      internalID: -1184087465
       vertices: []
       indices: 
       edges: []
@@ -254,13 +380,19 @@ TextureImporter:
     weights: []
     secondaryTextures: []
     nameFileIdTable:
-      Taco1bitAnimWout-rising_0: -1235588000
-      Taco1bitAnimWout-rising_1: -123205429
-      Taco1bitAnimWout-rising_2: 1827014844
-      Taco1bitAnimWout-rising_3: 144723203
-      Taco1bitAnimWout-rising_4: 1696176159
-      Taco1bitAnimWout-rising_5: -1899636826
-      Taco1bitAnimWout-rising_6: -810730481
+      Taco1bitAnimWoutHappy-Happy_0: 1036694616
+      Taco1bitAnimWoutHappy-Happy_1: -118789861
+      Taco1bitAnimWoutHappy-Happy_10: -750230118
+      Taco1bitAnimWoutHappy-Happy_11: 630265843
+      Taco1bitAnimWoutHappy-Happy_12: -1184087465
+      Taco1bitAnimWoutHappy-Happy_2: -1009367788
+      Taco1bitAnimWoutHappy-Happy_3: -389871736
+      Taco1bitAnimWoutHappy-Happy_4: -1684958062
+      Taco1bitAnimWoutHappy-Happy_5: -832834007
+      Taco1bitAnimWoutHappy-Happy_6: 2031857290
+      Taco1bitAnimWoutHappy-Happy_7: -732314165
+      Taco1bitAnimWoutHappy-Happy_8: 1906343580
+      Taco1bitAnimWoutHappy-Happy_9: -589276848
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

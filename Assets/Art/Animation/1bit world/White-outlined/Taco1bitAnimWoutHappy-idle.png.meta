@@ -1,5 +1,5 @@
 fileFormatVersion: 2
-guid: 9b347b9d0f6448643806a58556a5e1f4
+guid: fa505753dc0c59041a5f3d53f78f3f49
 TextureImporter:
   internalIDToNameTable: []
   externalObjects: {}
@@ -97,7 +97,7 @@ TextureImporter:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: Taco1bitAnimWout-push_0
+      name: Taco1bitAnimWoutHappy-idle_0
       rect:
         serializedVersion: 2
         x: 0
@@ -111,14 +111,14 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: 0
       bones: []
-      spriteID: c9512e426ca8a814583b934327b7d012
-      internalID: 1546923913
+      spriteID: 0241b2b09dc4ae64aa63589f226c75ba
+      internalID: -666782879
       vertices: []
       indices: 
       edges: []
       weights: []
     - serializedVersion: 2
-      name: Taco1bitAnimWout-push_1
+      name: Taco1bitAnimWoutHappy-idle_1
       rect:
         serializedVersion: 2
         x: 48
@@ -132,14 +132,14 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: 0
       bones: []
-      spriteID: 7dfb79965cbd66b48840a2c6630ac86d
-      internalID: 474233328
+      spriteID: a2fa92af14fe8014ca9ec348350a692b
+      internalID: -1307873284
       vertices: []
       indices: 
       edges: []
       weights: []
     - serializedVersion: 2
-      name: Taco1bitAnimWout-push_2
+      name: Taco1bitAnimWoutHappy-idle_2
       rect:
         serializedVersion: 2
         x: 96
@@ -153,14 +153,14 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: 0
       bones: []
-      spriteID: ba8a228f535944246be634a92fc7cc14
-      internalID: -229599386
+      spriteID: c9629095b3c0bda41a8c2835641e23fa
+      internalID: -795151356
       vertices: []
       indices: 
       edges: []
       weights: []
     - serializedVersion: 2
-      name: Taco1bitAnimWout-push_3
+      name: Taco1bitAnimWoutHappy-idle_3
       rect:
         serializedVersion: 2
         x: 144
@@ -174,14 +174,14 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: 0
       bones: []
-      spriteID: 02f16ed3f66dc0b459de53f1fec3eaa3
-      internalID: 1181436529
+      spriteID: 9afc6656e67771942a371452fa2e0c47
+      internalID: 611186006
       vertices: []
       indices: 
       edges: []
       weights: []
     - serializedVersion: 2
-      name: Taco1bitAnimWout-push_4
+      name: Taco1bitAnimWoutHappy-idle_4
       rect:
         serializedVersion: 2
         x: 192
@@ -195,14 +195,14 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: 0
       bones: []
-      spriteID: 2186885afe1e6064fb8d5e6909fae73e
-      internalID: -1427126282
+      spriteID: ee085a236d3d11d45a8878cd3a29f7aa
+      internalID: -2006968062
       vertices: []
       indices: 
       edges: []
       weights: []
     - serializedVersion: 2
-      name: Taco1bitAnimWout-push_5
+      name: Taco1bitAnimWoutHappy-idle_5
       rect:
         serializedVersion: 2
         x: 240
@@ -216,8 +216,8 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: 0
       bones: []
-      spriteID: 075c2ed1008fe5b4ea3d6a3fbb89f32d
-      internalID: 1693495933
+      spriteID: b4947da362a76624e8cdee5c22a7e64a
+      internalID: -1650641859
       vertices: []
       indices: 
       edges: []
@@ -233,12 +233,12 @@ TextureImporter:
     weights: []
     secondaryTextures: []
     nameFileIdTable:
-      Taco1bitAnimWout-push_0: 1546923913
-      Taco1bitAnimWout-push_1: 474233328
-      Taco1bitAnimWout-push_2: -229599386
-      Taco1bitAnimWout-push_3: 1181436529
-      Taco1bitAnimWout-push_4: -1427126282
-      Taco1bitAnimWout-push_5: 1693495933
+      Taco1bitAnimWoutHappy-idle_0: -666782879
+      Taco1bitAnimWoutHappy-idle_1: -1307873284
+      Taco1bitAnimWoutHappy-idle_2: -795151356
+      Taco1bitAnimWoutHappy-idle_3: 611186006
+      Taco1bitAnimWoutHappy-idle_4: -2006968062
+      Taco1bitAnimWoutHappy-idle_5: -1650641859
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 
