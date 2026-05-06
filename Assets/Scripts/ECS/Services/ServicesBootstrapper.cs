@@ -7,6 +7,7 @@ public class ServicesBootstrapper : MonoBehaviour
     {
         EnsureService<PushableBoxService>();
         EnsureService<PhysicalBoxService>();
+        EnsureService<PlayerRelativePositionService>();
     }
 
     private void Start()
@@ -26,12 +27,20 @@ public class ServicesBootstrapper : MonoBehaviour
     {
         PushableBoxService pushableBoxService = ServiceBase.Get<PushableBoxService>();
         PhysicalBoxService physicalBoxService = ServiceBase.Get<PhysicalBoxService>();
+        PlayerRelativePositionService playerRelativePositionService = ServiceBase.Get<PlayerRelativePositionService>();
         StandardBox[] boxes = FindObjectsOfType<StandardBox>();
+        PressurePlate[] pressurePlates = FindObjectsOfType<PressurePlate>();
 
         foreach (StandardBox box in boxes)
         {
             pushableBoxService?.Register(box);
             physicalBoxService?.Register(box);
+            playerRelativePositionService?.Register(box);
+        }
+
+        foreach (PressurePlate pressurePlate in pressurePlates)
+        {
+            playerRelativePositionService?.Register(pressurePlate);
         }
     }
 }

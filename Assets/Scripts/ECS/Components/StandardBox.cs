@@ -5,7 +5,7 @@ using UnityEngine;
 using UnityEngine.SceneManagement;
 
 [DisallowMultipleComponent]
-public class StandardBox : MonoBehaviour
+public class StandardBox : MonoBehaviour, IPlayerRelativePositionTarget
 {
     [Header("Grid")]
     [SerializeField] private Vector3 cellOffset = new Vector3(0.5f, 0.5f, 0f);
@@ -127,12 +127,14 @@ public class StandardBox : MonoBehaviour
     {
         ServiceBase.Get<PushableBoxService>()?.Register(this);
         ServiceBase.Get<PhysicalBoxService>()?.Register(this);
+        ServiceBase.Get<PlayerRelativePositionService>()?.Register(this);
     }
 
     private void UnRegisterFromServices()
     {
         ServiceBase.Get<PushableBoxService>()?.UnRegister(this);
         ServiceBase.Get<PhysicalBoxService>()?.UnRegister(this);
+        ServiceBase.Get<PlayerRelativePositionService>()?.UnRegister(this);
     }
 
     private void SnapToGrid()

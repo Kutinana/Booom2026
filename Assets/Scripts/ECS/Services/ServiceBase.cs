@@ -104,6 +104,66 @@ public readonly struct BoxFallStateEvent
     }
 }
 
+public interface IPlayerRelativePositionTarget
+{
+    Bounds Bounds { get; }
+}
+
+public readonly struct PlayerRelativePositionState
+{
+    public readonly bool PlayerAbove;
+    public readonly bool PlayerBelow;
+    public readonly Bounds TargetBounds;
+    public readonly Bounds PlayerBounds;
+
+    public PlayerRelativePositionState(bool playerAbove, bool playerBelow, Bounds targetBounds, Bounds playerBounds)
+    {
+        PlayerAbove = playerAbove;
+        PlayerBelow = playerBelow;
+        TargetBounds = targetBounds;
+        PlayerBounds = playerBounds;
+    }
+}
+
+public readonly struct PlayerRelativePositionEvent
+{
+    public readonly Component Target;
+    public readonly bool PlayerAbove;
+    public readonly bool PlayerBelow;
+    public readonly bool WasPlayerAbove;
+    public readonly bool WasPlayerBelow;
+    public readonly Bounds TargetBounds;
+    public readonly Bounds PlayerBounds;
+
+    public PlayerRelativePositionEvent(
+        Component target,
+        PlayerRelativePositionState current,
+        PlayerRelativePositionState previous)
+    {
+        Target = target;
+        PlayerAbove = current.PlayerAbove;
+        PlayerBelow = current.PlayerBelow;
+        WasPlayerAbove = previous.PlayerAbove;
+        WasPlayerBelow = previous.PlayerBelow;
+        TargetBounds = current.TargetBounds;
+        PlayerBounds = current.PlayerBounds;
+    }
+}
+
+public readonly struct PressurePlateStateEvent
+{
+    public readonly PressurePlate PressurePlate;
+    public readonly bool Pressed;
+    public readonly bool WasPressed;
+
+    public PressurePlateStateEvent(PressurePlate pressurePlate, bool pressed, bool wasPressed)
+    {
+        PressurePlate = pressurePlate;
+        Pressed = pressed;
+        WasPressed = wasPressed;
+    }
+}
+
 public abstract class ServiceBase : MonoBehaviour
 {
     private static readonly Dictionary<Type, ServiceBase> Services = new Dictionary<Type, ServiceBase>();

@@ -1,11 +1,14 @@
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using UnityEngine.Tilemaps;
 
 [DisallowMultipleComponent]
 public partial class PlayerController : MonoBehaviour
 {
     private const float AxisNormalBlockThreshold = 0.85f;
+    private const int MaxOverlapResolveIterations = 6;
+    private const float OverlapResolveEpsilon = 0.001f;
 
     [System.Serializable]
     public struct ContactState
@@ -33,7 +36,7 @@ public partial class PlayerController : MonoBehaviour
     [Header("Collision")]
     [SerializeField] private LayerMask collisionMask = ~0;
     [SerializeField] private float skinWidth = 0.02f;
-    [SerializeField, Min(2)] private int raysPerSide = 3;
+    [SerializeField, Min(2)] private int raysPerSide = 2;
 
     [Header("Push")]
     [SerializeField, Min(0f)] private float pushHoldThreshold = 0.12f;
@@ -65,6 +68,8 @@ public partial class PlayerController : MonoBehaviour
     private readonly Queue<Transform> bfsQueue = new Queue<Transform>(32);
     private readonly RaycastHit2D[] hits2D = new RaycastHit2D[8];
     private readonly RaycastHit[] hits3D = new RaycastHit[8];
+    private readonly Collider2D[] overlapHits2D = new Collider2D[16];
+    private readonly Collider[] overlapHits3D = new Collider[16];
 
     private void Awake()
     {
@@ -141,19 +146,15 @@ public partial class PlayerController : MonoBehaviour
         velocity.y = Mathf.Max(velocity.y - gravity * dt, -maxFallSpeed);
 
         Vector3 delta = new Vector3(velocity.x * dt, velocity.y * dt, 0f);
-        delta.x = ResolveAxis(Vector3.right * Mathf.Sign(delta.x), Mathf.Abs(delta.x));
-        delta.y = ResolveAxis(Vector3.up * Mathf.Sign(delta.y), Mathf.Abs(delta.y));
-
-        Vector3 next = transform.position + delta;
-        if (jumping && next.y > jumpApexY)
+        if (jumping && transform.position.y + delta.y > jumpApexY)
         {
-            next.y = jumpApexY;
+            delta.y = jumpApexY - transform.position.y;
             velocity.y = 0f;
             jumping = false;
         }
 
-        next.z = fixedZ;
-        MoveTo(next);
+        MoveByAndResolve(new Vector3(delta.x, 0f, 0f));
+        MoveByAndResolve(new Vector3(0f, delta.y, 0f));
         RefreshContacts();
         HandleBoxPush(dt);
     }
@@ -250,43 +251,248 @@ public partial class PlayerController : MonoBehaviour
         nextPushTime = Time.time + pushCooldown;
     }
 
-    private float ResolveAxis(Vector3 direction, float distance)
+    private void MoveByAndResolve(Vector3 delta)
     {
-        if (distance <= 0f)
+        if (delta == Vector3.zero)
         {
-            return 0f;
+            return;
         }
 
-        if (Cast(direction, distance + skinWidth, out RayHit hit))
-        {
-            if (hit.distance <= skinWidth)
-            {
-                if (direction.y != 0f)
-                {
-                    velocity.y = 0f;
-                    jumping = false;
-                }
-                else
-                {
-                    velocity.x = 0f;
-                }
+        Vector3 position = transform.position + delta;
+        position.z = fixedZ;
+        MoveTo(position);
+        SyncColliderTransforms();
+        ResolveTerrainOverlaps(delta);
+    }
 
-                return 0f;
+    private void ResolveTerrainOverlaps(Vector3 movedDelta)
+    {
+        for (int i = 0; i < MaxOverlapResolveIterations; i++)
+        {
+            Bounds bounds = GetBounds();
+            if (bounds.size == Vector3.zero)
+            {
+                return;
             }
 
-            distance = Mathf.Max(0f, hit.distance - skinWidth);
-            if (direction.y != 0f)
+            if (!TryFindOverlapSeparation(bounds, movedDelta, out Vector3 correction))
+            {
+                return;
+            }
+
+            Vector3 position = transform.position + correction;
+            position.z = fixedZ;
+            MoveTo(position);
+            SyncColliderTransforms();
+
+            if (Mathf.Abs(correction.x) > 0f)
+            {
+                velocity.x = 0f;
+            }
+
+            if (Mathf.Abs(correction.y) > 0f)
             {
                 velocity.y = 0f;
                 jumping = false;
             }
-            else
+        }
+    }
+
+    private bool TryFindOverlapSeparation(Bounds bounds, Vector3 movedDelta, out Vector3 correction)
+    {
+        correction = Vector3.zero;
+        float bestMagnitude = float.PositiveInfinity;
+
+        if (m_Collider2D != null)
+        {
+            int hitCount = Physics2D.OverlapBoxNonAlloc((Vector2)bounds.center, (Vector2)bounds.size, 0f, overlapHits2D, collisionMask);
+            for (int i = 0; i < hitCount; i++)
             {
-                velocity.x = 0f;
+                Collider2D other = overlapHits2D[i];
+                if (!IsValidOverlapCollider(other))
+                {
+                    continue;
+                }
+
+                if (TryEvaluateTilemapOverlaps(other, bounds, movedDelta, ref bestMagnitude, ref correction))
+                {
+                    continue;
+                }
+
+                Bounds otherBounds = other.bounds;
+                GameObject platform = GetPlatformObject(other);
+                if (!ShouldResolveOverlap(platform, bounds, otherBounds, movedDelta))
+                {
+                    continue;
+                }
+
+                Vector3 candidate = CalculateAabbSeparation(bounds, otherBounds, movedDelta);
+                float magnitude = candidate.sqrMagnitude;
+                if (magnitude > 0f && magnitude < bestMagnitude)
+                {
+                    bestMagnitude = magnitude;
+                    correction = candidate;
+                }
             }
         }
 
-        return distance * Mathf.Sign(direction.x + direction.y);
+        if (m_Collider3D != null)
+        {
+            int hitCount = Physics.OverlapBoxNonAlloc(bounds.center, bounds.extents, overlapHits3D, Quaternion.identity, collisionMask, QueryTriggerInteraction.Ignore);
+            for (int i = 0; i < hitCount; i++)
+            {
+                Collider other = overlapHits3D[i];
+                if (!IsValidOverlapCollider(other))
+                {
+                    continue;
+                }
+
+                Bounds otherBounds = other.bounds;
+                GameObject platform = GetPlatformObject(other);
+                if (!ShouldResolveOverlap(platform, bounds, otherBounds, movedDelta))
+                {
+                    continue;
+                }
+
+                Vector3 candidate = CalculateAabbSeparation(bounds, otherBounds, movedDelta);
+                float magnitude = candidate.sqrMagnitude;
+                if (magnitude > 0f && magnitude < bestMagnitude)
+                {
+                    bestMagnitude = magnitude;
+                    correction = candidate;
+                }
+            }
+        }
+
+        return bestMagnitude < float.PositiveInfinity;
+    }
+
+    private bool TryEvaluateTilemapOverlaps(Collider2D tileCollider, Bounds playerBounds, Vector3 movedDelta, ref float bestMagnitude, ref Vector3 correction)
+    {
+        Tilemap tilemap = tileCollider.GetComponent<Tilemap>();
+        if (tilemap == null)
+        {
+            return false;
+        }
+
+        Vector3Int minCell = tilemap.WorldToCell(new Vector3(playerBounds.min.x - OverlapResolveEpsilon, playerBounds.min.y - OverlapResolveEpsilon, 0f));
+        Vector3Int maxCell = tilemap.WorldToCell(new Vector3(playerBounds.max.x + OverlapResolveEpsilon, playerBounds.max.y + OverlapResolveEpsilon, 0f));
+        GameObject platform = GetPlatformObject(tileCollider);
+
+        for (int x = minCell.x - 1; x <= maxCell.x + 1; x++)
+        {
+            for (int y = minCell.y - 1; y <= maxCell.y + 1; y++)
+            {
+                Vector3Int cell = new Vector3Int(x, y, minCell.z);
+                if (!tilemap.HasTile(cell))
+                {
+                    continue;
+                }
+
+                Bounds tileBounds = GetTileWorldBounds(tilemap, cell);
+                if (!ShouldResolveOverlap(platform, playerBounds, tileBounds, movedDelta))
+                {
+                    continue;
+                }
+
+                Vector3 candidate = CalculateAabbSeparation(playerBounds, tileBounds, movedDelta);
+                float magnitude = candidate.sqrMagnitude;
+                if (magnitude > 0f && magnitude < bestMagnitude)
+                {
+                    bestMagnitude = magnitude;
+                    correction = candidate;
+                }
+            }
+        }
+
+        return true;
+    }
+
+    private static Bounds GetTileWorldBounds(Tilemap tilemap, Vector3Int cell)
+    {
+        GridLayout layout = tilemap.layoutGrid;
+        Vector3 size = layout != null ? layout.cellSize : Vector3.one;
+        size.x = Mathf.Abs(size.x);
+        size.y = Mathf.Abs(size.y);
+        size.z = Mathf.Max(Mathf.Abs(size.z), OverlapResolveEpsilon);
+        return new Bounds(tilemap.GetCellCenterWorld(cell), size);
+    }
+
+    private bool IsValidOverlapCollider(Collider2D other)
+    {
+        return other != null &&
+            !other.isTrigger &&
+            other != m_Collider2D &&
+            other.bounds.size != Vector3.zero;
+    }
+
+    private bool IsValidOverlapCollider(Collider other)
+    {
+        return other != null &&
+            other != m_Collider3D &&
+            other.bounds.size != Vector3.zero;
+    }
+
+    private bool ShouldResolveOverlap(GameObject platform, Bounds playerBounds, Bounds otherBounds, Vector3 movedDelta)
+    {
+        if (!OverlapsXY(playerBounds, otherBounds))
+        {
+            return false;
+        }
+
+        if (platform == null)
+        {
+            return true;
+        }
+
+        if (movedDelta.y >= 0f)
+        {
+            return false;
+        }
+
+        if (platform == ignoredPlatform && Time.time < platformDropUntil)
+        {
+            return false;
+        }
+
+        float previousBottom = playerBounds.min.y - movedDelta.y;
+        float tolerance = Mathf.Max(platformLandingTolerance, skinWidth * 2f);
+        return previousBottom >= otherBounds.max.y - tolerance;
+    }
+
+    private Vector3 CalculateAabbSeparation(Bounds playerBounds, Bounds otherBounds, Vector3 movedDelta)
+    {
+        float moveLeft = otherBounds.min.x - playerBounds.max.x - OverlapResolveEpsilon;
+        float moveRight = otherBounds.max.x - playerBounds.min.x + OverlapResolveEpsilon;
+        float moveDown = otherBounds.min.y - playerBounds.max.y - OverlapResolveEpsilon;
+        float moveUp = otherBounds.max.y - playerBounds.min.y + OverlapResolveEpsilon;
+
+        if (Mathf.Abs(movedDelta.x) > 0f && Mathf.Abs(movedDelta.x) >= Mathf.Abs(movedDelta.y))
+        {
+            return new Vector3(movedDelta.x > 0f ? moveLeft : moveRight, 0f, 0f);
+        }
+
+        if (Mathf.Abs(movedDelta.y) > 0f)
+        {
+            return new Vector3(0f, movedDelta.y > 0f ? moveDown : moveUp, 0f);
+        }
+
+        Vector3 xCorrection = Mathf.Abs(moveLeft) < Mathf.Abs(moveRight)
+            ? new Vector3(moveLeft, 0f, 0f)
+            : new Vector3(moveRight, 0f, 0f);
+        Vector3 yCorrection = Mathf.Abs(moveDown) < Mathf.Abs(moveUp)
+            ? new Vector3(0f, moveDown, 0f)
+            : new Vector3(0f, moveUp, 0f);
+
+        return xCorrection.sqrMagnitude < yCorrection.sqrMagnitude ? xCorrection : yCorrection;
+    }
+
+    private static bool OverlapsXY(Bounds a, Bounds b)
+    {
+        return a.min.x < b.max.x &&
+            a.max.x > b.min.x &&
+            a.min.y < b.max.y &&
+            a.max.y > b.min.y;
     }
 
     private bool Cast(Vector3 direction, float distance, out RayHit bestHit)
@@ -300,15 +506,10 @@ public partial class PlayerController : MonoBehaviour
 
         bounds.Expand(-skinWidth * 2f);
 
-        if (CastCollider(bounds, direction, distance, out bestHit))
-        {
-            return true;
-        }
-
-        bool vertical = Mathf.Abs(direction.y) > 0f;
-        int count = Mathf.Max(2, raysPerSide);
+        int count = Mathf.Min(Mathf.Max(2, raysPerSide), 2);
         float bestDistance = float.PositiveInfinity;
         bool hitAny = false;
+        bool vertical = Mathf.Abs(direction.y) > 0f;
 
         for (int i = 0; i < count; i++)
         {
@@ -321,7 +522,10 @@ public partial class PlayerController : MonoBehaviour
             }
             else
             {
-                origin = new Vector3(direction.x > 0f ? bounds.max.x : bounds.min.x, Mathf.Lerp(bounds.min.y, bounds.max.y, t), transform.position.z);
+                float minY = bounds.min.y + skinWidth;
+                float maxY = bounds.max.y - skinWidth;
+                float originY = minY <= maxY ? Mathf.Lerp(minY, maxY, t) : bounds.center.y;
+                origin = new Vector3(direction.x > 0f ? bounds.max.x : bounds.min.x, originY, transform.position.z);
             }
 
             if (CastSingle(bounds, origin, direction, distance, out RayHit hit) && hit.distance < bestDistance)
@@ -333,70 +537,6 @@ public partial class PlayerController : MonoBehaviour
         }
 
         return hitAny;
-    }
-
-    private bool CastCollider(Bounds bounds, Vector3 direction, float distance, out RayHit bestHit)
-    {
-        bestHit = default;
-        float bestDistance = float.PositiveInfinity;
-
-        if (m_Collider2D != null)
-        {
-            int hitCount = Physics2D.BoxCastNonAlloc(
-                (Vector2)bounds.center,
-                (Vector2)bounds.size,
-                0f,
-                (Vector2)direction,
-                hits2D,
-                distance,
-                collisionMask);
-
-            for (int i = 0; i < hitCount; i++)
-            {
-                RaycastHit2D hit2D = hits2D[i];
-                GameObject platform = GetPlatformObject(hit2D.collider);
-                if (hit2D.collider != null &&
-                    !hit2D.collider.isTrigger &&
-                    hit2D.collider != m_Collider2D &&
-                    ShouldCollideWithPlatform(platform, hit2D.point.y, bounds, hit2D.normal, direction) &&
-                    IsBlockingAxisNormal(hit2D.normal, direction) &&
-                    hit2D.distance < bestDistance)
-                {
-                    bestDistance = hit2D.distance;
-                    bestHit = new RayHit(hit2D.distance, hit2D.collider.tag, hit2D.collider.GetComponentInParent<StandardBox>(), platform);
-                }
-            }
-        }
-
-        if (m_Collider3D != null)
-        {
-            int hitCount = Physics.BoxCastNonAlloc(
-                bounds.center,
-                bounds.extents,
-                direction,
-                hits3D,
-                Quaternion.identity,
-                distance,
-                collisionMask,
-                QueryTriggerInteraction.Ignore);
-
-            for (int i = 0; i < hitCount; i++)
-            {
-                RaycastHit hit3D = hits3D[i];
-                GameObject platform = GetPlatformObject(hit3D.collider);
-                if (hit3D.collider != null &&
-                    hit3D.collider != m_Collider3D &&
-                    ShouldCollideWithPlatform(platform, hit3D.point.y, bounds, hit3D.normal, direction) &&
-                    IsBlockingAxisNormal(hit3D.normal, direction) &&
-                    hit3D.distance < bestDistance)
-                {
-                    bestDistance = hit3D.distance;
-                    bestHit = new RayHit(hit3D.distance, hit3D.collider.tag, hit3D.collider.GetComponentInParent<StandardBox>(), platform);
-                }
-            }
-        }
-
-        return bestDistance < float.PositiveInfinity;
     }
 
     private static bool IsBlockingAxisNormal(Vector3 normal, Vector3 direction)
@@ -440,6 +580,7 @@ public partial class PlayerController : MonoBehaviour
                     !hit2D.collider.isTrigger &&
                     hit2D.collider != m_Collider2D &&
                     ShouldCollideWithPlatform(platform, hit2D.point.y, bounds, hit2D.normal, direction) &&
+                    IsBlockingAxisNormal(hit2D.normal, direction) &&
                     hit2D.distance < bestDistance)
                 {
                     bestDistance = hit2D.distance;
@@ -458,6 +599,7 @@ public partial class PlayerController : MonoBehaviour
                 if (hit3D.collider != null &&
                     hit3D.collider != m_Collider3D &&
                     ShouldCollideWithPlatform(platform, hit3D.point.y, bounds, hit3D.normal, direction) &&
+                    IsBlockingAxisNormal(hit3D.normal, direction) &&
                     hit3D.distance < bestDistance)
                 {
                     bestDistance = hit3D.distance;
@@ -493,16 +635,24 @@ public partial class PlayerController : MonoBehaviour
     {
         if (body2D != null)
         {
-            body2D.MovePosition((Vector2)position);
+            body2D.position = (Vector2)position;
+            transform.position = position;
         }
         else if (body3D != null)
         {
-            body3D.MovePosition(position);
+            body3D.position = position;
+            transform.position = position;
         }
         else
         {
             transform.position = position;
         }
+    }
+
+    private void SyncColliderTransforms()
+    {
+        Physics.SyncTransforms();
+        Physics2D.SyncTransforms();
     }
 
     private readonly struct RayHit
