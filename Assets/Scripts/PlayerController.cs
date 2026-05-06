@@ -5,6 +5,8 @@ using UnityEngine.SceneManagement;
 [DisallowMultipleComponent]
 public partial class PlayerController : MonoBehaviour
 {
+    private const float AxisNormalBlockThreshold = 0.85f;
+
     [System.Serializable]
     public struct ContactState
     {
@@ -298,6 +300,11 @@ public partial class PlayerController : MonoBehaviour
 
         bounds.Expand(-skinWidth * 2f);
 
+        if (CastCollider(bounds, direction, distance, out bestHit))
+        {
+            return true;
+        }
+
         bool vertical = Mathf.Abs(direction.y) > 0f;
         int count = Mathf.Max(2, raysPerSide);
         float bestDistance = float.PositiveInfinity;
@@ -317,7 +324,7 @@ public partial class PlayerController : MonoBehaviour
                 origin = new Vector3(direction.x > 0f ? bounds.max.x : bounds.min.x, Mathf.Lerp(bounds.min.y, bounds.max.y, t), transform.position.z);
             }
 
-            if (CastSingle(origin, direction, distance, out RayHit hit) && hit.distance < bestDistance)
+            if (CastSingle(bounds, origin, direction, distance, out RayHit hit) && hit.distance < bestDistance)
             {
                 bestDistance = hit.distance;
                 bestHit = hit;
@@ -328,7 +335,96 @@ public partial class PlayerController : MonoBehaviour
         return hitAny;
     }
 
-    private bool CastSingle(Vector3 origin, Vector3 direction, float distance, out RayHit hit)
+    private bool CastCollider(Bounds bounds, Vector3 direction, float distance, out RayHit bestHit)
+    {
+        bestHit = default;
+        float bestDistance = float.PositiveInfinity;
+
+        if (m_Collider2D != null)
+        {
+            int hitCount = Physics2D.BoxCastNonAlloc(
+                (Vector2)bounds.center,
+                (Vector2)bounds.size,
+                0f,
+                (Vector2)direction,
+                hits2D,
+                distance,
+                collisionMask);
+
+            for (int i = 0; i < hitCount; i++)
+            {
+                RaycastHit2D hit2D = hits2D[i];
+                GameObject platform = GetPlatformObject(hit2D.collider);
+                if (hit2D.collider != null &&
+                    !hit2D.collider.isTrigger &&
+                    hit2D.collider != m_Collider2D &&
+                    ShouldCollideWithPlatform(platform, hit2D.point.y, bounds, hit2D.normal, direction) &&
+                    IsBlockingAxisNormal(hit2D.normal, direction) &&
+                    hit2D.distance < bestDistance)
+                {
+                    bestDistance = hit2D.distance;
+                    bestHit = new RayHit(hit2D.distance, hit2D.collider.tag, hit2D.collider.GetComponentInParent<StandardBox>(), platform);
+                }
+            }
+        }
+
+        if (m_Collider3D != null)
+        {
+            int hitCount = Physics.BoxCastNonAlloc(
+                bounds.center,
+                bounds.extents,
+                direction,
+                hits3D,
+                Quaternion.identity,
+                distance,
+                collisionMask,
+                QueryTriggerInteraction.Ignore);
+
+            for (int i = 0; i < hitCount; i++)
+            {
+                RaycastHit hit3D = hits3D[i];
+                GameObject platform = GetPlatformObject(hit3D.collider);
+                if (hit3D.collider != null &&
+                    hit3D.collider != m_Collider3D &&
+                    ShouldCollideWithPlatform(platform, hit3D.point.y, bounds, hit3D.normal, direction) &&
+                    IsBlockingAxisNormal(hit3D.normal, direction) &&
+                    hit3D.distance < bestDistance)
+                {
+                    bestDistance = hit3D.distance;
+                    bestHit = new RayHit(hit3D.distance, hit3D.collider.tag, hit3D.collider.GetComponentInParent<StandardBox>(), platform);
+                }
+            }
+        }
+
+        return bestDistance < float.PositiveInfinity;
+    }
+
+    private static bool IsBlockingAxisNormal(Vector3 normal, Vector3 direction)
+    {
+        if (direction.x > 0f)
+        {
+            return normal.x <= -AxisNormalBlockThreshold;
+        }
+
+        if (direction.x < 0f)
+        {
+            return normal.x >= AxisNormalBlockThreshold;
+        }
+
+        if (direction.y > 0f)
+        {
+            return normal.y <= -AxisNormalBlockThreshold;
+        }
+
+        if (direction.y < 0f)
+        {
+            return normal.y >= AxisNormalBlockThreshold;
+        }
+
+        return false;
+    }
+
+    private bool CastSingle(Bounds bounds, Vector3 origin, Vector3 direction, float distance, out RayHit hit)
     {
         float bestDistance = float.PositiveInfinity;
         hit = default;
@@ -343,7 +439,7 @@ public partial class PlayerController : MonoBehaviour
                 if (hit2D.collider != null &&
                     !hit2D.collider.isTrigger &&
                     hit2D.collider != m_Collider2D &&
-                    ShouldCollideWithPlatform(platform, hit2D.normal, direction) &&
+                    ShouldCollideWithPlatform(platform, hit2D.point.y, bounds, hit2D.normal, direction) &&
                     hit2D.distance < bestDistance)
                 {
                     bestDistance = hit2D.distance;
@@ -361,7 +457,7 @@ public partial class PlayerController : MonoBehaviour
                 GameObject platform = GetPlatformObject(hit3D.collider);
                 if (hit3D.collider != null &&
                     hit3D.collider != m_Collider3D &&
-                    ShouldCollideWithPlatform(platform, hit3D.normal, direction) &&
+                    ShouldCollideWithPlatform(platform, hit3D.point.y, bounds, hit3D.normal, direction) &&
                     hit3D.distance < bestDistance)
                 {
                     bestDistance = hit3D.distance;

@@ -7,6 +7,7 @@ public partial class PlayerController
     [Header("Platform")]
     [SerializeField, Min(0f)] private float platformDropDuration = 0.25f;
     [SerializeField, Range(0f, 1f)] private float platformTopNormalThreshold = 0.5f;
+    [SerializeField, Min(0f)] private float platformLandingTolerance = 0.03f;
 
     private bool platformDropQueued;
     private float platformDropUntil;
@@ -86,5 +87,21 @@ public partial class PlayerController
         }
 
         return normal.y >= platformTopNormalThreshold;
+    }
+
+    private bool ShouldCollideWithPlatform(GameObject platform, float platformTopY, Bounds playerBounds, Vector3 normal, Vector3 direction)
+    {
+        if (!ShouldCollideWithPlatform(platform, normal, direction))
+        {
+            return false;
+        }
+
+        if (platform == null)
+        {
+            return true;
+        }
+
+        float tolerance = Mathf.Max(platformLandingTolerance, skinWidth * 2f);
+        return playerBounds.min.y >= platformTopY - tolerance;
     }
 }
