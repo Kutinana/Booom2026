@@ -3,7 +3,7 @@ using UnityEngine;
 using UnityEngine.SceneManagement;
 
 [DisallowMultipleComponent]
-public class PlayerController : MonoBehaviour
+public partial class PlayerController : MonoBehaviour
 {
     [System.Serializable]
     public struct ContactState
@@ -109,11 +109,14 @@ public class PlayerController : MonoBehaviour
         {
             jumpQueued = true;
         }
+
+        HandlePlatformInput();
     }
 
     private void FixedUpdate()
     {
         RefreshContacts();
+        ProcessPlatformDropRequest();
 
         float dt = Time.fixedDeltaTime;
         velocity.x = Mathf.Clamp(moveInput.x, -1f, 1f) * moveSpeed;
@@ -200,6 +203,7 @@ public class PlayerController : MonoBehaviour
         contacts.upTag = upHit.tag;
         contacts.leftTag = leftHit.tag;
         contacts.rightTag = rightHit.tag;
+        downPlatform = downHit.platform;
         leftBox = leftHit.box;
         rightBox = rightHit.box;
     }
@@ -335,10 +339,15 @@ public class PlayerController : MonoBehaviour
             for (int i = 0; i < hitCount; i++)
             {
                 RaycastHit2D hit2D = hits2D[i];
-                if (hit2D.collider != null && !hit2D.collider.isTrigger && hit2D.collider != m_Collider2D && hit2D.distance < bestDistance)
+                GameObject platform = GetPlatformObject(hit2D.collider);
+                if (hit2D.collider != null &&
+                    !hit2D.collider.isTrigger &&
+                    hit2D.collider != m_Collider2D &&
+                    ShouldCollideWithPlatform(platform, hit2D.normal, direction) &&
+                    hit2D.distance < bestDistance)
                 {
                     bestDistance = hit2D.distance;
-                    hit = new RayHit(hit2D.distance, hit2D.collider.tag, hit2D.collider.GetComponentInParent<StandardBox>());
+                    hit = new RayHit(hit2D.distance, hit2D.collider.tag, hit2D.collider.GetComponentInParent<StandardBox>(), platform);
                 }
             }
         }
@@ -349,10 +358,14 @@ public class PlayerController : MonoBehaviour
             for (int i = 0; i < hitCount; i++)
             {
                 RaycastHit hit3D = hits3D[i];
-                if (hit3D.collider != null && hit3D.collider != m_Collider3D && hit3D.distance < bestDistance)
+                GameObject platform = GetPlatformObject(hit3D.collider);
+                if (hit3D.collider != null &&
+                    hit3D.collider != m_Collider3D &&
+                    ShouldCollideWithPlatform(platform, hit3D.normal, direction) &&
+                    hit3D.distance < bestDistance)
                 {
                     bestDistance = hit3D.distance;
-                    hit = new RayHit(hit3D.distance, hit3D.collider.tag, hit3D.collider.GetComponentInParent<StandardBox>());
+                    hit = new RayHit(hit3D.distance, hit3D.collider.tag, hit3D.collider.GetComponentInParent<StandardBox>(), platform);
                 }
             }
         }
@@ -401,12 +414,14 @@ public class PlayerController : MonoBehaviour
         public readonly float distance;
         public readonly string tag;
         public readonly StandardBox box;
+        public readonly GameObject platform;
 
-        public RayHit(float distance, string tag, StandardBox box)
+        public RayHit(float distance, string tag, StandardBox box, GameObject platform)
         {
             this.distance = distance;
             this.tag = tag;
             this.box = box;
+            this.platform = platform;
         }
     }
 }
