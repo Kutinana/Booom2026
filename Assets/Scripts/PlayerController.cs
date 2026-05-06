@@ -24,7 +24,7 @@ public class PlayerController : MonoBehaviour
 
     [Header("Movement")]
     [SerializeField] private float moveSpeed = 4f;
-    [SerializeField, Min(1)] private int jumpGridHeight = 2;
+    [SerializeField, Min(0.01f)] private float jumpGridHeight = 2.5f;
     [SerializeField] private float gravity = 28f;
     [SerializeField] private float maxFallSpeed = 18f;
 
@@ -335,7 +335,7 @@ public class PlayerController : MonoBehaviour
             for (int i = 0; i < hitCount; i++)
             {
                 RaycastHit2D hit2D = hits2D[i];
-                if (hit2D.collider != null && hit2D.collider != m_Collider2D && hit2D.distance < bestDistance)
+                if (hit2D.collider != null && !hit2D.collider.isTrigger && hit2D.collider != m_Collider2D && hit2D.distance < bestDistance)
                 {
                     bestDistance = hit2D.distance;
                     hit = new RayHit(hit2D.distance, hit2D.collider.tag, hit2D.collider.GetComponentInParent<StandardBox>());

@@ -214,7 +214,7 @@ public class PhysicalBoxService : ServiceBase<StandardBox>
             for (int i = 0; i < hitCount; i++)
             {
                 RaycastHit2D hit2D = hits2D[i];
-                if (hit2D.collider != null && hit2D.collider != boxCollider2D && hit2D.distance < bestDistance)
+                if (hit2D.collider != null && !hit2D.collider.isTrigger && hit2D.collider != boxCollider2D && hit2D.distance < bestDistance)
                 {
                     bestDistance = hit2D.distance;
                     hit = new RayHit(bestDistance);
