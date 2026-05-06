@@ -33,6 +33,10 @@ public class PlayerController : MonoBehaviour
     [SerializeField] private float skinWidth = 0.02f;
     [SerializeField, Min(2)] private int raysPerSide = 3;
 
+    [Header("Push")]
+    [SerializeField, Min(0f)] private float pushHoldThreshold = 0.12f;
+    [SerializeField, Min(0f)] private float pushCooldown = 0.35f;
+
     public Grid Grid => grid;
     public ContactState Contacts => contacts;
     public Vector2 Velocity => velocity;
@@ -49,6 +53,12 @@ public class PlayerController : MonoBehaviour
     private bool jumping;
     private float jumpApexY;
     private float fixedZ;
+    private StandardBox leftBox;
+    private StandardBox rightBox;
+    private StandardBox heldPushBox;
+    private BoxPushDirection heldPushDirection;
+    private float pushHoldTime;
+    private float nextPushTime;
     
     private readonly Queue<Transform> bfsQueue = new Queue<Transform>(32);
     private readonly RaycastHit2D[] hits2D = new RaycastHit2D[8];
@@ -140,6 +150,7 @@ public class PlayerController : MonoBehaviour
         next.z = fixedZ;
         MoveTo(next);
         RefreshContacts();
+        HandleBoxPush(dt);
     }
 
     private Grid FindSceneGrid()
@@ -189,6 +200,48 @@ public class PlayerController : MonoBehaviour
         contacts.upTag = upHit.tag;
         contacts.leftTag = leftHit.tag;
         contacts.rightTag = rightHit.tag;
+        leftBox = leftHit.box;
+        rightBox = rightHit.box;
+    }
+
+    private void HandleBoxPush(float dt)
+    {
+        StandardBox box = null;
+        BoxPushDirection direction = default;
+
+        if (moveInput.x > 0.01f && contacts.rightBlocked)
+        {
+            box = rightBox;
+            direction = BoxPushDirection.Right;
+        }
+        else if (moveInput.x < -0.01f && contacts.leftBlocked)
+        {
+            box = leftBox;
+            direction = BoxPushDirection.Left;
+        }
+
+        if (box == null)
+        {
+            heldPushBox = null;
+            pushHoldTime = 0f;
+            return;
+        }
+
+        if (box != heldPushBox || direction != heldPushDirection)
+        {
+            heldPushBox = box;
+            heldPushDirection = direction;
+            pushHoldTime = 0f;
+        }
+
+        pushHoldTime += dt;
+        if (pushHoldTime < pushHoldThreshold || Time.time < nextPushTime)
+        {
+            return;
+        }
+
+        box.TryPush(direction, gameObject);
+        nextPushTime = Time.time + pushCooldown;
     }
 
     private float ResolveAxis(Vector3 direction, float distance)
@@ -285,7 +338,7 @@ public class PlayerController : MonoBehaviour
                 if (hit2D.collider != null && hit2D.collider != m_Collider2D && hit2D.distance < bestDistance)
                 {
                     bestDistance = hit2D.distance;
-                    hit = new RayHit(hit2D.distance, hit2D.collider.tag);
+                    hit = new RayHit(hit2D.distance, hit2D.collider.tag, hit2D.collider.GetComponentInParent<StandardBox>());
                 }
             }
         }
@@ -299,7 +352,7 @@ public class PlayerController : MonoBehaviour
                 if (hit3D.collider != null && hit3D.collider != m_Collider3D && hit3D.distance < bestDistance)
                 {
                     bestDistance = hit3D.distance;
-                    hit = new RayHit(hit3D.distance, hit3D.collider.tag);
+                    hit = new RayHit(hit3D.distance, hit3D.collider.tag, hit3D.collider.GetComponentInParent<StandardBox>());
                 }
             }
         }
@@ -347,11 +400,13 @@ public class PlayerController : MonoBehaviour
     {
         public readonly float distance;
         public readonly string tag;
+        public readonly StandardBox box;
 
-        public RayHit(float distance, string tag)
+        public RayHit(float distance, string tag, StandardBox box)
         {
             this.distance = distance;
             this.tag = tag;
+            this.box = box;
         }
     }
 }
