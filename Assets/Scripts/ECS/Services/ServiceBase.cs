@@ -38,6 +38,27 @@ public readonly struct BoxPushRequestEvent
     }
 }
 
+public readonly struct BoxPushInitializeEvent
+{
+    public readonly StandardBox Box;
+    public readonly BoxPushDirection Direction;
+    public readonly GameObject Pusher;
+    public readonly bool CanPush;
+
+    public BoxPushInitializeEvent(StandardBox box, BoxPushDirection direction, GameObject pusher, bool canPush)
+    {
+        Box = box;
+        Direction = direction;
+        Pusher = pusher;
+        CanPush = canPush;
+    }
+
+    public override string ToString()
+    {
+        return $"BoxPushInitializeEvent(Box={Box.name}, Direction={Direction}, Pusher={Pusher?.name ?? "null"}, CanPush={CanPush})";
+    }
+}
+
 public readonly struct BoxPushAttemptEvent
 {
     public readonly StandardBox Box;

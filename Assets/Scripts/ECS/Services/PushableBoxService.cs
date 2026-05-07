@@ -17,9 +17,22 @@ public class PushableBoxService : ServiceBase<StandardBox>
         base.OnDestroy();
     }
 
+    public BoxPushInitializeEvent InitializePush(StandardBox box, BoxPushDirection direction, UnityEngine.GameObject pusher = null)
+    {
+        bool canPush = CanPush(box, direction);
+        BoxPushInitializeEvent initialize = new BoxPushInitializeEvent(box, direction, pusher, canPush);
+        SendEvent(initialize);
+        return initialize;
+    }
+
     public BoxPushAttemptEvent TryPush(StandardBox box, BoxPushDirection direction, UnityEngine.GameObject pusher = null)
     {
-        bool canPush = box != null && IsRegistered(box) && box.CanPushToward(direction);
+        return TryPush(box, direction, pusher, CanPush(box, direction));
+    }
+
+    public BoxPushAttemptEvent TryPush(StandardBox box, BoxPushDirection direction, UnityEngine.GameObject pusher, bool canPush)
+    {
+        canPush = canPush && box != null && IsRegistered(box);
         BoxPushAttemptEvent attempt = new BoxPushAttemptEvent(box, direction, pusher, canPush);
         SendEvent(attempt);
         return attempt;
@@ -28,5 +41,10 @@ public class PushableBoxService : ServiceBase<StandardBox>
     private void OnPushRequested(BoxPushRequestEvent e)
     {
         TryPush(e.Box, e.Direction, e.Pusher);
+    }
+
+    private bool CanPush(StandardBox box, BoxPushDirection direction)
+    {
+        return box != null && IsRegistered(box) && box.CanPushToward(direction);
     }
 }

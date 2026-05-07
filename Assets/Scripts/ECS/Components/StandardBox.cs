@@ -89,12 +89,38 @@ public class StandardBox : MonoBehaviour, IPlayerRelativePositionTarget
         return CanPushFrom(Opposite(direction));
     }
 
+    public BoxPushInitializeEvent InitializePush(BoxPushDirection direction, GameObject pusher = null)
+    {
+        PushableBoxService service = ServiceBase.Get<PushableBoxService>();
+        if (service != null)
+        {
+            return service.InitializePush(this, direction, pusher);
+        }
+
+        BoxPushInitializeEvent initialize = new BoxPushInitializeEvent(this, direction, pusher, false);
+        TypeEventSystem.Global.Send(initialize);
+        return initialize;
+    }
+
     public BoxPushAttemptEvent TryPush(BoxPushDirection direction, GameObject pusher = null)
     {
         PushableBoxService service = ServiceBase.Get<PushableBoxService>();
         if (service != null)
         {
             return service.TryPush(this, direction, pusher);
+        }
+
+        BoxPushAttemptEvent attempt = new BoxPushAttemptEvent(this, direction, pusher, false);
+        TypeEventSystem.Global.Send(attempt);
+        return attempt;
+    }
+
+    public BoxPushAttemptEvent TryPush(BoxPushDirection direction, GameObject pusher, bool initializedCanPush)
+    {
+        PushableBoxService service = ServiceBase.Get<PushableBoxService>();
+        if (service != null)
+        {
+            return service.TryPush(this, direction, pusher, initializedCanPush);
         }
 
         BoxPushAttemptEvent attempt = new BoxPushAttemptEvent(this, direction, pusher, false);

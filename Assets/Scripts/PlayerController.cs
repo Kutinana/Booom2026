@@ -62,6 +62,8 @@ public partial class PlayerController : MonoBehaviour
     private StandardBox rightBox;
     private StandardBox heldPushBox;
     private BoxPushDirection heldPushDirection;
+    private bool heldPushInitializedCanPush;
+    private bool hasHeldPushInitialization;
     private float pushHoldTime;
     private float nextPushTime;
     
@@ -230,6 +232,7 @@ public partial class PlayerController : MonoBehaviour
         if (box == null)
         {
             heldPushBox = null;
+            hasHeldPushInitialization = false;
             pushHoldTime = 0f;
             return;
         }
@@ -239,6 +242,8 @@ public partial class PlayerController : MonoBehaviour
             heldPushBox = box;
             heldPushDirection = direction;
             pushHoldTime = 0f;
+            heldPushInitializedCanPush = box.InitializePush(direction, gameObject).CanPush;
+            hasHeldPushInitialization = true;
         }
 
         pushHoldTime += dt;
@@ -247,7 +252,15 @@ public partial class PlayerController : MonoBehaviour
             return;
         }
 
-        box.TryPush(direction, gameObject);
+        if (hasHeldPushInitialization)
+        {
+            box.TryPush(direction, gameObject, heldPushInitializedCanPush);
+        }
+        else
+        {
+            box.TryPush(direction, gameObject);
+        }
+
         nextPushTime = Time.time + pushCooldown;
     }
 

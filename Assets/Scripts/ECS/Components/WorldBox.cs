@@ -28,17 +28,22 @@ public class WorldBox : StandardBox
     private bool wasPlayerOutsideInnerBounds = true;
     private bool hasPreviousPlayerBounds;
     private Bounds previousPlayerBounds;
+    private IUnRegister pushInitializeUnRegister;
     private IUnRegister pushAttemptUnRegister;
 
     private void OnEnable()
     {
+        pushInitializeUnRegister?.UnRegister();
         pushAttemptUnRegister?.UnRegister();
+        pushInitializeUnRegister = TypeEventSystem.Global.Register<BoxPushInitializeEvent>(OnPushInitialized);
         pushAttemptUnRegister = TypeEventSystem.Global.Register<BoxPushAttemptEvent>(OnPushAttempted);
     }
 
     private void OnDisable()
     {
+        pushInitializeUnRegister?.UnRegister();
         pushAttemptUnRegister?.UnRegister();
+        pushInitializeUnRegister = null;
         pushAttemptUnRegister = null;
     }
 
@@ -119,6 +124,16 @@ public class WorldBox : StandardBox
         return true;
     }
 
+    private void OnPushInitialized(BoxPushInitializeEvent e)
+    {
+        if (e.Box != this || e.CanPush || !EnsurePlayer())
+        {
+            return;
+        }
+
+        MovePlayerToOuterEntranceFromBlockedPush(e.Direction);
+    }
+
     private void OnPushAttempted(BoxPushAttemptEvent e)
     {
         if (e.Box != this || e.CanPush || !EnsurePlayer())
@@ -126,7 +141,12 @@ public class WorldBox : StandardBox
             return;
         }
 
-        BoxPushDirection side = Opposite(e.Direction);
+        MovePlayerToOuterEntranceFromBlockedPush(e.Direction);
+    }
+
+    private void MovePlayerToOuterEntranceFromBlockedPush(BoxPushDirection direction)
+    {
+        BoxPushDirection side = Opposite(direction);
         if (TryMovePlayerToOuterEntrance(side))
         {
             HasLastExitDirection = true;
