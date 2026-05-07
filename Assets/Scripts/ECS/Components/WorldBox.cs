@@ -3,8 +3,6 @@ using UnityEngine;
 
 public class WorldBox : StandardBox
 {
-    private const string PlayerTag = "Player";
-
     [System.Serializable]
     public struct DirectionEntrance
     {
@@ -108,12 +106,13 @@ public class WorldBox : StandardBox
     {
         if (playerTransform == null)
         {
-            GameObject playerObject = GameObject.FindGameObjectWithTag(PlayerTag);
-            if (playerObject == null)
+            PlayerController player = ServiceBase.Get<PlayerService>()?.Player;
+            if (player == null)
             {
                 return false;
             }
 
+            GameObject playerObject = player.gameObject;
             playerTransform = playerObject.transform;
             playerCollider3D = playerObject.GetComponent<Collider>();
             playerCollider2D = playerObject.GetComponent<Collider2D>();

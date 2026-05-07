@@ -7,6 +7,11 @@ public class PushableBoxService : ServiceBase<StandardBox>
     protected override void Awake()
     {
         base.Awake();
+        if (!IsActiveService)
+        {
+            return;
+        }
+
         pushRequestUnRegister = RegisterEvent<BoxPushRequestEvent>(OnPushRequested);
     }
 

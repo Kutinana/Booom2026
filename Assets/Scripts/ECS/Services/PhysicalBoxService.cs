@@ -19,6 +19,11 @@ public class PhysicalBoxService : ServiceBase<StandardBox>
     protected override void Awake()
     {
         base.Awake();
+        if (!IsActiveService)
+        {
+            return;
+        }
+
         pushAttemptUnRegister = RegisterEvent<BoxPushAttemptEvent>(OnPushAttempted);
     }
 

@@ -130,47 +130,6 @@ public interface IPlayerRelativePositionTarget
     Bounds Bounds { get; }
 }
 
-public readonly struct PlayerRelativePositionState
-{
-    public readonly bool PlayerAbove;
-    public readonly bool PlayerBelow;
-    public readonly Bounds TargetBounds;
-    public readonly Bounds PlayerBounds;
-
-    public PlayerRelativePositionState(bool playerAbove, bool playerBelow, Bounds targetBounds, Bounds playerBounds)
-    {
-        PlayerAbove = playerAbove;
-        PlayerBelow = playerBelow;
-        TargetBounds = targetBounds;
-        PlayerBounds = playerBounds;
-    }
-}
-
-public readonly struct PlayerRelativePositionEvent
-{
-    public readonly Component Target;
-    public readonly bool PlayerAbove;
-    public readonly bool PlayerBelow;
-    public readonly bool WasPlayerAbove;
-    public readonly bool WasPlayerBelow;
-    public readonly Bounds TargetBounds;
-    public readonly Bounds PlayerBounds;
-
-    public PlayerRelativePositionEvent(
-        Component target,
-        PlayerRelativePositionState current,
-        PlayerRelativePositionState previous)
-    {
-        Target = target;
-        PlayerAbove = current.PlayerAbove;
-        PlayerBelow = current.PlayerBelow;
-        WasPlayerAbove = previous.PlayerAbove;
-        WasPlayerBelow = previous.PlayerBelow;
-        TargetBounds = current.TargetBounds;
-        PlayerBounds = current.PlayerBounds;
-    }
-}
-
 public readonly struct PressurePlateStateEvent
 {
     public readonly PressurePlate PressurePlate;
@@ -189,29 +148,67 @@ public abstract class ServiceBase : MonoBehaviour
 {
     private static readonly Dictionary<Type, ServiceBase> Services = new Dictionary<Type, ServiceBase>();
 
+    protected bool IsActiveService { get; private set; }
+
     public static T Get<T>() where T : ServiceBase
     {
         ServiceBase service;
-        if (Services.TryGetValue(typeof(T), out service))
+        if (Services.TryGetValue(typeof(T), out service) && service != null)
         {
             return service as T;
         }
 
-        return FindObjectOfType<T>();
+        GameObject serviceObject = new GameObject($"Service.{typeof(T).Name}");
+        return serviceObject.AddComponent<T>();
+    }
+
+    public static bool TryGet<T>(out T service) where T : ServiceBase
+    {
+        service = null;
+        ServiceBase existing;
+        if (!Services.TryGetValue(typeof(T), out existing) || existing == null)
+        {
+            return false;
+        }
+
+        service = existing as T;
+        return service != null;
     }
 
     protected virtual void Awake()
     {
-        Services[GetType()] = this;
+        Type serviceType = GetType();
+        ServiceBase existing;
+        if (Services.TryGetValue(serviceType, out existing) && existing != null && existing != this)
+        {
+            Destroy(this);
+            return;
+        }
+
+        IsActiveService = true;
+        Services[serviceType] = this;
+        if (transform.parent != null)
+        {
+            transform.SetParent(null);
+        }
+
+        DontDestroyOnLoad(gameObject);
     }
 
     protected virtual void OnDestroy()
     {
+        if (!IsActiveService)
+        {
+            return;
+        }
+
         ServiceBase service;
         if (Services.TryGetValue(GetType(), out service) && service == this)
         {
             Services.Remove(GetType());
         }
+
+        IsActiveService = false;
     }
 
     protected IUnRegister RegisterEvent<TEvent>(Action<TEvent> onEvent)

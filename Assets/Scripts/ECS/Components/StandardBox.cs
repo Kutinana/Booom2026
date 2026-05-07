@@ -5,7 +5,7 @@ using UnityEngine;
 using UnityEngine.SceneManagement;
 
 [DisallowMultipleComponent]
-public class StandardBox : MonoBehaviour, IPlayerRelativePositionTarget
+public class StandardBox : MonoBehaviour
 {
     [Header("Grid")]
     [SerializeField] private Vector3 cellOffset = new Vector3(0.5f, 0.5f, 0f);
@@ -42,7 +42,7 @@ public class StandardBox : MonoBehaviour, IPlayerRelativePositionTarget
     private Collider2D _collider2D;
     private readonly Queue<Transform> bfsQueue = new Queue<Transform>(32);
 
-    private void Awake()
+    protected virtual void Awake()
     {
         body3D = GetComponent<Rigidbody>();
         body2D = GetComponent<Rigidbody2D>();
@@ -60,21 +60,17 @@ public class StandardBox : MonoBehaviour, IPlayerRelativePositionTarget
             body2D.gravityScale = 0f;
             body2D.bodyType = RigidbodyType2D.Kinematic;
         }
-    }
 
-    private void Start()
-    {
         grid = FindSceneGrid();
-        SnapToGrid();
         RegisterToServices();
     }
 
-    private void OnEnable()
+    protected virtual void Start()
     {
-        RegisterToServices();
+        SnapToGrid();
     }
 
-    private void OnDisable()
+    protected virtual void OnDestroy()
     {
         UnRegisterFromServices();
     }
@@ -153,14 +149,19 @@ public class StandardBox : MonoBehaviour, IPlayerRelativePositionTarget
     {
         ServiceBase.Get<PushableBoxService>()?.Register(this);
         ServiceBase.Get<PhysicalBoxService>()?.Register(this);
-        ServiceBase.Get<PlayerRelativePositionService>()?.Register(this);
     }
 
     private void UnRegisterFromServices()
     {
-        ServiceBase.Get<PushableBoxService>()?.UnRegister(this);
-        ServiceBase.Get<PhysicalBoxService>()?.UnRegister(this);
-        ServiceBase.Get<PlayerRelativePositionService>()?.UnRegister(this);
+        if (ServiceBase.TryGet(out PushableBoxService pushableBoxService))
+        {
+            pushableBoxService.UnRegister(this);
+        }
+
+        if (ServiceBase.TryGet(out PhysicalBoxService physicalBoxService))
+        {
+            physicalBoxService.UnRegister(this);
+        }
     }
 
     private void SnapToGrid()

@@ -79,6 +79,7 @@ public partial class PlayerController : MonoBehaviour
         body2D = GetComponent<Rigidbody2D>();
         m_Collider3D = GetComponent<Collider>();
         m_Collider2D = GetComponent<Collider2D>();
+        ServiceBase.Get<PlayerService>()?.Register(this);
 
         if (body3D != null)
         {
@@ -90,6 +91,14 @@ public partial class PlayerController : MonoBehaviour
         {
             body2D.gravityScale = 0f;
             body2D.bodyType = RigidbodyType2D.Kinematic;
+        }
+    }
+
+    private void OnDestroy()
+    {
+        if (ServiceBase.TryGet(out PlayerService playerService))
+        {
+            playerService.UnRegister(this);
         }
     }
 

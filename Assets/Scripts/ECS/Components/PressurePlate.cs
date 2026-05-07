@@ -24,50 +24,23 @@ public class PressurePlate : MonoBehaviour, IPlayerRelativePositionTarget
 
     private Collider _collider3D;
     private Collider2D _collider2D;
-    private IUnRegister playerPositionUnRegister;
 
     private void Awake()
     {
         _collider3D = GetComponent<Collider>();
         _collider2D = GetComponent<Collider2D>();
+        ServiceBase.Get<PressurePlateService>()?.Register(this);
     }
 
-    private void OnEnable()
+    private void OnDestroy()
     {
-        ServiceBase.Get<PlayerRelativePositionService>()?.Register(this);
-        playerPositionUnRegister?.UnRegister();
-        playerPositionUnRegister = TypeEventSystem.Global.Register<PlayerRelativePositionEvent>(OnPlayerPositionChanged);
-    }
-
-    private void OnDisable()
-    {
-        playerPositionUnRegister?.UnRegister();
-        playerPositionUnRegister = null;
-        ServiceBase.Get<PlayerRelativePositionService>()?.UnRegister(this);
-    }
-
-    private void Start()
-    {
-        RefreshPressedState();
-    }
-
-    private void OnPlayerPositionChanged(PlayerRelativePositionEvent e)
-    {
-        if (e.Target != this)
+        if (ServiceBase.TryGet(out PressurePlateService pressurePlateService))
         {
-            return;
+            pressurePlateService.UnRegister(this);
         }
-
-        SetPressed(e.PlayerAbove);
     }
 
-    private void RefreshPressedState()
-    {
-        PlayerRelativePositionService service = ServiceBase.Get<PlayerRelativePositionService>();
-        SetPressed(service != null && service.IsPlayerAbove(this));
-    }
-
-    private void SetPressed(bool pressed)
+    public void SetPressed(bool pressed)
     {
         if (IsPressed == pressed)
         {
