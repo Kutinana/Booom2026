@@ -37,7 +37,6 @@ public partial class PlayerController : MonoBehaviour, ISceneMovableItem
     [SerializeField] private LayerMask collisionMask = ~0;
     [SerializeField] private float skinWidth = 0.02f;
     [SerializeField, Min(2)] private int raysPerSide = 2;
-    [SerializeField, Range(0f, 1f)] private float minGroundSupportFraction = 0.2f;
 
     [Header("Push")]
     [SerializeField, Min(0f)] private float pushHoldThreshold = 0.12f;
@@ -219,12 +218,11 @@ public partial class PlayerController : MonoBehaviour, ISceneMovableItem
 
     private void RefreshContacts()
     {
-        float fac = 2f;
         contacts = default;
-        contacts.downBlocked = Cast(Vector3.down, skinWidth * fac, out RayHit downHit);
-        contacts.upBlocked = Cast(Vector3.up, skinWidth * fac, out RayHit upHit);
-        contacts.leftBlocked = Cast(Vector3.left, skinWidth * fac, out RayHit leftHit);
-        contacts.rightBlocked = Cast(Vector3.right, skinWidth * fac, out RayHit rightHit);
+        contacts.downBlocked = Cast(Vector3.down, skinWidth * 2f, out RayHit downHit);
+        contacts.upBlocked = Cast(Vector3.up, skinWidth * 2f, out RayHit upHit);
+        contacts.leftBlocked = Cast(Vector3.left, skinWidth * 2f, out RayHit leftHit);
+        contacts.rightBlocked = Cast(Vector3.right, skinWidth * 2f, out RayHit rightHit);
         contacts.grounded = contacts.downBlocked;
         contacts.downTag = downHit.tag;
         contacts.upTag = upHit.tag;
@@ -508,8 +506,7 @@ public partial class PlayerController : MonoBehaviour, ISceneMovableItem
         }
 
         float tolerance = Mathf.Max(platformLandingTolerance, skinWidth * 2f);
-        return playerBounds.min.y >= otherBounds.max.y - tolerance &&
-            HasMinimumGroundSupport(playerBounds, otherBounds);
+        return playerBounds.min.y >= otherBounds.max.y - tolerance;
     }
 
     private Vector3 CalculateAabbSeparation(Bounds playerBounds, Bounds otherBounds, Vector3 movedDelta)
@@ -526,13 +523,6 @@ public partial class PlayerController : MonoBehaviour, ISceneMovableItem
 
         if (Mathf.Abs(movedDelta.y) > 0f)
         {
-            if (movedDelta.y < 0f && !HasMinimumGroundSupport(playerBounds, otherBounds))
-            {
-                return Mathf.Abs(moveLeft) < Mathf.Abs(moveRight)
-                    ? new Vector3(moveLeft, 0f, 0f)
-                    : new Vector3(moveRight, 0f, 0f);
-            }
-
             return new Vector3(0f, movedDelta.y > 0f ? moveDown : moveUp, 0f);
         }
 
@@ -544,18 +534,6 @@ public partial class PlayerController : MonoBehaviour, ISceneMovableItem
             : new Vector3(0f, moveUp, 0f);
 
         return xCorrection.sqrMagnitude < yCorrection.sqrMagnitude ? xCorrection : yCorrection;
-    }
-
-    private bool HasMinimumGroundSupport(Bounds playerBounds, Bounds otherBounds)
-    {
-        float overlap = GetHorizontalOverlap(playerBounds, otherBounds);
-        float required = Mathf.Max(skinWidth * 2f, playerBounds.size.x * minGroundSupportFraction);
-        return overlap >= required;
-    }
-
-    private static float GetHorizontalOverlap(Bounds a, Bounds b)
-    {
-        return Mathf.Max(0f, Mathf.Min(a.max.x, b.max.x) - Mathf.Max(a.min.x, b.min.x));
     }
 
     private static bool OverlapsXY(Bounds a, Bounds b)
@@ -651,7 +629,6 @@ public partial class PlayerController : MonoBehaviour, ISceneMovableItem
                     !hit2D.collider.isTrigger &&
                     hit2D.collider != m_Collider2D &&
                     !IsWalkableTopSideContact(bounds, hit2D.collider.bounds, direction) &&
-                    HasRequiredSupportForContact(bounds, hit2D.collider.bounds, direction) &&
                     ShouldCollideWithPlatform(platform, hit2D.point.y, bounds, hit2D.normal, direction) &&
                     IsBlockingAxisNormal(hit2D.normal, direction) &&
                     hit2D.distance < bestDistance)
@@ -672,7 +649,6 @@ public partial class PlayerController : MonoBehaviour, ISceneMovableItem
                 if (hit3D.collider != null &&
                     hit3D.collider != m_Collider3D &&
                     !IsWalkableTopSideContact(bounds, hit3D.collider.bounds, direction) &&
-                    HasRequiredSupportForContact(bounds, hit3D.collider.bounds, direction) &&
                     ShouldCollideWithPlatform(platform, hit3D.point.y, bounds, hit3D.normal, direction) &&
                     IsBlockingAxisNormal(hit3D.normal, direction) &&
                     hit3D.distance < bestDistance)
@@ -684,11 +660,6 @@ public partial class PlayerController : MonoBehaviour, ISceneMovableItem
         }
 
         return bestDistance < float.PositiveInfinity;
-    }
-
-    private bool HasRequiredSupportForContact(Bounds playerBounds, Bounds otherBounds, Vector3 direction)
-    {
-        return direction.y >= 0f || HasMinimumGroundSupport(playerBounds, otherBounds);
     }
 
     private Bounds GetBounds()
