@@ -473,6 +473,11 @@ public partial class PlayerController : MonoBehaviour, ISceneMovableItem
             return false;
         }
 
+        if (IsWalkableTopSideContact(playerBounds, otherBounds, movedDelta))
+        {
+            return false;
+        }
+
         if (platform == null)
         {
             return true;
@@ -491,6 +496,17 @@ public partial class PlayerController : MonoBehaviour, ISceneMovableItem
         float previousBottom = playerBounds.min.y - movedDelta.y;
         float tolerance = Mathf.Max(platformLandingTolerance, skinWidth * 2f);
         return previousBottom >= otherBounds.max.y - tolerance;
+    }
+
+    private bool IsWalkableTopSideContact(Bounds playerBounds, Bounds otherBounds, Vector3 direction)
+    {
+        if (Mathf.Abs(direction.x) <= 0f || Mathf.Abs(direction.x) < Mathf.Abs(direction.y))
+        {
+            return false;
+        }
+
+        float tolerance = Mathf.Max(platformLandingTolerance, skinWidth * 2f);
+        return playerBounds.min.y >= otherBounds.max.y - tolerance;
     }
 
     private Vector3 CalculateAabbSeparation(Bounds playerBounds, Bounds otherBounds, Vector3 movedDelta)
@@ -612,6 +628,7 @@ public partial class PlayerController : MonoBehaviour, ISceneMovableItem
                 if (hit2D.collider != null &&
                     !hit2D.collider.isTrigger &&
                     hit2D.collider != m_Collider2D &&
+                    !IsWalkableTopSideContact(bounds, hit2D.collider.bounds, direction) &&
                     ShouldCollideWithPlatform(platform, hit2D.point.y, bounds, hit2D.normal, direction) &&
                     IsBlockingAxisNormal(hit2D.normal, direction) &&
                     hit2D.distance < bestDistance)
@@ -631,6 +648,7 @@ public partial class PlayerController : MonoBehaviour, ISceneMovableItem
                 GameObject platform = GetPlatformObject(hit3D.collider);
                 if (hit3D.collider != null &&
                     hit3D.collider != m_Collider3D &&
+                    !IsWalkableTopSideContact(bounds, hit3D.collider.bounds, direction) &&
                     ShouldCollideWithPlatform(platform, hit3D.point.y, bounds, hit3D.normal, direction) &&
                     IsBlockingAxisNormal(hit3D.normal, direction) &&
                     hit3D.distance < bestDistance)

@@ -232,3 +232,9 @@ MonoBehaviour:
   DefaultOpen: 0
   BarrierClosed: {fileID: 3848948580077187489}
   Animator: {fileID: 1984640666894210152}
+  AnimationDuration: 0.3
+  BlockingMask:
+    serializedVersion: 2
+    m_Bits: 2147483767
+  BlockingPadding: 0.04
+  ClearanceTimeThreshold: 0.1
