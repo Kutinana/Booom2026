@@ -332,7 +332,7 @@ public class SceneMovableInteractionService : ServiceBase
                     return false;
                 }
 
-                face = relativeDelta.x > 0f ? BoxPushDirection.Right : BoxPushDirection.Left;
+                face = GetOverlappingImpactFace(previousItem, previousPlayer, true, relativeDelta.x);
                 return true;
             }
 
@@ -341,7 +341,7 @@ public class SceneMovableInteractionService : ServiceBase
                 return false;
             }
 
-            face = relativeDelta.y > 0f ? BoxPushDirection.Up : BoxPushDirection.Down;
+            face = GetOverlappingImpactFace(previousItem, previousPlayer, false, relativeDelta.y);
             return true;
         }
 
@@ -408,6 +408,26 @@ public class SceneMovableInteractionService : ServiceBase
         }
 
         return true;
+    }
+
+    private static BoxPushDirection GetOverlappingImpactFace(Bounds previousItem, Bounds previousPlayer, bool horizontalAxis, float relativeDelta)
+    {
+        if (horizontalAxis)
+        {
+            if (Mathf.Abs(previousItem.center.x - previousPlayer.center.x) > BoundsEpsilon)
+            {
+                return previousItem.center.x < previousPlayer.center.x ? BoxPushDirection.Right : BoxPushDirection.Left;
+            }
+
+            return relativeDelta > 0f ? BoxPushDirection.Right : BoxPushDirection.Left;
+        }
+
+        if (Mathf.Abs(previousItem.center.y - previousPlayer.center.y) > BoundsEpsilon)
+        {
+            return previousItem.center.y < previousPlayer.center.y ? BoxPushDirection.Up : BoxPushDirection.Down;
+        }
+
+        return relativeDelta > 0f ? BoxPushDirection.Up : BoxPushDirection.Down;
     }
 
     private bool IsActiveItemImpact(Bounds itemBounds, Bounds playerBounds, Vector2 itemVelocity, BoxPushDirection impactFace)
