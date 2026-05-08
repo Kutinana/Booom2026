@@ -10,7 +10,7 @@ public class Barrier : MonoBehaviour
     [Header("Block Detection")]
     public LayerMask BlockingMask = ~0;
     [Min(0f)]
-    public float BlockingPadding = 0.02f;
+    public float BlockingPadding = 0.04f;
     [Min(0f)]
     public float ClearanceTimeThreshold = 0.1f;
 
