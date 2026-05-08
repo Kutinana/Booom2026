@@ -5,7 +5,7 @@ using UnityEngine;
 using UnityEngine.SceneManagement;
 
 [DisallowMultipleComponent]
-public class StandardBox : MonoBehaviour
+public class StandardBox : MonoBehaviour, ISceneMovableItem
 {
     [Header("Grid")]
     [SerializeField] private Vector3 cellOffset = new Vector3(0.5f, 0.5f, 0f);
@@ -21,6 +21,9 @@ public class StandardBox : MonoBehaviour
     public Grid Grid => grid;
     public Collider Collider3D => _collider3D;
     public Collider2D Collider2D => _collider2D;
+    public GameObject Owner => gameObject;
+    public ISceneMovableBoundsProvider BoundsProvider => sceneMovableBoundsProvider;
+    public bool IsSceneMovableActive => isActiveAndEnabled;
 
     public Bounds Bounds
     {
@@ -40,6 +43,7 @@ public class StandardBox : MonoBehaviour
     private Rigidbody2D body2D;
     private Collider _collider3D;
     private Collider2D _collider2D;
+    private ColliderSceneMovableBoundsProvider sceneMovableBoundsProvider;
     private readonly Queue<Transform> bfsQueue = new Queue<Transform>(32);
 
     protected virtual void Awake()
@@ -48,6 +52,7 @@ public class StandardBox : MonoBehaviour
         body2D = GetComponent<Rigidbody2D>();
         _collider3D = GetComponent<Collider>();
         _collider2D = GetComponent<Collider2D>();
+        sceneMovableBoundsProvider = new ColliderSceneMovableBoundsProvider(gameObject, transform, _collider3D, _collider2D);
 
         if (body3D != null)
         {
@@ -129,6 +134,12 @@ public class StandardBox : MonoBehaviour
         TypeEventSystem.Global.Send(new BoxPushRequestEvent(this, direction, pusher));
     }
 
+    public virtual bool HandlePlayerImpact(SceneMovablePlayerImpactContext context)
+    {
+        TypeEventSystem.Global.Send(new PlayerDeathEvent(context.Player, "砸死", gameObject));
+        return true;
+    }
+
     public void MoveTo(Vector3 position)
     {
         if (body2D != null)
@@ -149,6 +160,7 @@ public class StandardBox : MonoBehaviour
     {
         ServiceBase.Get<PushableBoxService>()?.Register(this);
         ServiceBase.Get<PhysicalBoxService>()?.Register(this);
+        ServiceBase.Get<SceneMovableInteractionService>()?.Register(this);
     }
 
     private void UnRegisterFromServices()
@@ -161,6 +173,11 @@ public class StandardBox : MonoBehaviour
         if (ServiceBase.TryGet(out PhysicalBoxService physicalBoxService))
         {
             physicalBoxService.UnRegister(this);
+        }
+
+        if (ServiceBase.TryGet(out SceneMovableInteractionService sceneMovableInteractionService))
+        {
+            sceneMovableInteractionService.UnRegister(this);
         }
     }
 

@@ -4,7 +4,7 @@ using UnityEngine.SceneManagement;
 using UnityEngine.Tilemaps;
 
 [DisallowMultipleComponent]
-public partial class PlayerController : MonoBehaviour
+public partial class PlayerController : MonoBehaviour, ISceneMovableItem
 {
     private const float AxisNormalBlockThreshold = 0.85f;
     private const int MaxOverlapResolveIterations = 6;
@@ -45,12 +45,16 @@ public partial class PlayerController : MonoBehaviour
     public Grid Grid => grid;
     public ContactState Contacts => contacts;
     public Vector2 Velocity => velocity;
+    public GameObject Owner => gameObject;
+    public ISceneMovableBoundsProvider BoundsProvider => sceneMovableBoundsProvider;
+    public bool IsSceneMovableActive => isActiveAndEnabled;
 
     private Grid grid;
     private Rigidbody body3D;
     private Rigidbody2D body2D;
     private Collider m_Collider3D;
     private Collider2D m_Collider2D;
+    private ColliderSceneMovableBoundsProvider sceneMovableBoundsProvider;
     private ContactState contacts;
     private Vector2 moveInput;
     private Vector2 velocity;
@@ -79,7 +83,9 @@ public partial class PlayerController : MonoBehaviour
         body2D = GetComponent<Rigidbody2D>();
         m_Collider3D = GetComponent<Collider>();
         m_Collider2D = GetComponent<Collider2D>();
+        sceneMovableBoundsProvider = new ColliderSceneMovableBoundsProvider(gameObject, transform, m_Collider3D, m_Collider2D);
         ServiceBase.Get<PlayerService>()?.Register(this);
+        ServiceBase.Get<SceneMovableInteractionService>()?.Register(this);
 
         if (body3D != null)
         {
@@ -99,6 +105,11 @@ public partial class PlayerController : MonoBehaviour
         if (ServiceBase.TryGet(out PlayerService playerService))
         {
             playerService.UnRegister(this);
+        }
+
+        if (ServiceBase.TryGet(out SceneMovableInteractionService sceneMovableInteractionService))
+        {
+            sceneMovableInteractionService.UnRegister(this);
         }
     }
 
@@ -528,7 +539,7 @@ public partial class PlayerController : MonoBehaviour
 
         bounds.Expand(-skinWidth * 2f);
 
-        int count = Mathf.Min(Mathf.Max(2, raysPerSide), 2);
+        int count = Mathf.Max(2, raysPerSide);
         float bestDistance = float.PositiveInfinity;
         bool hitAny = false;
         bool vertical = Mathf.Abs(direction.y) > 0f;
@@ -669,6 +680,11 @@ public partial class PlayerController : MonoBehaviour
         {
             transform.position = position;
         }
+    }
+
+    public bool HandlePlayerImpact(SceneMovablePlayerImpactContext context)
+    {
+        return false;
     }
 
     private void SyncColliderTransforms()

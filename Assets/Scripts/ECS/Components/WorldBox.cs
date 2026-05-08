@@ -146,14 +146,39 @@ public class WorldBox : StandardBox
     private void MovePlayerToOuterEntranceFromBlockedPush(BoxPushDirection direction)
     {
         BoxPushDirection side = Opposite(direction);
-        if (TryMovePlayerToOuterEntrance(side))
+        TeleportPlayerToOuterEntrance(side);
+    }
+
+    public override bool HandlePlayerImpact(SceneMovablePlayerImpactContext context)
+    {
+        if (CanPushFrom(context.ItemFace))
         {
-            HasLastExitDirection = true;
-            LastExitDirection = side;
-            wasPlayerInOuterBounds = false;
-            wasPlayerOutsideInnerBounds = true;
-            hasPreviousPlayerBounds = false;
+            return base.HandlePlayerImpact(context);
         }
+
+        if (!EnsurePlayer())
+        {
+            return false;
+        }
+
+        var t = TeleportPlayerToOuterEntrance(context.ItemFace);
+        Debug.Log($"Handled player impact on WorldBox. Teleported: {t}");
+        return t;
+    }
+
+    private bool TeleportPlayerToOuterEntrance(BoxPushDirection side)
+    {
+        if (!TryMovePlayerToOuterEntrance(side))
+        {
+            return false;
+        }
+
+        HasLastExitDirection = true;
+        LastExitDirection = side;
+        wasPlayerInOuterBounds = false;
+        wasPlayerOutsideInnerBounds = true;
+        hasPreviousPlayerBounds = false;
+        return true;
     }
 
     private Bounds GetPlayerBounds()
