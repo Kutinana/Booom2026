@@ -107,6 +107,7 @@ InitTestScene*.unity*
 /[Aa]ssets/[Ii]nit[Tt]est[Ss]cene*.unity*
 
 # Cursor
+.vscode/
 .cursor/
 
 #Portal tests
