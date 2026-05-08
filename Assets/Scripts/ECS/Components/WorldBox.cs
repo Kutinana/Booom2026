@@ -1,6 +1,7 @@
 using QFramework;
 using UnityEngine;
 
+[DefaultExecutionOrder(1100)]
 public class WorldBox : StandardBox
 {
     [System.Serializable]
@@ -22,6 +23,7 @@ public class WorldBox : StandardBox
     private Collider2D playerCollider2D;
     private Rigidbody playerBody3D;
     private Rigidbody2D playerBody2D;
+    private PlayerController playerController;
     private bool wasPlayerInOuterBounds;
     private bool wasPlayerOutsideInnerBounds = true;
     private bool hasPreviousPlayerBounds;
@@ -112,6 +114,7 @@ public class WorldBox : StandardBox
                 return false;
             }
 
+            playerController = player;
             GameObject playerObject = player.gameObject;
             playerTransform = playerObject.transform;
             playerCollider3D = playerObject.GetComponent<Collider>();
@@ -162,6 +165,11 @@ public class WorldBox : StandardBox
         }
 
         var t = TeleportPlayerToOuterEntrance(context.ItemFace);
+        if (t)
+        {
+            playerController?.ApplyExternalVelocity(-context.RelativeVelocity);
+        }
+
         Debug.Log($"Handled player impact on WorldBox. Teleported: {t}");
         return t;
     }

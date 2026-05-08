@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-[DefaultExecutionOrder(1000)]
+[DefaultExecutionOrder(-100)]
 public class SceneMovableInteractionService : ServiceBase
 {
     private const float BoundsEpsilon = 0.001f;

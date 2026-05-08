@@ -32,6 +32,8 @@ public partial class PlayerController : MonoBehaviour, ISceneMovableItem
     [SerializeField, Min(0.01f)] private float jumpGridHeight = 2.5f;
     [SerializeField] private float gravity = 28f;
     [SerializeField] private float maxFallSpeed = 18f;
+    [SerializeField, Min(0f)] private float retainedVelocityDrag = 18f;
+    [SerializeField, Min(0f)] private float retainedVelocityStopSpeed = 0.05f;
 
     [Header("Collision")]
     [SerializeField] private LayerMask collisionMask = ~0;
@@ -57,6 +59,7 @@ public partial class PlayerController : MonoBehaviour, ISceneMovableItem
     private ColliderSceneMovableBoundsProvider sceneMovableBoundsProvider;
     private ContactState contacts;
     private Vector2 moveInput;
+    private Vector2 baseVelocity;
     private Vector2 velocity;
     private bool jumpQueued;
     private bool jumping;
@@ -68,6 +71,9 @@ public partial class PlayerController : MonoBehaviour, ISceneMovableItem
     private BoxPushDirection heldPushDirection;
     private bool heldPushInitializedCanPush;
     private bool hasHeldPushInitialization;
+    private bool hasRetainedVelocity;
+    private Vector2 retainedVelocityAxis;
+    private float retainedVelocitySpeed;
     private float pushHoldTime;
     private float nextPushTime;
     
@@ -148,30 +154,32 @@ public partial class PlayerController : MonoBehaviour, ISceneMovableItem
         ProcessPlatformDropRequest();
 
         float dt = Time.fixedDeltaTime;
-        velocity.x = Mathf.Clamp(moveInput.x, -1f, 1f) * moveSpeed;
+        baseVelocity.x = Mathf.Clamp(moveInput.x, -1f, 1f) * moveSpeed;
 
-        if (contacts.grounded && velocity.y < 0f)
+        if (contacts.grounded && baseVelocity.y < 0f)
         {
-            velocity.y = 0f;
+            baseVelocity.y = 0f;
             jumping = false;
         }
 
         if (jumpQueued && contacts.grounded)
         {
             float height = Mathf.Max(0.01f, GetCellHeight() * jumpGridHeight);
-            velocity.y = Mathf.Sqrt(2f * gravity * height);
+            baseVelocity.y = Mathf.Sqrt(2f * gravity * height);
             jumpApexY = transform.position.y + height;
             jumping = true;
         }
 
         jumpQueued = false;
-        velocity.y = Mathf.Max(velocity.y - gravity * dt, -maxFallSpeed);
+        baseVelocity.y = Mathf.Max(baseVelocity.y - gravity * dt, -maxFallSpeed);
+        velocity = baseVelocity + TickRetainedVelocity(dt);
 
         Vector3 delta = new Vector3(velocity.x * dt, velocity.y * dt, 0f);
         if (jumping && transform.position.y + delta.y > jumpApexY)
         {
             delta.y = jumpApexY - transform.position.y;
-            velocity.y = 0f;
+            baseVelocity.y = 0f;
+            velocity.y = GetRetainedVelocity().y;
             jumping = false;
         }
 
@@ -320,11 +328,15 @@ public partial class PlayerController : MonoBehaviour, ISceneMovableItem
 
             if (Mathf.Abs(correction.x) > 0f)
             {
+                StopRetainedVelocityForCollision(movedDelta, true);
+                baseVelocity.x = 0f;
                 velocity.x = 0f;
             }
 
             if (Mathf.Abs(correction.y) > 0f)
             {
+                StopRetainedVelocityForCollision(movedDelta, false);
+                baseVelocity.y = 0f;
                 velocity.y = 0f;
                 jumping = false;
             }
@@ -703,6 +715,119 @@ public partial class PlayerController : MonoBehaviour, ISceneMovableItem
     public bool HandlePlayerImpact(SceneMovablePlayerImpactContext context)
     {
         return false;
+    }
+
+    public void ApplyExternalVelocity(Vector2 newVelocity)
+    {
+        BeginRetainedVelocity(newVelocity);
+        jumpQueued = false;
+        jumping = false;
+    }
+
+    private void BeginRetainedVelocity(Vector2 newVelocity)
+    {
+        float xSpeed = Mathf.Abs(newVelocity.x);
+        float ySpeed = Mathf.Abs(newVelocity.y);
+
+        if (xSpeed <= retainedVelocityStopSpeed && ySpeed <= retainedVelocityStopSpeed)
+        {
+            ClearRetainedVelocity();
+            return;
+        }
+
+        if (xSpeed >= ySpeed)
+        {
+            retainedVelocityAxis = newVelocity.x >= 0f ? Vector2.right : Vector2.left;
+            retainedVelocitySpeed = xSpeed;
+        }
+        else
+        {
+            retainedVelocityAxis = newVelocity.y >= 0f ? Vector2.up : Vector2.down;
+            retainedVelocitySpeed = ySpeed;
+        }
+
+        hasRetainedVelocity = retainedVelocitySpeed > retainedVelocityStopSpeed;
+    }
+
+    private Vector2 TickRetainedVelocity(float dt)
+    {
+        if (!hasRetainedVelocity || IsRetainedVelocityBlocked())
+        {
+            ClearRetainedVelocity();
+            return Vector2.zero;
+        }
+
+        retainedVelocitySpeed = Mathf.Max(0f, retainedVelocitySpeed - retainedVelocityDrag * dt);
+        if (retainedVelocitySpeed <= retainedVelocityStopSpeed)
+        {
+            ClearRetainedVelocity();
+            return Vector2.zero;
+        }
+
+        return GetRetainedVelocity();
+    }
+
+    private Vector2 GetRetainedVelocity()
+    {
+        return hasRetainedVelocity ? retainedVelocityAxis * retainedVelocitySpeed : Vector2.zero;
+    }
+
+    private bool IsRetainedVelocityBlocked()
+    {
+        if (!hasRetainedVelocity)
+        {
+            return false;
+        }
+
+        if (retainedVelocityAxis.x > 0f)
+        {
+            return contacts.rightBlocked;
+        }
+
+        if (retainedVelocityAxis.x < 0f)
+        {
+            return contacts.leftBlocked;
+        }
+
+        if (retainedVelocityAxis.y > 0f)
+        {
+            return contacts.upBlocked;
+        }
+
+        if (retainedVelocityAxis.y < 0f)
+        {
+            return contacts.downBlocked;
+        }
+
+        return false;
+    }
+
+    private void StopRetainedVelocityForCollision(Vector3 movedDelta, bool horizontal)
+    {
+        if (!hasRetainedVelocity)
+        {
+            return;
+        }
+
+        bool retainedIsHorizontal = Mathf.Abs(retainedVelocityAxis.x) > 0f;
+        if (retainedIsHorizontal != horizontal)
+        {
+            return;
+        }
+
+        float movedAxis = horizontal ? movedDelta.x : movedDelta.y;
+        float retainedAxis = horizontal ? retainedVelocityAxis.x : retainedVelocityAxis.y;
+        if (movedAxis * retainedAxis > 0f)
+        {
+            ClearRetainedVelocity();
+        }
+    }
+
+    private void ClearRetainedVelocity()
+    {
+        hasRetainedVelocity = false;
+        retainedVelocityAxis = Vector2.zero;
+        retainedVelocitySpeed = 0f;
     }
 
     private void SyncColliderTransforms()
