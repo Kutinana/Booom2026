@@ -36,10 +36,10 @@ public class PortalRenderController : MonoBehaviour
 
     public void InitializePortalFeature()
     {
-        if (portalPass != null)
-        {
-            return;
-        }
+        // No early-exit on portalPass: PortalRenderFeature.settings is shared across all cameras
+        // that use the same renderer asset, so external paths (e.g. PortalRenderControllerBootstrap
+        // after an additive scene load) can replace it with a default-constructed instance. We must
+        // be able to re-apply our serialized settings on every Awake/OnEnable/scene-event tick.
 
         Camera camera = GetComponent<Camera>();
         if (camera == null)
@@ -65,15 +65,13 @@ public class PortalRenderController : MonoBehaviour
             return;
         }
 
-        portalFeature.ApplySettings(settings);
-
         if (portalFeature.pass == null)
         {
             portalFeature.Create();
         }
 
-        portalPass = portalFeature.pass;
         portalFeature.ApplySettings(settings);
+        portalPass = portalFeature.pass;
     }
 
     private void UnregisterPortalFeature()
