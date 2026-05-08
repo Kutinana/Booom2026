@@ -1,7 +1,8 @@
+using QFramework;
 using UnityEngine;
 
 [DisallowMultipleComponent]
-public class ServicesBootstrapper : MonoBehaviour
+public class ServicesBootstrapper : MonoSingleton<ServicesBootstrapper>
 {
     private void Awake()
     {
