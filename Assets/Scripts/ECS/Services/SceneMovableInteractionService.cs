@@ -65,6 +65,16 @@ public class SceneMovableInteractionService : ServiceBase
         return results.Count;
     }
 
+    public void ApplyImpactCooldown(ISceneMovableItem item)
+    {
+        if (item == null)
+        {
+            return;
+        }
+
+        nextImpactTimes[item] = Time.time + impactCooldown;
+    }
+
     protected override void OnDestroy()
     {
         items.Clear();

@@ -10,6 +10,9 @@ public class PhysicalBoxService : ServiceBase<StandardBox>
     [SerializeField] private float maxFallSpeed = 18f;
     [SerializeField] private float skinWidth = 0.02f;
     [SerializeField, Min(2)] private int raysPerSide = 3;
+    [SerializeField, Min(0f)] private float impactContactTolerance = 0.04f;
+    [SerializeField, Min(0f)] private float minPlayerImpactSpeed = 0.1f;
+    [SerializeField, Range(0f, 1f)] private float minPlayerImpactFaceOverlapFraction = 0.25f;
 
     private readonly Dictionary<StandardBox, float> fallSpeeds = new Dictionary<StandardBox, float>();
     private readonly RaycastHit2D[] hits2D = new RaycastHit2D[8];
@@ -93,6 +96,11 @@ public class PhysicalBoxService : ServiceBase<StandardBox>
         float allowedContactDistance = distance + skinWidth;
         if (Cast(box, axis, allowedContactDistance, out RayHit hit) && hit.Distance < allowedContactDistance - PushContactTolerance)
         {
+            if (hit.Player != null)
+            {
+                TryHandlePlayerImpact(box, from, from + axis * distance, Time.fixedDeltaTime);
+            }
+
             SendEvent(new BoxPhysicalPushEvent(box, direction, false, false, from, from));
             return false;
         }
@@ -107,6 +115,7 @@ public class PhysicalBoxService : ServiceBase<StandardBox>
             to.z = from.z;
         }
 
+        TryHandlePlayerImpact(box, from, to, dt: Time.fixedDeltaTime);
         box.MoveTo(to);
         SendEvent(new BoxPhysicalPushEvent(box, direction, true, false, from, to));
         return true;
@@ -133,8 +142,17 @@ public class PhysicalBoxService : ServiceBase<StandardBox>
 
         float distance = fallSpeed * dt;
         Vector3 from = box.transform.position;
-        float resolved = ResolveVertical(box, distance);
+        float resolved = ResolveVertical(box, distance, out RayHit verticalHit);
         Vector3 to = from + Vector3.down * resolved;
+        if (verticalHit.Player != null)
+        {
+            TryHandlePlayerImpact(box, from, from + Vector3.down * distance, dt);
+        }
+        else
+        {
+            TryHandlePlayerImpact(box, from, to, dt);
+        }
+
         box.MoveTo(to);
 
         bool landed = resolved < distance;
@@ -151,19 +169,250 @@ public class PhysicalBoxService : ServiceBase<StandardBox>
         return Cast(box, Vector3.down, skinWidth * 2f, out RayHit hit);
     }
 
-    private float ResolveVertical(StandardBox box, float distance)
+    private float ResolveVertical(StandardBox box, float distance, out RayHit hit)
     {
+        hit = default;
         if (distance <= 0f)
         {
             return 0f;
         }
 
-        if (Cast(box, Vector3.down, distance + skinWidth, out RayHit hit))
+        if (Cast(box, Vector3.down, distance + skinWidth, out hit))
         {
             return Mathf.Max(0f, hit.Distance - skinWidth);
         }
 
         return distance;
+    }
+
+    private bool TryHandlePlayerImpact(StandardBox box, Vector3 from, Vector3 to, float dt)
+    {
+        Vector3 delta = to - from;
+        if (box == null || delta == Vector3.zero)
+        {
+            return false;
+        }
+
+        if (!ServiceBase.TryGet(out PlayerService playerService) || playerService.Player == null)
+        {
+            return false;
+        }
+
+        PlayerController player = playerService.Player;
+        if (box.Owner == player.gameObject)
+        {
+            return false;
+        }
+
+        Bounds previousItemBounds = box.Bounds;
+        ISceneMovableBoundsProvider playerBoundsProvider = player.BoundsProvider;
+        if (previousItemBounds.size == Vector3.zero || playerBoundsProvider == null || !playerBoundsProvider.IsValid)
+        {
+            return false;
+        }
+
+        Bounds playerBounds = playerBoundsProvider.Bounds;
+        if (playerBounds.size == Vector3.zero)
+        {
+            return false;
+        }
+
+        if (!TryGetSweptImpactFace(previousItemBounds, playerBounds, (Vector2)delta, out BoxPushDirection impactFace))
+        {
+            return false;
+        }
+
+        Vector2 itemVelocity = (Vector2)delta / Mathf.Max(dt, Mathf.Epsilon);
+        if (!IsActivePlayerImpact(previousItemBounds, playerBounds, itemVelocity, impactFace))
+        {
+            return false;
+        }
+
+        Bounds itemBounds = previousItemBounds;
+        itemBounds.center += delta;
+        Vector2 playerVelocity = player.Velocity;
+        SceneMovablePlayerImpactContext context = new SceneMovablePlayerImpactContext(
+            box,
+            player,
+            impactFace,
+            itemVelocity - playerVelocity,
+            itemVelocity,
+            playerVelocity,
+            itemBounds,
+            playerBounds);
+
+        bool handled = box.HandlePlayerImpact(context);
+        SendEvent(new SceneMovablePlayerImpactEvent(context, handled));
+        if (ServiceBase.TryGet(out SceneMovableInteractionService sceneMovableService))
+        {
+            sceneMovableService.ApplyImpactCooldown(box);
+        }
+
+        return handled;
+    }
+
+    private bool TryGetSweptImpactFace(Bounds previousItem, Bounds playerBounds, Vector2 itemDelta, out BoxPushDirection face)
+    {
+        face = default;
+        Bounds playerTarget = playerBounds;
+        playerTarget.Expand(impactContactTolerance * 2f);
+
+        if (OverlapsXY(previousItem, playerTarget))
+        {
+            if (Mathf.Abs(itemDelta.x) >= Mathf.Abs(itemDelta.y))
+            {
+                if (Mathf.Abs(itemDelta.x) <= PushContactTolerance)
+                {
+                    return false;
+                }
+
+                face = GetOverlappingImpactFace(previousItem, playerBounds, true, itemDelta.x);
+                return true;
+            }
+
+            if (Mathf.Abs(itemDelta.y) <= PushContactTolerance)
+            {
+                return false;
+            }
+
+            face = GetOverlappingImpactFace(previousItem, playerBounds, false, itemDelta.y);
+            return true;
+        }
+
+        float xEntry;
+        float xExit;
+        if (itemDelta.x > PushContactTolerance)
+        {
+            xEntry = (playerTarget.min.x - previousItem.max.x) / itemDelta.x;
+            xExit = (playerTarget.max.x - previousItem.min.x) / itemDelta.x;
+        }
+        else if (itemDelta.x < -PushContactTolerance)
+        {
+            xEntry = (playerTarget.max.x - previousItem.min.x) / itemDelta.x;
+            xExit = (playerTarget.min.x - previousItem.max.x) / itemDelta.x;
+        }
+        else
+        {
+            if (previousItem.max.x < playerTarget.min.x || previousItem.min.x > playerTarget.max.x)
+            {
+                return false;
+            }
+
+            xEntry = float.NegativeInfinity;
+            xExit = float.PositiveInfinity;
+        }
+
+        float yEntry;
+        float yExit;
+        if (itemDelta.y > PushContactTolerance)
+        {
+            yEntry = (playerTarget.min.y - previousItem.max.y) / itemDelta.y;
+            yExit = (playerTarget.max.y - previousItem.min.y) / itemDelta.y;
+        }
+        else if (itemDelta.y < -PushContactTolerance)
+        {
+            yEntry = (playerTarget.max.y - previousItem.min.y) / itemDelta.y;
+            yExit = (playerTarget.min.y - previousItem.max.y) / itemDelta.y;
+        }
+        else
+        {
+            if (previousItem.max.y < playerTarget.min.y || previousItem.min.y > playerTarget.max.y)
+            {
+                return false;
+            }
+
+            yEntry = float.NegativeInfinity;
+            yExit = float.PositiveInfinity;
+        }
+
+        float entryTime = Mathf.Max(xEntry, yEntry);
+        float exitTime = Mathf.Min(xExit, yExit);
+        if (entryTime > exitTime || entryTime < 0f || entryTime > 1f)
+        {
+            return false;
+        }
+
+        if (xEntry > yEntry)
+        {
+            face = itemDelta.x > 0f ? BoxPushDirection.Right : BoxPushDirection.Left;
+        }
+        else
+        {
+            face = itemDelta.y > 0f ? BoxPushDirection.Up : BoxPushDirection.Down;
+        }
+
+        return true;
+    }
+
+    private static BoxPushDirection GetOverlappingImpactFace(Bounds previousItem, Bounds playerBounds, bool horizontalAxis, float itemDelta)
+    {
+        if (horizontalAxis)
+        {
+            if (Mathf.Abs(previousItem.center.x - playerBounds.center.x) > PushContactTolerance)
+            {
+                return previousItem.center.x < playerBounds.center.x ? BoxPushDirection.Right : BoxPushDirection.Left;
+            }
+
+            return itemDelta > 0f ? BoxPushDirection.Right : BoxPushDirection.Left;
+        }
+
+        if (Mathf.Abs(previousItem.center.y - playerBounds.center.y) > PushContactTolerance)
+        {
+            return previousItem.center.y < playerBounds.center.y ? BoxPushDirection.Up : BoxPushDirection.Down;
+        }
+
+        return itemDelta > 0f ? BoxPushDirection.Up : BoxPushDirection.Down;
+    }
+
+    private bool IsActivePlayerImpact(Bounds itemBounds, Bounds playerBounds, Vector2 itemVelocity, BoxPushDirection impactFace)
+    {
+        return GetImpactFaceSpeed(itemVelocity, impactFace) >= minPlayerImpactSpeed &&
+            HasMinimumImpactFaceOverlap(itemBounds, playerBounds, impactFace);
+    }
+
+    private static float GetImpactFaceSpeed(Vector2 itemVelocity, BoxPushDirection impactFace)
+    {
+        switch (impactFace)
+        {
+            case BoxPushDirection.Left:
+                return -itemVelocity.x;
+            case BoxPushDirection.Right:
+                return itemVelocity.x;
+            case BoxPushDirection.Up:
+                return itemVelocity.y;
+            case BoxPushDirection.Down:
+                return -itemVelocity.y;
+            default:
+                return 0f;
+        }
+    }
+
+    private bool HasMinimumImpactFaceOverlap(Bounds itemBounds, Bounds playerBounds, BoxPushDirection impactFace)
+    {
+        bool verticalFace = impactFace == BoxPushDirection.Up || impactFace == BoxPushDirection.Down;
+        float overlap = verticalFace ? GetHorizontalOverlap(itemBounds, playerBounds) : GetVerticalOverlap(itemBounds, playerBounds);
+        float itemSpan = verticalFace ? itemBounds.size.x : itemBounds.size.y;
+        float playerSpan = verticalFace ? playerBounds.size.x : playerBounds.size.y;
+        float required = Mathf.Max(PushContactTolerance, Mathf.Min(itemSpan, playerSpan) * minPlayerImpactFaceOverlapFraction);
+        return overlap >= required;
+    }
+
+    private static float GetHorizontalOverlap(Bounds a, Bounds b)
+    {
+        return Mathf.Max(0f, Mathf.Min(a.max.x, b.max.x) - Mathf.Max(a.min.x, b.min.x));
+    }
+
+    private static float GetVerticalOverlap(Bounds a, Bounds b)
+    {
+        return Mathf.Max(0f, Mathf.Min(a.max.y, b.max.y) - Mathf.Max(a.min.y, b.min.y));
+    }
+
+    private static bool OverlapsXY(Bounds a, Bounds b)
+    {
+        return a.min.x < b.max.x &&
+            a.max.x > b.min.x &&
+            a.min.y < b.max.y &&
+            a.max.y > b.min.y;
     }
 
     private bool Cast(StandardBox box, Vector3 direction, float distance, out RayHit bestHit)
@@ -222,7 +471,7 @@ public class PhysicalBoxService : ServiceBase<StandardBox>
                 if (hit2D.collider != null && !hit2D.collider.isTrigger && hit2D.collider != boxCollider2D && hit2D.distance < bestDistance)
                 {
                     bestDistance = hit2D.distance;
-                    hit = new RayHit(bestDistance);
+                    hit = new RayHit(bestDistance, hit2D.collider.GetComponentInParent<PlayerController>());
                 }
             }
         }
@@ -237,7 +486,7 @@ public class PhysicalBoxService : ServiceBase<StandardBox>
                 if (hit3D.collider != null && hit3D.collider != boxCollider3D && hit3D.distance < bestDistance)
                 {
                     bestDistance = hit3D.distance;
-                    hit = new RayHit(bestDistance);
+                    hit = new RayHit(bestDistance, hit3D.collider.GetComponentInParent<PlayerController>());
                 }
             }
         }
@@ -259,10 +508,12 @@ public class PhysicalBoxService : ServiceBase<StandardBox>
     private readonly struct RayHit
     {
         public readonly float Distance;
+        public readonly PlayerController Player;
 
-        public RayHit(float distance)
+        public RayHit(float distance, PlayerController player)
         {
             Distance = distance;
+            Player = player;
         }
     }
 }
