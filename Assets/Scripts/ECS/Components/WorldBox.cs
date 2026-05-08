@@ -65,19 +65,19 @@ public class WorldBox : StandardBox
         bool playerInOuterBounds = IntersectsXY(outerBounds, playerBounds);
         bool playerOverlapsInnerBounds = innerBounds.size != Vector3.zero && OverlapsXY(innerBounds, playerBounds);
 
-        if (playerOverlapsInnerBounds && wasPlayerOutsideInnerBounds)
-        {
-            BoxPushDirection t_direction = GetInnerEntryDirection(innerBounds, hasPreviousPlayerBounds ? previousPlayerBounds : playerBounds);
-            if (TryMovePlayerToOuterEntrance(t_direction))
-            {
-                HasLastExitDirection = true;
-                LastExitDirection = t_direction;
-                wasPlayerInOuterBounds = false;
-                wasPlayerOutsideInnerBounds = true;
-                hasPreviousPlayerBounds = false;
-                return;
-            }
-        }
+        // if (playerOverlapsInnerBounds && wasPlayerOutsideInnerBounds)
+        // {
+        //     BoxPushDirection t_direction = GetInnerEntryDirection(innerBounds, hasPreviousPlayerBounds ? previousPlayerBounds : playerBounds);
+        //     if (TryMovePlayerToOuterEntrance(t_direction))
+        //     {
+        //         HasLastExitDirection = true;
+        //         LastExitDirection = t_direction;
+        //         wasPlayerInOuterBounds = false;
+        //         wasPlayerOutsideInnerBounds = true;
+        //         hasPreviousPlayerBounds = false;
+        //         return;
+        //     }
+        // }
 
         if (playerInOuterBounds)
         {
