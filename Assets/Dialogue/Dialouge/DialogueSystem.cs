@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
+using Kuchinashi.Utils.Progressable;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -15,6 +16,7 @@ public class DialogueSystem : MonoBehaviour
     [Header("UI")]
     public TMP_Text textBox;
     public GameObject dialoguePanel;
+    public ScaleProgressable progressable;
 
     [Header("Audio")]
     public AudioClip typingClip;
@@ -34,6 +36,10 @@ public class DialogueSystem : MonoBehaviour
     [Header("订单选择相关")]
     public System.Action onAccept;
     public System.Action onReject;
+
+    [Header("Editor 测试")]
+    [Tooltip("在 Inspector 中选择一个 DialogueData，进入 Play Mode 后点击按钮即可播放")]
+    public DialogueData editorTestData;
 
     void Awake()
     {
@@ -56,13 +62,12 @@ public class DialogueSystem : MonoBehaviour
     // 开始对话
     public void StartDialogue(DialogueData data)
     {
-        dialoguePanel.SetActive(true);
+        // dialoguePanel.SetActive(true);
+        progressable.LinearTransition(0.1f);
         dialogueQueue.Clear();
 
         foreach (var line in data.lines)
         {
-           
-
             dialogueQueue.Enqueue(line);
         }
 
@@ -131,7 +136,9 @@ public class DialogueSystem : MonoBehaviour
     void EndDialogue()
     {
         isPlaying = false;
-        dialoguePanel.SetActive(false);
+        // dialoguePanel.SetActive(false);
+
+        progressable.InverseLinearTransition(0.1f);
     }
 
     

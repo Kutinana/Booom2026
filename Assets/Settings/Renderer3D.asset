@@ -17,6 +17,8 @@ MonoBehaviour:
     mesh: {fileID: 0}
     material: {fileID: 0}
     transform: {fileID: 0}
+    outerTransform: {fileID: 0}
+    maxDepth: 2
 --- !u!114 &11400000
 MonoBehaviour:
   m_ObjectHideFlags: 0
