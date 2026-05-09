@@ -4,6 +4,7 @@ using UnityEngine.Events;
 using UnityEngine.Playables;
 using Kuchinashi.DataSystem;
 using QFramework;
+using Cysharp.Threading.Tasks;
 
 /// <summary>
 /// 教程场景：整段对话期间暂停 Timeline，对话结束后恢复。
@@ -20,6 +21,7 @@ public class TutorialManager : MonoBehaviour
     [SerializeField] private PlayableAsset tutorial;
     [SerializeField] private PlayableAsset afterTutorial;
     [SerializeField] private PlayableAsset boxStuckTutorial;
+    [SerializeField] private GameObject tutorialStar;
 
     bool timelinePausedForDialogue;
     bool tapSubscribed;
@@ -36,13 +38,22 @@ public class TutorialManager : MonoBehaviour
         }
 
         if (UserConfig.TryRead<bool>("HasAlreadyPlayedAfterTutorial", out bool flag) && flag)
+        {
             return;
+        }
         else if (UserConfig.TryRead<bool>("HasAlreadyPlayedTutorial", out var a) && a
         && UserConfig.TryRead<bool>("HasAlreadyStartedAfterTutorial", out var b) && b)
+        {
             StartTutorial(afterTutorial);
+        }
         else if (!UserConfig.TryRead<bool>("HasAlreadyPlayedTutorial", out var c) || !c)
         {
             StartTutorial(tutorial);
+            TypeEventSystem.Global.Register<CollectiveStarCollectedEvent>(async e =>
+            {
+                await UniTask.Delay(1000);
+                StartTutorial(afterTutorial);
+            }).UnRegisterWhenGameObjectDestroyed(tutorialStar);
         }
 
         TypeEventSystem.Global.Register<OnTutorialBoxStuckedEvent>(e =>
