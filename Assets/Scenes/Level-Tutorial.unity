@@ -9640,7 +9640,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   dialoguePanelRect: {fileID: 1363794724}
   padding: {x: 0, y: 200}
-  minWidth: 200
+  minWidth: 300
   maxWidth: 500
   minHeight: 100
   maxHeight: 400
@@ -9653,6 +9653,7 @@ MonoBehaviour:
   optionArea: {fileID: 911337297}
   optionGap: 60
   optionAreaPadding: 25
+  dialogueAnimPlayer: {fileID: 1822326671}
   editorTestData: {fileID: 0}
 --- !u!114 &436145073
 MonoBehaviour:
@@ -9670,6 +9671,7 @@ MonoBehaviour:
     m_Signals:
     - {fileID: 11400000, guid: 31de078e6d2f2ea46bb324759a2037f5, type: 2}
     - {fileID: 11400000, guid: fc36d15448aac7c4297e2d15ae325c44, type: 2}
+    - {fileID: 11400000, guid: 1761d422ec095c445aee1a75c5c216c3, type: 2}
     m_Events:
     - m_PersistentCalls:
         m_Calls:
@@ -9699,6 +9701,20 @@ MonoBehaviour:
             m_StringArgument: 
             m_BoolArgument: 0
           m_CallState: 2
+    - m_PersistentCalls:
+        m_Calls:
+        - m_Target: {fileID: 436145072}
+          m_TargetAssemblyTypeName: DialogueSystem, Assembly-CSharp
+          m_MethodName: StartDialogue
+          m_Mode: 2
+          m_Arguments:
+            m_ObjectArgument: {fileID: 11400000, guid: 6c716505de14468438f9f969e8743050, type: 2}
+            m_ObjectArgumentAssemblyTypeName: DialogueData, Assembly-CSharp
+            m_IntArgument: 0
+            m_FloatArgument: 0
+            m_StringArgument: 
+            m_BoolArgument: 0
+          m_CallState: 2
 --- !u!320 &436145074
 PlayableDirector:
   m_ObjectHideFlags: 0
@@ -9708,7 +9724,7 @@ PlayableDirector:
   m_GameObject: {fileID: 436145067}
   m_Enabled: 1
   serializedVersion: 3
-  m_PlayableAsset: {fileID: 11400000, guid: 3a9d73995ea6a7b458ea90d1010605ac, type: 2}
+  m_PlayableAsset: {fileID: 11400000, guid: ea929d097404d33478ca07408cc11b35, type: 2}
   m_InitialState: 0
   m_WrapMode: 2
   m_DirectorUpdateMode: 1
@@ -9722,6 +9738,12 @@ PlayableDirector:
     value: {fileID: 436145073}
   - key: {fileID: 1707999497377442875, guid: 3a9d73995ea6a7b458ea90d1010605ac, type: 2}
     value: {fileID: 106017738}
+  - key: {fileID: -8783357393479532805, guid: ea929d097404d33478ca07408cc11b35, type: 2}
+    value: {fileID: 1822326676}
+  - key: {fileID: 3090085061581974943, guid: ea929d097404d33478ca07408cc11b35, type: 2}
+    value: {fileID: 907838668}
+  - key: {fileID: -5288557765995491112, guid: ea929d097404d33478ca07408cc11b35, type: 2}
+    value: {fileID: 436145073}
   m_ExposedReferences:
     m_References:
     - 64d651cff3861314aa6e3b46d8bbee0c: {fileID: 907838668}
@@ -9759,6 +9781,18 @@ MonoBehaviour:
         m_CallState: 2
       - m_Target: {fileID: 436145075}
         m_TargetAssemblyTypeName: TutorialManager, Assembly-CSharp
+        m_MethodName: UnsubscribePlayerTap
+        m_Mode: 1
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
+      - m_Target: {fileID: 436145075}
+        m_TargetAssemblyTypeName: TutorialManager, Assembly-CSharp
         m_MethodName: Resume
         m_Mode: 1
         m_Arguments:
@@ -9769,6 +9803,8 @@ MonoBehaviour:
           m_StringArgument: 
           m_BoolArgument: 0
         m_CallState: 2
+  tutorial: {fileID: 11400000, guid: 3a9d73995ea6a7b458ea90d1010605ac, type: 2}
+  afterTutorial: {fileID: 11400000, guid: ea929d097404d33478ca07408cc11b35, type: 2}
 --- !u!1 &469630864
 GameObject:
   m_ObjectHideFlags: 0
@@ -12520,7 +12556,7 @@ RectTransform:
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 1, y: 1}
   m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: -100, y: -40}
+  m_SizeDelta: {x: -60, y: -40}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1164430525
 MonoBehaviour:
@@ -14670,6 +14706,7 @@ MonoBehaviour:
     - {fileID: 11400000, guid: fc36d15448aac7c4297e2d15ae325c44, type: 2}
     - {fileID: 11400000, guid: 787d59038b08e7749be11e5051c7b8a8, type: 2}
     - {fileID: 11400000, guid: 266ac5aee26d1b248b3f17d73cad692d, type: 2}
+    - {fileID: 11400000, guid: e8378095138402349857595ab8ae651c, type: 2}
     m_Events:
     - m_PersistentCalls:
         m_Calls:
@@ -14725,6 +14762,20 @@ MonoBehaviour:
             m_IntArgument: 0
             m_FloatArgument: 0
             m_StringArgument: Tap
+            m_BoolArgument: 0
+          m_CallState: 2
+    - m_PersistentCalls:
+        m_Calls:
+        - m_Target: {fileID: 1822326671}
+          m_TargetAssemblyTypeName: PlayerController, Assembly-CSharp
+          m_MethodName: SwitchAnimationTo
+          m_Mode: 5
+          m_Arguments:
+            m_ObjectArgument: {fileID: 0}
+            m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+            m_IntArgument: 0
+            m_FloatArgument: 0
+            m_StringArgument: Happy
             m_BoolArgument: 0
           m_CallState: 2
 --- !u!114 &1822326677

@@ -43,6 +43,10 @@ public class DialogueSystem : MonoBehaviour
     [SerializeField] private float optionGap = 12f;
     [SerializeField] private float optionAreaPadding = 25f;
 
+    [Header("台词触发的角色动画")]
+    [Tooltip("在句首或句中写 <anim=状态名>，本行开始展示前会调用 SwitchAnimationTo；可为空。")]
+    [SerializeField] private PlayerController dialogueAnimPlayer;
+
     [Header("Editor Test")]
     public DialogueData editorTestData;
 
@@ -143,6 +147,17 @@ public class DialogueSystem : MonoBehaviour
 
         activeLine = dialogueQueue.Dequeue();
         string line = activeLine.text;
+
+        if (dialogueAnimPlayer != null)
+        {
+            while (DialogueTagParser.TryParseAnimTag(ref line, out string animState))
+                dialogueAnimPlayer.SwitchAnimationTo(animState);
+        }
+        else
+        {
+            while (DialogueTagParser.TryParseAnimTag(ref line, out _)) { }
+        }
+
         autoAdvance = DialogueTagParser.TryParseAutoTag(ref line, out autoDelay);
 
         activeLineHasOptions =

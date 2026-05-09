@@ -2,6 +2,7 @@ using Kuchinashi.Utils.Progressable;
 using UnityEngine;
 using UnityEngine.Events;
 using UnityEngine.Playables;
+using Kuchinashi.DataSystem;
 
 /// <summary>
 /// 教程场景：整段对话期间暂停 Timeline，对话结束后恢复。
@@ -13,6 +14,10 @@ public class TutorialManager : MonoBehaviour
     [SerializeField] private Progressable blackEdges;
     [SerializeField] PlayerController player;
     [SerializeField] UnityEvent onPlayerTapped;
+
+    [Header("Tutorials")]
+    [SerializeField] private PlayableAsset tutorial;
+    [SerializeField] private PlayableAsset afterTutorial;
 
     bool timelinePausedForDialogue;
     bool tapSubscribed;
@@ -28,13 +33,29 @@ public class TutorialManager : MonoBehaviour
             dialogueSystem.OnDialogueEnded += OnDialogueEnded;
         }
 
-        StartTutorial();
+        if (UserConfig.TryRead<bool>("HasAlreadyPlayedAfterTutorial", out bool flag) && flag)
+            return;
+        else if (UserConfig.TryRead<bool>("HasAlreadyPlayedTutorial", out var a) && a
+        && UserConfig.TryRead<bool>("HasAlreadyStartedAfterTutorial", out var b) && b)
+            StartTutorial(afterTutorial);
+        else
+        {
+            StartTutorial(tutorial);
+        }
     }
 
     void OnDisable()
     {
         if (timelineDirector != null)
             timelineDirector.stopped -= OnTimelineDirectorStopped;
+
+        if (dialogueSystem != null)
+        {
+            dialogueSystem.OnDialogueStarted -= OnDialogueStarted;
+            dialogueSystem.OnDialogueEnded -= OnDialogueEnded;
+        }
+
+        UnsubscribePlayerTap();
     }
 
     void OnTimelineDirectorStopped(PlayableDirector director)
@@ -47,26 +68,36 @@ public class TutorialManager : MonoBehaviour
 
     void OnTutorialFinished()
     {
-        if (dialogueSystem != null)
-        {
-            dialogueSystem.OnDialogueStarted -= OnDialogueStarted;
-            dialogueSystem.OnDialogueEnded -= OnDialogueEnded;
-        }
-
-        UnsubscribePlayerTap();
         timelinePausedForDialogue = false;
 
         if (player != null)
             player.MovementInputDisabled = false;
+
+        if (timelineDirector.playableAsset is PlayableAsset tutorialAsset)
+        {
+            UserConfig.Write("HasAlreadyPlayedTutorial", true);
+        }
+        else if (timelineDirector.playableAsset is PlayableAsset afterTutorialAsset)
+        {
+            UserConfig.Write("HasAlreadyPlayedAfterTutorial", true);
+        }
     }
 
-    public void StartTutorial()
+    public void StartTutorial(PlayableAsset asset)
     {
-        TrySubscribePlayerTap();
         player.MovementInputDisabled = true;
 
+        if (asset is PlayableAsset tutorialAsset)
+        {
+            TrySubscribePlayerTap();
+        }
+        else if (asset is PlayableAsset afterTutorialAsset)
+        {
+            UserConfig.Write("HasAlreadyStartedAfterTutorial", true);
+        }
+
         timelineDirector.time = 0f;
-        timelineDirector.Play();
+        timelineDirector.Play(asset);
     }
 
     public void Pause()
@@ -126,7 +157,7 @@ public class TutorialManager : MonoBehaviour
         tapSubscribed = true;
     }
 
-    void UnsubscribePlayerTap()
+    public void UnsubscribePlayerTap()
     {
         if (!tapSubscribed || player == null)
         {
