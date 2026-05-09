@@ -3,6 +3,7 @@ using UnityEngine;
 using UnityEngine.Events;
 using UnityEngine.Playables;
 using Kuchinashi.DataSystem;
+using QFramework;
 
 /// <summary>
 /// 教程场景：整段对话期间暂停 Timeline，对话结束后恢复。
@@ -18,6 +19,7 @@ public class TutorialManager : MonoBehaviour
     [Header("Tutorials")]
     [SerializeField] private PlayableAsset tutorial;
     [SerializeField] private PlayableAsset afterTutorial;
+    [SerializeField] private PlayableAsset boxStuckTutorial;
 
     bool timelinePausedForDialogue;
     bool tapSubscribed;
@@ -38,10 +40,15 @@ public class TutorialManager : MonoBehaviour
         else if (UserConfig.TryRead<bool>("HasAlreadyPlayedTutorial", out var a) && a
         && UserConfig.TryRead<bool>("HasAlreadyStartedAfterTutorial", out var b) && b)
             StartTutorial(afterTutorial);
-        else
+        else if (!UserConfig.TryRead<bool>("HasAlreadyPlayedTutorial", out var c) || !c)
         {
             StartTutorial(tutorial);
         }
+
+        TypeEventSystem.Global.Register<OnTutorialBoxStuckedEvent>(e =>
+        {
+            StartTutorial(boxStuckTutorial);
+        }).UnRegisterWhenGameObjectDestroyed(gameObject);
     }
 
     void OnDisable()
@@ -55,6 +62,7 @@ public class TutorialManager : MonoBehaviour
             dialogueSystem.OnDialogueEnded -= OnDialogueEnded;
         }
 
+        player.MovementInputDisabled = false;
         UnsubscribePlayerTap();
     }
 

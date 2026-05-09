@@ -9672,6 +9672,7 @@ MonoBehaviour:
     - {fileID: 11400000, guid: 31de078e6d2f2ea46bb324759a2037f5, type: 2}
     - {fileID: 11400000, guid: fc36d15448aac7c4297e2d15ae325c44, type: 2}
     - {fileID: 11400000, guid: 1761d422ec095c445aee1a75c5c216c3, type: 2}
+    - {fileID: 11400000, guid: f2fed4557b5f92a42ae0a7be986e4ee6, type: 2}
     m_Events:
     - m_PersistentCalls:
         m_Calls:
@@ -9715,6 +9716,20 @@ MonoBehaviour:
             m_StringArgument: 
             m_BoolArgument: 0
           m_CallState: 2
+    - m_PersistentCalls:
+        m_Calls:
+        - m_Target: {fileID: 436145072}
+          m_TargetAssemblyTypeName: DialogueSystem, Assembly-CSharp
+          m_MethodName: StartDialogue
+          m_Mode: 2
+          m_Arguments:
+            m_ObjectArgument: {fileID: 11400000, guid: 8b3c49e26b3599d43a48ed79631f759b, type: 2}
+            m_ObjectArgumentAssemblyTypeName: DialogueData, Assembly-CSharp
+            m_IntArgument: 0
+            m_FloatArgument: 0
+            m_StringArgument: 
+            m_BoolArgument: 0
+          m_CallState: 2
 --- !u!320 &436145074
 PlayableDirector:
   m_ObjectHideFlags: 0
@@ -9724,7 +9739,7 @@ PlayableDirector:
   m_GameObject: {fileID: 436145067}
   m_Enabled: 1
   serializedVersion: 3
-  m_PlayableAsset: {fileID: 11400000, guid: ea929d097404d33478ca07408cc11b35, type: 2}
+  m_PlayableAsset: {fileID: 11400000, guid: efd38fb655c41974f8d3cdfc8416f246, type: 2}
   m_InitialState: 0
   m_WrapMode: 2
   m_DirectorUpdateMode: 1
@@ -9744,6 +9759,12 @@ PlayableDirector:
     value: {fileID: 907838668}
   - key: {fileID: -5288557765995491112, guid: ea929d097404d33478ca07408cc11b35, type: 2}
     value: {fileID: 436145073}
+  - key: {fileID: 3090085061581974943, guid: efd38fb655c41974f8d3cdfc8416f246, type: 2}
+    value: {fileID: 907838668}
+  - key: {fileID: -5288557765995491112, guid: efd38fb655c41974f8d3cdfc8416f246, type: 2}
+    value: {fileID: 436145073}
+  - key: {fileID: -8783357393479532805, guid: efd38fb655c41974f8d3cdfc8416f246, type: 2}
+    value: {fileID: 1822326676}
   m_ExposedReferences:
     m_References:
     - 64d651cff3861314aa6e3b46d8bbee0c: {fileID: 907838668}
@@ -9805,6 +9826,7 @@ MonoBehaviour:
         m_CallState: 2
   tutorial: {fileID: 11400000, guid: 3a9d73995ea6a7b458ea90d1010605ac, type: 2}
   afterTutorial: {fileID: 11400000, guid: ea929d097404d33478ca07408cc11b35, type: 2}
+  boxStuckTutorial: {fileID: 11400000, guid: efd38fb655c41974f8d3cdfc8416f246, type: 2}
 --- !u!1 &469630864
 GameObject:
   m_ObjectHideFlags: 0
@@ -14044,6 +14066,7 @@ GameObject:
   - component: {fileID: 1579278814}
   - component: {fileID: 1579278816}
   - component: {fileID: 1579278815}
+  - component: {fileID: 1579278817}
   m_Layer: 0
   m_Name: Box
   m_TagString: Untagged
@@ -14229,6 +14252,19 @@ Rigidbody2D:
   m_SleepingMode: 1
   m_CollisionDetection: 0
   m_Constraints: 0
+--- !u!114 &1579278817
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1579278810}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a6cea5ec2b10f7545830f661be27ba5c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  stuckThresholdX: 4
 --- !u!1 &1708389045
 GameObject:
   m_ObjectHideFlags: 0
