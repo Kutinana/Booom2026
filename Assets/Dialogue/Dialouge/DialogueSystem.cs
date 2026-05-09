@@ -49,6 +49,23 @@ public class DialogueSystem : MonoBehaviour
     private DialogueLine activeLine;
     private bool awaitingOptionPick;
     private bool activeLineHasOptions;
+
+    /// <summary>一段对话从 <see cref="StartDialogue"/> 调用起，到队列播完内部结束时触发对应结束事件。</summary>
+    public event Action OnDialogueStarted;
+    public event Action OnDialogueEnded;
+
+    /// <summary>仅在「等待选项」状态变化时触发。</summary>
+    public event Action<bool> OnAwaitingOptionPickChanged;
+
+    void SetAwaitingOptionPick(bool value)
+    {
+        if (awaitingOptionPick == value)
+            return;
+        awaitingOptionPick = value;
+        OnAwaitingOptionPickChanged?.Invoke(value);
+    }
+
+    public bool IsAwaitingOptionPick => awaitingOptionPick;
     private readonly List<GameObject> spawnedOptions = new List<GameObject>();
 
     void Awake()
@@ -81,6 +98,7 @@ public class DialogueSystem : MonoBehaviour
         }
 
         isPlaying = true;
+        OnDialogueStarted?.Invoke();
         PlayNextLine();
     }
 
@@ -121,7 +139,7 @@ public class DialogueSystem : MonoBehaviour
         }
 
         ClearOptionsUI();
-        awaitingOptionPick = false;
+        SetAwaitingOptionPick(false);
 
         activeLine = dialogueQueue.Dequeue();
         string line = activeLine.text;
@@ -159,7 +177,7 @@ public class DialogueSystem : MonoBehaviour
         }
 
         ShowOptions(processedText);
-        awaitingOptionPick = spawnedOptions.Count > 0;
+        SetAwaitingOptionPick(spawnedOptions.Count > 0);
     }
 
     void ShowOptions(string processedText)
@@ -224,7 +242,7 @@ public class DialogueSystem : MonoBehaviour
         if (!awaitingOptionPick)
             return;
 
-        awaitingOptionPick = false;
+        SetAwaitingOptionPick(false);
         ClearOptionsUI();
         PlayNextLine();
     }
@@ -251,9 +269,10 @@ public class DialogueSystem : MonoBehaviour
     void EndDialogue()
     {
         isPlaying = false;
-        awaitingOptionPick = false;
+        SetAwaitingOptionPick(false);
         ClearOptionsUI();
 
         progressable.InverseLinearTransition(0.1f);
+        OnDialogueEnded?.Invoke();
     }
 }

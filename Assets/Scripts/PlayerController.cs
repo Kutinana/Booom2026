@@ -1,10 +1,11 @@
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.SceneManagement;
 using UnityEngine.Tilemaps;
 
 [DisallowMultipleComponent]
-public partial class PlayerController : MonoBehaviour, ISceneMovableItem
+public partial class PlayerController : MonoBehaviour, ISceneMovableItem, IPointerClickHandler
 {
     private const float AxisNormalBlockThreshold = 0.85f;
     private const int MaxOverlapResolveIterations = 6;
@@ -50,6 +51,11 @@ public partial class PlayerController : MonoBehaviour, ISceneMovableItem
     public GameObject Owner => gameObject;
     public ISceneMovableBoundsProvider BoundsProvider => sceneMovableBoundsProvider;
     public bool IsSceneMovableActive => isActiveAndEnabled;
+
+    /// <summary>
+    /// 为 <c>true</c> 时不读取键盘产生的移动、跳跃与平台下落输入；重力与已有速度仍正常结算。
+    /// </summary>
+    public bool MovementInputDisabled { get; set; }
 
     private Grid grid;
     private Rigidbody body3D;
@@ -137,6 +143,12 @@ public partial class PlayerController : MonoBehaviour, ISceneMovableItem
 
     private void Update()
     {
+        if (MovementInputDisabled)
+        {
+            moveInput = Vector2.zero;
+            return;
+        }
+
         moveInput.x = Input.GetAxisRaw("Horizontal");
         moveInput.y = Input.GetAxisRaw("Vertical");
 
