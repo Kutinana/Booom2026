@@ -10,6 +10,15 @@ public class BarrierGroup : MonoBehaviour
 
     private Coroutine updateBarriersCoroutine;
 
+    private void Awake()
+    {
+       
+        Barriers.Clear();
+
+        Barrier[] foundBarriers = GetComponentsInChildren<Barrier>(true);
+
+        Barriers.AddRange(foundBarriers);
+    }
     void Start()
     {
         if (Barriers == null || Barriers.Count == 0)
