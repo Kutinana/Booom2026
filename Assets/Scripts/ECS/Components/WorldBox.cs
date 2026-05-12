@@ -437,4 +437,7 @@ public class WorldBox : StandardBox
 
         return Mathf.Lerp(outMin, outMax, Mathf.Clamp01((value - inMin) / inputRange));
     }
+
+   
+
 }

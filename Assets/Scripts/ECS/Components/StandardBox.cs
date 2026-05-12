@@ -11,7 +11,7 @@ public class StandardBox : MonoBehaviour, ISceneMovableItem
     [SerializeField] private Vector3 cellOffset = new Vector3(0.5f, 0.5f, 0f);
 
     [Header("Push")]
-    [SerializeField] private BoxPushDirectionMask pushableFrom = BoxPushDirectionMask.Horizontal;
+    [SerializeField] public BoxPushDirectionMask pushableFrom = BoxPushDirectionMask.Horizontal;
 
     [Header("Collision")]
     [SerializeField] private LayerMask collisionMask = ~0;
@@ -263,4 +263,65 @@ public class StandardBox : MonoBehaviour, ISceneMovableItem
     {
         Debug.Log(TryPush(TestDirection));
     }
+
+    public virtual void SetPushableFrom(BoxPushDirectionMask newMask)
+    {
+        pushableFrom = newMask;
+    }
+
+    public virtual void AddPushableDirection(BoxPushDirectionMask direction)
+    {
+        pushableFrom |= direction;
+    }
+
+    public virtual void RemovePushableDirection(BoxPushDirectionMask direction)
+    {
+        pushableFrom &= ~direction;
+    }
+
+    public virtual void ClearPushableDirection()
+    {
+        pushableFrom = BoxPushDirectionMask.None;
+    }
+    public void AddPushableLeft()
+    {
+        AddPushableDirection(BoxPushDirectionMask.Left);
+    }
+
+    public void AddPushableRight()
+    {
+        AddPushableDirection(BoxPushDirectionMask.Right);
+    }
+
+    public void AddPushableUp()
+    {
+        AddPushableDirection(BoxPushDirectionMask.Up);
+    }
+
+    public void AddPushableDown()
+    {
+        AddPushableDirection(BoxPushDirectionMask.Down);
+    }
+
+    public void RemovePushableLeft()
+    {
+        RemovePushableDirection(BoxPushDirectionMask.Left);
+    }
+
+    public void RemovePushableRight()
+    {
+        RemovePushableDirection(BoxPushDirectionMask.Right);
+    }
+
+    public void RemovePushableUp()
+    {
+        RemovePushableDirection(BoxPushDirectionMask.Up);
+    }
+
+    public void RemovePushableDown()
+    {
+        RemovePushableDirection(BoxPushDirectionMask.Down);
+    }
+
+
 }

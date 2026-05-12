@@ -54,7 +54,7 @@ public class PlayerAnimationController : MonoBehaviour
         bool isFalling = !grounded && velocity.y < -0.1f;
         if (!wasFalling && isFalling)
         {
-            animator.SetTrigger("FallStart");
+            //animator.SetTrigger("FallStart");
         }
 
         wasGrounded = grounded;
