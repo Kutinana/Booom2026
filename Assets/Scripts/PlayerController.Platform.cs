@@ -30,7 +30,17 @@ public partial class PlayerController
         }
 
         platformDropQueued = false;
-        if (!contacts.grounded || downPlatform == null)
+        if (!contacts.grounded)
+        {
+            return;
+        }
+
+        if (TryPushDownWorldBox())
+        {
+            return;
+        }
+
+        if (downPlatform == null)
         {
             return;
         }
@@ -41,6 +51,19 @@ public partial class PlayerController
         contacts.grounded = false;
         contacts.downTag = null;
         downPlatform = null;
+        downBox = null;
+    }
+
+    private bool TryPushDownWorldBox()
+    {
+        WorldBox worldBox = downBox as WorldBox;
+        if (worldBox == null)
+        {
+            return false;
+        }
+
+        worldBox.TryPush(BoxPushDirection.Down, gameObject);
+        return true;
     }
 
     private GameObject GetPlatformObject(Collider collider)

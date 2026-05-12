@@ -73,6 +73,8 @@ public partial class PlayerController : MonoBehaviour, ISceneMovableItem, IPoint
     private float fixedZ;
     private StandardBox leftBox;
     private StandardBox rightBox;
+    private StandardBox upBox;
+    private StandardBox downBox;
     private StandardBox heldPushBox;
     private BoxPushDirection heldPushDirection;
     private bool heldPushInitializedCanPush;
@@ -198,6 +200,7 @@ public partial class PlayerController : MonoBehaviour, ISceneMovableItem, IPoint
         MoveByAndResolve(new Vector3(delta.x, 0f, 0f));
         MoveByAndResolve(new Vector3(0f, delta.y, 0f));
         RefreshContacts();
+        HandleWorldBoxUpPush(delta.y);
         HandleBoxPush(dt);
     }
 
@@ -249,8 +252,26 @@ public partial class PlayerController : MonoBehaviour, ISceneMovableItem, IPoint
         contacts.leftTag = leftHit.tag;
         contacts.rightTag = rightHit.tag;
         downPlatform = downHit.platform;
+        upBox = upHit.box;
+        downBox = downHit.box;
         leftBox = leftHit.box;
         rightBox = rightHit.box;
+    }
+
+    private void HandleWorldBoxUpPush(float verticalDelta)
+    {
+        if (verticalDelta <= 0f || !contacts.upBlocked)
+        {
+            return;
+        }
+
+        WorldBox worldBox = upBox as WorldBox;
+        if (worldBox == null)
+        {
+            return;
+        }
+
+        worldBox.TryPush(BoxPushDirection.Up, gameObject);
     }
 
     private void HandleBoxPush(float dt)
