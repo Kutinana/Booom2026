@@ -272,6 +272,7 @@ public class Barrier : MonoBehaviour
     {
         return hit != null &&
             !hit.isTrigger &&
+            !hit.CompareTag("Platform") &&
             !hit.transform.IsChildOf(transform) &&
             hit.bounds.size != Vector3.zero;
     }
@@ -280,6 +281,7 @@ public class Barrier : MonoBehaviour
     {
         return hit != null &&
             !hit.isTrigger &&
+            !hit.CompareTag("Platform") &&
             !hit.transform.IsChildOf(transform) &&
             hit.bounds.size != Vector3.zero;
     }
