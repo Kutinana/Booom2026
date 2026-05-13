@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using UnityEngine.Tilemaps;
 
 public class WorldBoxExitBlockerService : ServiceBase
 {
@@ -44,7 +45,7 @@ public class WorldBoxExitBlockerService : ServiceBase
             return false;
         }
 
-        if (IsPlatformTag(blockingTag) && IsPastOuterBottomEdge(direction, outerBounds, playerBounds))
+        if (IsPlatformTag(blockingTag) && ShouldSkipOuterPlatformBlocker(direction, outerBounds, playerBounds))
         {
             return false;
         }
@@ -137,7 +138,7 @@ public class WorldBoxExitBlockerService : ServiceBase
         for (int i = 0; i < hitCount; i++)
         {
             Collider2D hit = overlapHits2D[i];
-            if (IsStaticBlockingCollider(hit, worldBox))
+            if (IsStaticBlockingCollider(hit, worldBox, queryBounds))
             {
                 blockingTag = GetBlockingTag(hit.transform);
                 return true;
@@ -182,12 +183,19 @@ public class WorldBoxExitBlockerService : ServiceBase
 
     private bool IsStaticBlockingCollider(Collider2D hit, WorldBox worldBox)
     {
+        return IsStaticBlockingCollider(hit, worldBox, null);
+    }
+
+    private bool IsStaticBlockingCollider(Collider2D hit, WorldBox worldBox, Bounds? queryBounds)
+    {
         return hit != null &&
             hit.enabled &&
             !hit.isTrigger &&
             hit.bounds.size != Vector3.zero &&
+            !IsTemporaryWallCollider(hit) &&
             !IsOwnedByWorldBox(hit.transform, worldBox) &&
-            !HasSceneMovableItem(hit.transform);
+            !HasSceneMovableItem(hit.transform) &&
+            (!queryBounds.HasValue || TilemapHasTileInBounds(hit, queryBounds.Value));
     }
 
     private bool IsStaticBlockingCollider(Collider hit, WorldBox worldBox)
@@ -196,6 +204,7 @@ public class WorldBoxExitBlockerService : ServiceBase
             hit.enabled &&
             !hit.isTrigger &&
             hit.bounds.size != Vector3.zero &&
+            !IsTemporaryWallCollider(hit) &&
             !IsOwnedByWorldBox(hit.transform, worldBox) &&
             !HasSceneMovableItem(hit.transform);
     }
@@ -398,6 +407,83 @@ public class WorldBoxExitBlockerService : ServiceBase
         return false;
     }
 
+    private bool IsTemporaryWallCollider(Collider2D hit)
+    {
+        return hit != null && IsTemporaryWallTransform(hit.transform);
+    }
+
+    private bool IsTemporaryWallCollider(Collider hit)
+    {
+        return hit != null && IsTemporaryWallTransform(hit.transform);
+    }
+
+    private bool IsTemporaryWallTransform(Transform start)
+    {
+        if (start == null)
+        {
+            return false;
+        }
+
+        foreach (KeyValuePair<WorldBox, TemporaryWall> pair in walls)
+        {
+            TemporaryWall wall = pair.Value;
+            if (wall == null || wall.GameObject == null)
+            {
+                continue;
+            }
+
+            Transform wallTransform = wall.GameObject.transform;
+            if (start == wallTransform || start.IsChildOf(wallTransform))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static bool TilemapHasTileInBounds(Collider2D hit, Bounds queryBounds)
+    {
+        Tilemap tilemap = hit != null ? hit.GetComponent<Tilemap>() : null;
+        if (tilemap == null && hit != null)
+        {
+            tilemap = hit.GetComponentInParent<Tilemap>();
+        }
+
+        if (tilemap == null)
+        {
+            return true;
+        }
+
+        Vector3Int minCell = tilemap.WorldToCell(new Vector3(queryBounds.min.x, queryBounds.min.y, 0f));
+        Vector3Int maxCell = tilemap.WorldToCell(new Vector3(queryBounds.max.x, queryBounds.max.y, 0f));
+        int minX = Mathf.Min(minCell.x, maxCell.x) - 1;
+        int maxX = Mathf.Max(minCell.x, maxCell.x) + 1;
+        int minY = Mathf.Min(minCell.y, maxCell.y) - 1;
+        int maxY = Mathf.Max(minCell.y, maxCell.y) + 1;
+        int z = minCell.z;
+
+        for (int x = minX; x <= maxX; x++)
+        {
+            for (int y = minY; y <= maxY; y++)
+            {
+                Vector3Int cell = new Vector3Int(x, y, z);
+                if (!tilemap.HasTile(cell))
+                {
+                    continue;
+                }
+
+                Bounds tileBounds = GetTileWorldBounds(tilemap, cell);
+                if (OverlapsXY(queryBounds, tileBounds))
+                {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
     private static string GetBlockingTag(Transform start)
     {
         Transform current = start;
@@ -419,6 +505,18 @@ public class WorldBoxExitBlockerService : ServiceBase
         return tag == PlatformTag;
     }
 
+    private static bool ShouldSkipOuterPlatformBlocker(BoxPushDirection direction, Bounds outerBounds, Bounds playerBounds)
+    {
+        return IsOuterSideOrTopEdge(direction) || IsPastOuterBottomEdge(direction, outerBounds, playerBounds);
+    }
+
+    private static bool IsOuterSideOrTopEdge(BoxPushDirection direction)
+    {
+        return direction == BoxPushDirection.Left ||
+            direction == BoxPushDirection.Right ||
+            direction == BoxPushDirection.Up;
+    }
+
     private static bool IsPastOuterBottomEdge(BoxPushDirection direction, Bounds outerBounds, Bounds playerBounds)
     {
         return direction == BoxPushDirection.Down && playerBounds.max.y < outerBounds.min.y;
@@ -428,6 +526,24 @@ public class WorldBoxExitBlockerService : ServiceBase
     {
         int sceneBricksLayer = LayerMask.NameToLayer(SceneBricksLayerName);
         return sceneBricksLayer >= 0 ? sceneBricksLayer : fallbackLayer;
+    }
+
+    private static Bounds GetTileWorldBounds(Tilemap tilemap, Vector3Int cell)
+    {
+        GridLayout layout = tilemap.layoutGrid;
+        Vector3 size = layout != null ? layout.cellSize : Vector3.one;
+        size.x = Mathf.Abs(size.x);
+        size.y = Mathf.Abs(size.y);
+        size.z = Mathf.Max(Mathf.Abs(size.z), 0.001f);
+        return new Bounds(tilemap.GetCellCenterWorld(cell), size);
+    }
+
+    private static bool OverlapsXY(Bounds a, Bounds b)
+    {
+        return a.min.x < b.max.x &&
+            a.max.x > b.min.x &&
+            a.min.y < b.max.y &&
+            a.max.y > b.min.y;
     }
 
     private sealed class TemporaryWall
