@@ -15,6 +15,7 @@ public class PortalRenderFeature : ScriptableRendererFeature
         public int maxDepth = 2;
     }
 
+    [System.NonSerialized]
     public Settings settings = new Settings();
 
     public PortalPass pass;
