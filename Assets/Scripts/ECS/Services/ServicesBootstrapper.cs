@@ -10,6 +10,7 @@ public class ServicesBootstrapper : MonoSingleton<ServicesBootstrapper>
         ServiceBase.Get<PushableBoxService>();
         ServiceBase.Get<PhysicalBoxService>();
         ServiceBase.Get<SceneMovableInteractionService>();
+        ServiceBase.Get<WorldBoxExitBlockerService>();
         ServiceBase.Get<PressurePlateService>();
     }
 }

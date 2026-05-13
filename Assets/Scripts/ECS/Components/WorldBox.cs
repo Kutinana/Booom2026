@@ -30,6 +30,7 @@ public class WorldBox : StandardBox
     private Bounds previousPlayerBounds;
     private IUnRegister pushInitializeUnRegister;
     private IUnRegister pushAttemptUnRegister;
+    private WorldBoxExitBlockerService exitBlockerService;
 
     private void OnEnable()
     {
@@ -45,12 +46,20 @@ public class WorldBox : StandardBox
         pushAttemptUnRegister?.UnRegister();
         pushInitializeUnRegister = null;
         pushAttemptUnRegister = null;
+        ClearExitBlocker();
+    }
+
+    protected override void OnDestroy()
+    {
+        ClearExitBlocker();
+        base.OnDestroy();
     }
 
     private void FixedUpdate()
     {
         if (!EnsurePlayer())
         {
+            ClearExitBlocker();
             return;
         }
 
@@ -59,6 +68,7 @@ public class WorldBox : StandardBox
         Bounds playerBounds = GetPlayerBounds();
         if (outerBounds.size == Vector3.zero || playerBounds.size == Vector3.zero)
         {
+            ClearExitBlocker();
             return;
         }
 
@@ -81,6 +91,7 @@ public class WorldBox : StandardBox
 
         if (playerInOuterBounds)
         {
+            UpdateOuterEdgeExitBlocker(outerBounds, innerBounds, playerBounds);
             wasPlayerInOuterBounds = true;
             wasPlayerOutsideInnerBounds = !playerOverlapsInnerBounds;
             previousPlayerBounds = playerBounds;
@@ -90,12 +101,23 @@ public class WorldBox : StandardBox
 
         if (!wasPlayerInOuterBounds || !TryGetExitDirection(outerBounds, playerBounds, out BoxPushDirection direction))
         {
+            ClearExitBlocker();
             wasPlayerOutsideInnerBounds = !playerOverlapsInnerBounds;
             previousPlayerBounds = playerBounds;
             hasPreviousPlayerBounds = true;
             return;
         }
 
+        if (TryRefreshExitBlocker(direction, outerBounds, innerBounds, playerBounds))
+        {
+            wasPlayerInOuterBounds = true;
+            wasPlayerOutsideInnerBounds = !playerOverlapsInnerBounds;
+            previousPlayerBounds = playerBounds;
+            hasPreviousPlayerBounds = true;
+            return;
+        }
+
+        ClearExitBlocker();
         HasLastExitDirection = true;
         LastExitDirection = direction;
         wasPlayerInOuterBounds = false;
@@ -186,6 +208,7 @@ public class WorldBox : StandardBox
         wasPlayerInOuterBounds = false;
         wasPlayerOutsideInnerBounds = true;
         hasPreviousPlayerBounds = false;
+        ClearExitBlocker();
         return true;
     }
 
@@ -200,12 +223,24 @@ public class WorldBox : StandardBox
     }
 
     [SerializeField] private float padding = 0.03f;
+    [SerializeField, Min(0f)] private float outerEdgeBlockerTouchTolerance = 0.04f;
 
     private void MovePlayerToInnerSide(BoxPushDirection direction, Bounds outerBounds, Bounds innerBounds, Bounds playerBounds)
     {
-        if (innerBounds.size == Vector3.zero)
+        if (!TryGetInnerTargetPosition(direction, outerBounds, innerBounds, playerBounds, out Vector3 position))
         {
             return;
+        }
+
+        MovePlayer(position);
+    }
+
+    private bool TryGetInnerTargetPosition(BoxPushDirection direction, Bounds outerBounds, Bounds innerBounds, Bounds playerBounds, out Vector3 position)
+    {
+        position = playerTransform != null ? playerTransform.position : playerBounds.center;
+        if (innerBounds.size == Vector3.zero)
+        {
+            return false;
         }
 
         Vector3 extents = playerBounds.extents;
@@ -213,7 +248,6 @@ public class WorldBox : StandardBox
         float innerInsideMaxX = innerBounds.max.x - extents.x;
         float innerInsideMinY = innerBounds.min.y + extents.y;
         float innerInsideMaxY = innerBounds.max.y - extents.y;
-        Vector3 position = playerTransform.position;
 
         switch (direction)
         {
@@ -235,7 +269,158 @@ public class WorldBox : StandardBox
                 break;
         }
 
-        MovePlayer(position);
+        return true;
+    }
+
+    private bool TryGetInnerTargetBounds(BoxPushDirection direction, Bounds outerBounds, Bounds innerBounds, Bounds playerBounds, out Bounds targetBounds)
+    {
+        targetBounds = default;
+        if (!TryGetInnerTargetPosition(direction, outerBounds, innerBounds, playerBounds, out Vector3 targetPosition))
+        {
+            return false;
+        }
+
+        targetBounds = playerBounds;
+        if (playerTransform != null)
+        {
+            targetBounds.center += targetPosition - playerTransform.position;
+        }
+        else
+        {
+            targetBounds.center = targetPosition;
+        }
+
+        return true;
+    }
+
+    private void UpdateOuterEdgeExitBlocker(Bounds outerBounds, Bounds innerBounds, Bounds playerBounds)
+    {
+        if (!TryGetOuterContactDirection(outerBounds, playerBounds, out BoxPushDirection direction) ||
+            !TryRefreshExitBlocker(direction, outerBounds, innerBounds, playerBounds))
+        {
+            ClearExitBlocker();
+        }
+    }
+
+    private bool TryRefreshExitBlocker(BoxPushDirection direction, Bounds outerBounds, Bounds innerBounds, Bounds playerBounds)
+    {
+        if (!TryGetInnerTargetBounds(direction, outerBounds, innerBounds, playerBounds, out Bounds innerTargetBounds))
+        {
+            return false;
+        }
+
+        WorldBoxExitBlockerService service = GetExitBlockerService();
+        if (service == null)
+        {
+            return false;
+        }
+
+        bool use2D = playerCollider2D != null;
+        bool use3D = playerCollider3D != null;
+        return service.TryRefreshBlockerForStaticInnerHit(this, direction, outerBounds, innerTargetBounds, playerBounds, CollisionMask, use2D, use3D);
+    }
+
+    private WorldBoxExitBlockerService GetExitBlockerService()
+    {
+        if (exitBlockerService == null)
+        {
+            exitBlockerService = ServiceBase.Get<WorldBoxExitBlockerService>();
+        }
+
+        return exitBlockerService;
+    }
+
+    private void ClearExitBlocker()
+    {
+        if (exitBlockerService == null && ServiceBase.TryGet(out WorldBoxExitBlockerService service))
+        {
+            exitBlockerService = service;
+        }
+
+        exitBlockerService?.Clear(this);
+    }
+
+    private bool TryGetOuterContactDirection(Bounds outerBounds, Bounds playerBounds, out BoxPushDirection direction)
+    {
+        direction = default;
+        float threshold = Mathf.Max(0f, outerEdgeBlockerTouchTolerance);
+        float leftDistance = playerBounds.min.x - outerBounds.min.x;
+        float rightDistance = outerBounds.max.x - playerBounds.max.x;
+        float downDistance = playerBounds.min.y - outerBounds.min.y;
+        float upDistance = outerBounds.max.y - playerBounds.max.y;
+        bool touchesLeft = leftDistance <= threshold;
+        bool touchesRight = rightDistance <= threshold;
+        bool touchesDown = downDistance <= threshold;
+        bool touchesUp = upDistance <= threshold;
+
+        if (!touchesLeft && !touchesRight && !touchesDown && !touchesUp)
+        {
+            return false;
+        }
+
+        if (hasPreviousPlayerBounds)
+        {
+            Vector3 movement = playerBounds.center - previousPlayerBounds.center;
+            if (Mathf.Abs(movement.x) >= Mathf.Abs(movement.y))
+            {
+                if (movement.x < -Mathf.Epsilon && touchesLeft)
+                {
+                    direction = BoxPushDirection.Left;
+                    return true;
+                }
+
+                if (movement.x > Mathf.Epsilon && touchesRight)
+                {
+                    direction = BoxPushDirection.Right;
+                    return true;
+                }
+            }
+            else
+            {
+                if (movement.y < -Mathf.Epsilon && touchesDown)
+                {
+                    direction = BoxPushDirection.Down;
+                    return true;
+                }
+
+                if (movement.y > Mathf.Epsilon && touchesUp)
+                {
+                    direction = BoxPushDirection.Up;
+                    return true;
+                }
+            }
+        }
+
+        bool found = false;
+        float bestDistance = float.PositiveInfinity;
+        if (touchesLeft)
+        {
+            direction = BoxPushDirection.Left;
+            bestDistance = leftDistance;
+            found = true;
+        }
+
+        if (touchesRight && rightDistance < bestDistance)
+        {
+            direction = BoxPushDirection.Right;
+            bestDistance = rightDistance;
+            found = true;
+        }
+
+        if (touchesDown && downDistance < bestDistance)
+        {
+            direction = BoxPushDirection.Down;
+            bestDistance = downDistance;
+            found = true;
+        }
+
+        if (touchesUp && upDistance < bestDistance)
+        {
+            direction = BoxPushDirection.Up;
+            found = true;
+        }
+
+        return found;
     }
 
     private bool TryMovePlayerToOuterEntrance(BoxPushDirection direction)
