@@ -11406,6 +11406,26 @@ Tilemap:
       m_TileObjectToInstantiateIndex: 65535
       dummyAlignment: 0
       m_AllTileFlags: 1073741825
+  - first: {x: 7, y: 2, z: 0}
+    second:
+      serializedVersion: 2
+      m_TileIndex: 23
+      m_TileSpriteIndex: 24
+      m_TileMatrixIndex: 0
+      m_TileColorIndex: 0
+      m_TileObjectToInstantiateIndex: 65535
+      dummyAlignment: 0
+      m_AllTileFlags: 1073741825
+  - first: {x: 8, y: 2, z: 0}
+    second:
+      serializedVersion: 2
+      m_TileIndex: 23
+      m_TileSpriteIndex: 24
+      m_TileMatrixIndex: 0
+      m_TileColorIndex: 0
+      m_TileObjectToInstantiateIndex: 65535
+      dummyAlignment: 0
+      m_AllTileFlags: 1073741825
   - first: {x: 9, y: 2, z: 0}
     second:
       serializedVersion: 2
@@ -11904,7 +11924,7 @@ Tilemap:
     m_Data: {fileID: 11400000, guid: 953fcef08ff4c9949b62d03aa1676622, type: 2}
   - m_RefCount: 6
     m_Data: {fileID: 11400000, guid: 76f6e563fb39c024e83fddb3f8499d34, type: 2}
-  - m_RefCount: 2
+  - m_RefCount: 4
     m_Data: {fileID: 11400000, guid: 8f7c0cc834c69194382b92e0a0a46968, type: 2}
   - m_RefCount: 5
     m_Data: {fileID: 11400000, guid: 0fa87c9cf616cd4459882bb01ba0f0f6, type: 2}
@@ -12037,7 +12057,7 @@ Tilemap:
     m_Data: {fileID: -404957083, guid: 7ae7b573830da554ab5ce9276fc93f58, type: 3}
   - m_RefCount: 6
     m_Data: {fileID: -590178050, guid: 7ae7b573830da554ab5ce9276fc93f58, type: 3}
-  - m_RefCount: 2
+  - m_RefCount: 4
     m_Data: {fileID: 1478597223, guid: 7ae7b573830da554ab5ce9276fc93f58, type: 3}
   - m_RefCount: 5
     m_Data: {fileID: -1757301226, guid: 7ae7b573830da554ab5ce9276fc93f58, type: 3}
@@ -12120,7 +12140,7 @@ Tilemap:
   - m_RefCount: 1
     m_Data: {fileID: -351049511, guid: 7ae7b573830da554ab5ce9276fc93f58, type: 3}
   m_TileMatrixArray:
-  - m_RefCount: 175
+  - m_RefCount: 177
     m_Data:
       e00: 1
       e01: 0
@@ -12157,7 +12177,7 @@ Tilemap:
       e32: 0
       e33: 0
   m_TileColorArray:
-  - m_RefCount: 175
+  - m_RefCount: 177
     m_Data: {r: 1, g: 1, b: 1, a: 1}
   m_TileObjectToInstantiateArray: []
   m_AnimationFrameRate: 1
@@ -12323,6 +12343,10 @@ CompositeCollider2D:
       - X: 45000000
         Y: 25000000
       - X: 45000000
+        Y: 15000000
+      - X: 35000000
+        Y: 15000000
+      - X: 35000000
         Y: 10000000
       - X: 30000000
         Y: 10000000
@@ -12501,7 +12525,9 @@ CompositeCollider2D:
       - {x: 3.0000076, y: 2.6249924}
       - {x: 3.1250107, y: 2.5}
       - {x: 4.5, y: 2.4999707}
-      - {x: 4.4999704, y: 1}
+      - {x: 4.4999704, y: 1.5}
+      - {x: 3.5, y: 1.4999707}
+      - {x: 3.4999704, y: 1}
       - {x: 3, y: 1.0000294}
       - {x: 2.999971, y: 2}
       - {x: 2, y: 1.9999708}
