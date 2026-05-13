@@ -13819,7 +13819,7 @@ MonoBehaviour:
   OnReleased:
     m_PersistentCalls:
       m_Calls:
-      - m_Target: {fileID: 1647794796}
+      - m_Target: {fileID: 1074847254}
         m_TargetAssemblyTypeName: BarrierGroup, Assembly-CSharp
         m_MethodName: UpdateBarriersState
         m_Mode: 6
