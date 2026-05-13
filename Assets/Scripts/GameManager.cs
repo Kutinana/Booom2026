@@ -4,6 +4,8 @@ using UnityEngine;
 
 public class GameManager : MonoSingleton<GameManager>
 {
+    private const string StartContentSceneName = "StartScene";
+
     private void Awake()
     {
         DontDestroyOnLoad(gameObject);
@@ -11,17 +13,29 @@ public class GameManager : MonoSingleton<GameManager>
 
     private void Update()
     {
-        if (!Input.GetKeyDown(KeyCode.R))
-        {
-            return;
-        }
-
         var flow = SceneFlowController.Instance;
         if (flow == null || !flow.IsConfigured || flow.IsTransitioning)
         {
             return;
         }
 
-        flow.TryRequestReloadCurrentContent();
+        if (Input.GetKeyDown(KeyCode.R))
+        {
+            flow.TryRequestReloadCurrentContent();
+            return;
+        }
+
+        if (!Input.GetKeyDown(KeyCode.Escape))
+        {
+            return;
+        }
+
+        if (string.IsNullOrEmpty(flow.CurrentContentSceneName) ||
+            flow.CurrentContentSceneName == StartContentSceneName)
+        {
+            return;
+        }
+
+        flow.TryRequestSwitchContent(StartContentSceneName);
     }
 }
