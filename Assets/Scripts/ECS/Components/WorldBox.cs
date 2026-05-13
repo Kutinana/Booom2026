@@ -222,7 +222,8 @@ public class WorldBox : StandardBox
         return playerCollider3D != null ? CalculateBounds(playerCollider3D) : new Bounds(playerTransform.position, Vector3.zero);
     }
 
-    [SerializeField] private float padding = 0.03f;
+    [SerializeField] private float paddingX = 0.03f;
+    [SerializeField] private float paddingY = 0.03f;
     [SerializeField, Min(0f)] private float outerEdgeBlockerTouchTolerance = 0.04f;
 
     private void MovePlayerToInnerSide(BoxPushDirection direction, Bounds outerBounds, Bounds innerBounds, Bounds playerBounds)
@@ -252,12 +253,12 @@ public class WorldBox : StandardBox
         switch (direction)
         {
             case BoxPushDirection.Left:
-                position.x = innerBounds.min.x - extents.x - padding;
-                position.y = RemapClamped(playerBounds.center.y, outerBounds.min.y, outerBounds.max.y, innerInsideMinY, innerInsideMaxY);
+                position.x = innerBounds.min.x - extents.x - paddingX;
+                position.y = RemapClamped(playerBounds.center.y, outerBounds.min.y, outerBounds.max.y, innerInsideMinY, innerInsideMaxY)+ paddingY;
                 break;
             case BoxPushDirection.Right:
-                position.x = innerBounds.max.x + extents.x + padding;
-                position.y = RemapClamped(playerBounds.center.y, outerBounds.min.y, outerBounds.max.y, innerInsideMinY, innerInsideMaxY);
+                position.x = innerBounds.max.x + extents.x + paddingX;
+                position.y = RemapClamped(playerBounds.center.y, outerBounds.min.y, outerBounds.max.y, innerInsideMinY, innerInsideMaxY) + paddingY;
                 break;
             case BoxPushDirection.Down:
                 position.x = RemapClamped(playerBounds.center.x, outerBounds.min.x, outerBounds.max.x, innerInsideMinX, innerInsideMaxX);
