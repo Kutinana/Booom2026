@@ -142,13 +142,17 @@ public class StandardBox : MonoBehaviour, ISceneMovableItem
 
     public void MoveTo(Vector3 position)
     {
+        // 同时更新 body 与 transform，使后续同帧内的位置读取/碰撞查询立即拿到新位置；
+        // Rigidbody2D.MovePosition 是延迟到下个物理步的，会让线性推动期间玩家与箱子位置不同步而出现抖动。
         if (body2D != null)
         {
-            body2D.MovePosition((Vector2)position);
+            body2D.position = (Vector2)position;
+            transform.position = position;
         }
         else if (body3D != null)
         {
-            body3D.MovePosition(position);
+            body3D.position = position;
+            transform.position = position;
         }
         else
         {

@@ -14,7 +14,14 @@ public class PhysicalBoxService : ServiceBase<StandardBox>
     [SerializeField, Min(0f)] private float minPlayerImpactSpeed = 0.1f;
     [SerializeField, Range(0f, 1f)] private float minPlayerImpactFaceOverlapFraction = 0.25f;
 
+    [Header("Linear Push")]
+    [SerializeField, Min(0.01f)] private float linearPushSpeed = 1.6f;
+
+    public float LinearPushSpeed => linearPushSpeed;
+
     private readonly Dictionary<StandardBox, float> fallSpeeds = new Dictionary<StandardBox, float>();
+    private readonly Dictionary<StandardBox, LinearPushState> linearPushes = new Dictionary<StandardBox, LinearPushState>();
+    private readonly List<StandardBox> linearPushScratch = new List<StandardBox>(8);
     private readonly RaycastHit2D[] hits2D = new RaycastHit2D[8];
     private readonly RaycastHit[] hits3D = new RaycastHit[8];
     private IUnRegister pushAttemptUnRegister;
@@ -35,6 +42,7 @@ public class PhysicalBoxService : ServiceBase<StandardBox>
         pushAttemptUnRegister?.UnRegister();
         pushAttemptUnRegister = null;
         fallSpeeds.Clear();
+        linearPushes.Clear();
         base.OnDestroy();
     }
 
@@ -53,6 +61,7 @@ public class PhysicalBoxService : ServiceBase<StandardBox>
         if (component != null)
         {
             fallSpeeds.Remove(component);
+            linearPushes.Remove(component);
         }
     }
 
@@ -68,11 +77,20 @@ public class PhysicalBoxService : ServiceBase<StandardBox>
 
             SimulateFall(box, dt);
         }
+
+        UpdateLinearPushTransitions(dt);
     }
 
     private void OnPushAttempted(BoxPushAttemptEvent e)
     {
         if (!e.CanPush || e.Box == null || !IsRegistered(e.Box))
+        {
+            return;
+        }
+
+        // 处于线性推动会话中（无论是玩家驱动还是释放过渡），由 TryAdvanceLinearPush / UpdateLinearPushTransitions 直接驱动；
+        // 不再走整格瞬移，避免与线性推动相互覆盖。
+        if (linearPushes.TryGetValue(e.Box, out LinearPushState existing) && existing.Active)
         {
             return;
         }
@@ -503,6 +521,287 @@ public class PhysicalBoxService : ServiceBase<StandardBox>
         }
 
         return Mathf.Max(0.01f, Mathf.Abs(axis.x) > 0f ? grid.cellSize.x : grid.cellSize.y);
+    }
+
+    // ===== 线性推动 API =====
+
+    /// <summary>
+    /// 玩家在 FixedUpdate 中驱动一次线性推动位移；返回箱子（与玩家）实际可推动的轴向位移量。
+    /// </summary>
+    public float TryAdvanceLinearPush(StandardBox box, BoxPushDirection direction, float requestedDelta, GameObject pusher)
+    {
+        if (box == null || !IsRegistered(box))
+        {
+            return 0f;
+        }
+
+        if (direction != BoxPushDirection.Left && direction != BoxPushDirection.Right)
+        {
+            return 0f;
+        }
+
+        if (Mathf.Abs(requestedDelta) <= Mathf.Epsilon)
+        {
+            return 0f;
+        }
+
+        Vector3 axis = direction == BoxPushDirection.Right ? Vector3.right : Vector3.left;
+        float sign = direction == BoxPushDirection.Right ? 1f : -1f;
+
+        // 防御：传入与方向不一致的位移，按 0 处理。
+        if (requestedDelta * sign < 0f)
+        {
+            return 0f;
+        }
+
+        if (!linearPushes.TryGetValue(box, out LinearPushState state))
+        {
+            state = default;
+        }
+
+        bool needReset = !state.Active || state.Direction != direction || state.ReleaseTransition;
+        if (needReset)
+        {
+            Vector3 currentPos = box.transform.position;
+
+            // 若上一会话还在释放过渡中，先把箱子直接对齐到目标格，保证新原点是网格对齐的；
+            // 否则后续 50% 阈值检测会基于一个非对齐的原点，最终位置也无法对齐。
+            if (state.ReleaseTransition)
+            {
+                Vector3 snap = state.ReleaseTargetPosition;
+                snap.y = currentPos.y;
+                snap.z = currentPos.z;
+                box.MoveTo(snap);
+                currentPos = snap;
+            }
+
+            state = new LinearPushState
+            {
+                Active = true,
+                Direction = direction,
+                OriginCellPosition = currentPos,
+                ReleaseTransition = false,
+                ReleaseTargetPosition = currentPos,
+                AdvancedThisSession = false,
+                Pusher = pusher,
+                MovePusherWithBox = false
+            };
+        }
+        else
+        {
+            state.Pusher = pusher;
+        }
+
+        Vector3 from = box.transform.position;
+        float magnitude = Mathf.Abs(requestedDelta);
+        if (Cast(box, axis, magnitude + skinWidth, out RayHit hit))
+        {
+            magnitude = Mathf.Max(0f, hit.Distance - skinWidth);
+        }
+
+        if (magnitude <= 0f)
+        {
+            linearPushes[box] = state;
+            return 0f;
+        }
+
+        Vector3 to = from + axis * magnitude;
+        box.MoveTo(to);
+
+        // 越过 50% 阈值则推进原点；允许一次跨越多次（防止 dt 过大）。
+        float cellSize = GetCellDistance(box, axis);
+        float halfCell = cellSize * 0.5f;
+        while (true)
+        {
+            float displacement = (box.transform.position.x - state.OriginCellPosition.x) * sign;
+            if (displacement < halfCell + Mathf.Epsilon)
+            {
+                break;
+            }
+
+            Vector3 oldOrigin = state.OriginCellPosition;
+            Vector3 newOrigin = oldOrigin + axis * cellSize;
+            state.OriginCellPosition = newOrigin;
+            state.AdvancedThisSession = true;
+
+            SendEvent(new BoxPhysicalPushEvent(box, direction, true, false, oldOrigin, newOrigin));
+            SendEvent(new BoxPushAttemptEvent(box, direction, pusher, true));
+        }
+
+        linearPushes[box] = state;
+        return magnitude * sign;
+    }
+
+    /// <summary>
+    /// 通知线性推动会话结束，进入释放过渡阶段；按 50% 规则确定目标格并匀速滑过去。
+    /// 当目标为"返回原格"（≤50%）时，pusher 会被同步拖动以避免阻挡。
+    /// </summary>
+    public void ReleaseLinearPush(StandardBox box)
+    {
+        if (box == null)
+        {
+            return;
+        }
+
+        if (!linearPushes.TryGetValue(box, out LinearPushState state) || !state.Active || state.ReleaseTransition)
+        {
+            return;
+        }
+
+        Vector3 axis = state.Direction == BoxPushDirection.Right ? Vector3.right : Vector3.left;
+        float sign = state.Direction == BoxPushDirection.Right ? 1f : -1f;
+        float cellSize = GetCellDistance(box, axis);
+        float halfCell = cellSize * 0.5f;
+        float displacement = (box.transform.position.x - state.OriginCellPosition.x) * sign;
+
+        if (displacement >= halfCell - Mathf.Epsilon)
+        {
+            // 通常 TryAdvance 已在 ≥50% 时推进过原点；这里覆盖刚好等于 50% 的边界情形。
+            // 前进方向 snap：箱子向远离 pusher 的方向走，pusher 不需要被拖动。
+            state.ReleaseTargetPosition = state.OriginCellPosition + axis * cellSize;
+            state.MovePusherWithBox = false;
+        }
+        else
+        {
+            // 回退方向 snap：箱子向 pusher 一侧走，pusher 必须随箱子一起移动以让出空间。
+            state.ReleaseTargetPosition = state.OriginCellPosition;
+            state.MovePusherWithBox = state.Pusher != null;
+        }
+
+        state.ReleaseTargetPosition.y = box.transform.position.y;
+        state.ReleaseTargetPosition.z = box.transform.position.z;
+        state.ReleaseTransition = true;
+        linearPushes[box] = state;
+    }
+
+    /// <summary>
+    /// 查询某个 GameObject 是否正在被某个箱子的释放过渡拖动；PlayerController 可据此屏蔽水平输入。
+    /// </summary>
+    public bool IsPusherInRelease(GameObject pusher)
+    {
+        if (pusher == null)
+        {
+            return false;
+        }
+
+        foreach (KeyValuePair<StandardBox, LinearPushState> entry in linearPushes)
+        {
+            LinearPushState state = entry.Value;
+            if (state.ReleaseTransition && state.MovePusherWithBox && state.Pusher == pusher)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private void UpdateLinearPushTransitions(float dt)
+    {
+        if (linearPushes.Count == 0)
+        {
+            return;
+        }
+
+        linearPushScratch.Clear();
+        foreach (StandardBox box in linearPushes.Keys)
+        {
+            linearPushScratch.Add(box);
+        }
+
+        float step = linearPushSpeed * dt;
+        for (int i = 0; i < linearPushScratch.Count; i++)
+        {
+            StandardBox box = linearPushScratch[i];
+            if (box == null)
+            {
+                linearPushes.Remove(box);
+                continue;
+            }
+
+            if (!linearPushes.TryGetValue(box, out LinearPushState state) || !state.ReleaseTransition)
+            {
+                continue;
+            }
+
+            Vector3 current = box.transform.position;
+            Vector3 target = state.ReleaseTargetPosition;
+            target.y = current.y;
+            target.z = current.z;
+
+            float remaining = Mathf.Abs(target.x - current.x);
+            if (remaining <= Mathf.Epsilon)
+            {
+                CompleteRelease(box, target);
+                continue;
+            }
+
+            float move = Mathf.Min(step, remaining);
+            float dir = Mathf.Sign(target.x - current.x);
+            Vector3 axis = dir > 0f ? Vector3.right : Vector3.left;
+
+            // 回退 snap：先把 pusher（玩家）按相同位移移开，避免 pusher 阻挡箱子的回退路径。
+            PlayerController pusherPlayer = null;
+            if (state.MovePusherWithBox && state.Pusher != null)
+            {
+                pusherPlayer = state.Pusher.GetComponent<PlayerController>();
+                if (pusherPlayer != null)
+                {
+                    pusherPlayer.ApplyExternalPositionDelta(new Vector3(dir * move, 0f, 0f));
+                }
+            }
+
+            Vector3 next = current + new Vector3(dir * move, 0f, 0f);
+
+            // 释放过渡途中如果撞到东西也夹断，直接停在当前位置并清状态。
+            if (Cast(box, axis, move + skinWidth, out RayHit hit) && hit.Distance < move + skinWidth - PushContactTolerance)
+            {
+                float allowed = Mathf.Max(0f, hit.Distance - skinWidth);
+                // pusher 已经按 move 移走，但箱子被夹断只能走 allowed；把 pusher 多移走的部分回滚以保持贴合。
+                if (pusherPlayer != null && allowed < move)
+                {
+                    float rollback = allowed - move; // 负数（反向回滚）
+                    pusherPlayer.ApplyExternalPositionDelta(new Vector3(dir * rollback, 0f, 0f));
+                }
+
+                next = current + new Vector3(dir * allowed, 0f, 0f);
+                box.MoveTo(next);
+                // 撞到障碍物：放弃后续滑行，保持当前位置；若仍未到达目标，作为最终结果（不再尝试对齐）。
+                linearPushes.Remove(box);
+                continue;
+            }
+
+            box.MoveTo(next);
+
+            if (Mathf.Abs(target.x - next.x) <= Mathf.Epsilon)
+            {
+                CompleteRelease(box, target);
+            }
+            else
+            {
+                linearPushes[box] = state;
+            }
+        }
+
+        linearPushScratch.Clear();
+    }
+
+    private void CompleteRelease(StandardBox box, Vector3 target)
+    {
+        box.MoveTo(target);
+        linearPushes.Remove(box);
+    }
+
+    private struct LinearPushState
+    {
+        public bool Active;
+        public BoxPushDirection Direction;
+        public Vector3 OriginCellPosition;
+        public bool ReleaseTransition;
+        public Vector3 ReleaseTargetPosition;
+        public bool AdvancedThisSession;
+        public GameObject Pusher;
+        public bool MovePusherWithBox;
     }
 
     private readonly struct RayHit

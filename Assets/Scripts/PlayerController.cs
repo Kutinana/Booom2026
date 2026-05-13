@@ -42,8 +42,8 @@ public partial class PlayerController : MonoBehaviour, ISceneMovableItem, IPoint
     [SerializeField, Min(2)] private int raysPerSide = 2;
 
     [Header("Push")]
-    [SerializeField, Min(0f)] private float pushHoldThreshold = 0.12f;
-    [SerializeField, Min(0f)] private float pushCooldown = 0.35f;
+    [SerializeField, Min(0.05f), Tooltip("线性推动期间玩家水平移动速度相对 moveSpeed 的倍率；当 PhysicalBoxService 暴露 LinearPushSpeed 时优先使用其值。")]
+    private float pushSpeedMultiplier = 0.4f;
 
     public Grid Grid => grid;
     public ContactState Contacts => contacts;
@@ -51,6 +51,27 @@ public partial class PlayerController : MonoBehaviour, ISceneMovableItem, IPoint
     public GameObject Owner => gameObject;
     public ISceneMovableBoundsProvider BoundsProvider => sceneMovableBoundsProvider;
     public bool IsSceneMovableActive => isActiveAndEnabled;
+
+    /// <summary>
+    /// 玩家是否处于"推动"状态（驱动阶段或被释放过渡拖动阶段）。用于动画切换。
+    /// </summary>
+    public bool IsPushing
+    {
+        get
+        {
+            if (activePushBox != null && activePushCanPush)
+            {
+                return true;
+            }
+
+            if (ServiceBase.TryGet(out PhysicalBoxService svc) && svc.IsPusherInRelease(gameObject))
+            {
+                return true;
+            }
+
+            return false;
+        }
+    }
 
     /// <summary>
     /// 为 <c>true</c> 时不读取键盘产生的移动、跳跃与平台下落输入；重力与已有速度仍正常结算。
@@ -75,15 +96,12 @@ public partial class PlayerController : MonoBehaviour, ISceneMovableItem, IPoint
     private StandardBox rightBox;
     private StandardBox upBox;
     private StandardBox downBox;
-    private StandardBox heldPushBox;
-    private BoxPushDirection heldPushDirection;
-    private bool heldPushInitializedCanPush;
-    private bool hasHeldPushInitialization;
+    private StandardBox activePushBox;
+    private BoxPushDirection activePushDirection;
+    private bool activePushCanPush;
     private bool hasRetainedVelocity;
     private Vector2 retainedVelocityAxis;
     private float retainedVelocitySpeed;
-    private float pushHoldTime;
-    private float nextPushTime;
     
     private readonly Queue<Transform> bfsQueue = new Queue<Transform>(32);
     private readonly RaycastHit2D[] hits2D = new RaycastHit2D[8];
@@ -116,6 +134,8 @@ public partial class PlayerController : MonoBehaviour, ISceneMovableItem, IPoint
 
     private void OnDestroy()
     {
+        EndPushSession();
+
         if (ServiceBase.TryGet(out PlayerService playerService))
         {
             playerService.UnRegister(this);
@@ -197,11 +217,13 @@ public partial class PlayerController : MonoBehaviour, ISceneMovableItem, IPoint
             jumping = false;
         }
 
+        // 线性推动：先决定/维护推动会话；若处于推动，限速并先驱动箱子，再让玩家按相同位移移动。
+        HandleBoxPush(dt, ref delta);
+
         MoveByAndResolve(new Vector3(delta.x, 0f, 0f));
         MoveByAndResolve(new Vector3(0f, delta.y, 0f));
         RefreshContacts();
         HandleWorldBoxUpPush(delta.y);
-        HandleBoxPush(dt);
     }
 
     private Grid FindSceneGrid()
@@ -274,17 +296,27 @@ public partial class PlayerController : MonoBehaviour, ISceneMovableItem, IPoint
         worldBox.TryPush(BoxPushDirection.Up, gameObject);
     }
 
-    private void HandleBoxPush(float dt)
+    private void HandleBoxPush(float dt, ref Vector3 delta)
     {
+        // 释放过渡中、且玩家被拖动时：屏蔽玩家自身的水平位移，让 PhysicalBoxService 全权驱动。
+        // 垂直运动（重力/跳跃）保持正常。
+        if (ServiceBase.TryGet(out PhysicalBoxService releaseLookup) && releaseLookup.IsPusherInRelease(gameObject))
+        {
+            delta.x = 0f;
+            baseVelocity.x = 0f;
+            velocity.x = 0f;
+            return;
+        }
+
         StandardBox box = null;
         BoxPushDirection direction = default;
 
-        if (moveInput.x > 0.01f && contacts.rightBlocked)
+        if (moveInput.x > 0.01f && contacts.rightBlocked && rightBox != null)
         {
             box = rightBox;
             direction = BoxPushDirection.Right;
         }
-        else if (moveInput.x < -0.01f && contacts.leftBlocked)
+        else if (moveInput.x < -0.01f && contacts.leftBlocked && leftBox != null)
         {
             box = leftBox;
             direction = BoxPushDirection.Left;
@@ -292,37 +324,70 @@ public partial class PlayerController : MonoBehaviour, ISceneMovableItem, IPoint
 
         if (box == null)
         {
-            heldPushBox = null;
-            hasHeldPushInitialization = false;
-            pushHoldTime = 0f;
+            EndPushSession();
             return;
         }
 
-        if (box != heldPushBox || direction != heldPushDirection)
+        // 切换箱子或换方向：先把旧会话释放（触发 50% 规则收尾），再 InitializePush 新会话。
+        if (activePushBox != box || activePushDirection != direction)
         {
-            heldPushBox = box;
-            heldPushDirection = direction;
-            pushHoldTime = 0f;
-            heldPushInitializedCanPush = box.InitializePush(direction, gameObject).CanPush;
-            hasHeldPushInitialization = true;
+            EndPushSession();
+            bool canPush = box.InitializePush(direction, gameObject).CanPush;
+            if (!canPush)
+            {
+                // !CanPush 由 WorldBox 等监听者处理（例如把玩家瞬移到外入口）；本地不进入线性会话。
+                return;
+            }
+
+            activePushBox = box;
+            activePushDirection = direction;
+            activePushCanPush = true;
         }
 
-        pushHoldTime += dt;
-        if (pushHoldTime < pushHoldThreshold || Time.time < nextPushTime)
+        if (!activePushCanPush)
         {
             return;
         }
 
-        if (hasHeldPushInitialization)
+        if (!ServiceBase.TryGet(out PhysicalBoxService physicalBoxService))
         {
-            box.TryPush(direction, gameObject, heldPushInitializedCanPush);
+            return;
+        }
+
+        float pushSpeed = physicalBoxService.LinearPushSpeed;
+        if (pushSpeed <= 0f)
+        {
+            pushSpeed = moveSpeed * Mathf.Max(0.05f, pushSpeedMultiplier);
+        }
+
+        float dirSign = direction == BoxPushDirection.Right ? 1f : -1f;
+        float maxStep = pushSpeed * dt * dirSign;
+
+        // 在推动方向上限制玩家本帧水平位移；反方向上禁止（实际上分支已限制 moveInput 同号，这里是兜底）。
+        if (dirSign > 0f)
+        {
+            delta.x = Mathf.Clamp(delta.x, 0f, maxStep);
         }
         else
         {
-            box.TryPush(direction, gameObject);
+            delta.x = Mathf.Clamp(delta.x, maxStep, 0f);
         }
 
-        nextPushTime = Time.time + pushCooldown;
+        float clamped = physicalBoxService.TryAdvanceLinearPush(box, direction, delta.x, gameObject);
+        delta.x = clamped;
+        baseVelocity.x = clamped / Mathf.Max(dt, Mathf.Epsilon);
+        velocity.x = baseVelocity.x;
+    }
+
+    private void EndPushSession()
+    {
+        if (activePushBox != null && ServiceBase.TryGet(out PhysicalBoxService physicalBoxService))
+        {
+            physicalBoxService.ReleaseLinearPush(activePushBox);
+        }
+
+        activePushBox = null;
+        activePushCanPush = false;
     }
 
     private void MoveByAndResolve(Vector3 delta)
@@ -755,6 +820,22 @@ public partial class PlayerController : MonoBehaviour, ISceneMovableItem, IPoint
         BeginRetainedVelocity(newVelocity);
         jumpQueued = false;
         jumping = false;
+    }
+
+    /// <summary>
+    /// 由外部系统（如 <see cref="PhysicalBoxService"/> 释放过渡）施加一个绝对位移，会保持 fixedZ 并同步刚体位置。
+    /// </summary>
+    public void ApplyExternalPositionDelta(Vector3 delta)
+    {
+        if (delta.sqrMagnitude <= Mathf.Epsilon * Mathf.Epsilon)
+        {
+            return;
+        }
+
+        Vector3 newPos = transform.position + delta;
+        newPos.z = fixedZ;
+        MoveTo(newPos);
+        SyncColliderTransforms();
     }
 
     private void BeginRetainedVelocity(Vector2 newVelocity)

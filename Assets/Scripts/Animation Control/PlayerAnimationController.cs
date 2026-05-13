@@ -16,6 +16,7 @@ public class PlayerAnimationController : MonoBehaviour
     private float nextIdleTime;
     private bool wasGrounded;
     private bool wasFalling;
+    private bool wasPushing;
 
     private void Reset()
     {
@@ -30,18 +31,19 @@ public class PlayerAnimationController : MonoBehaviour
 
         var contacts = controller.Contacts;
         var velocity = controller.Velocity;
+        bool isPushing = controller.IsPushing;
 
-        UpdateMovementAnimation(contacts, velocity);
-        UpdateIdleVariation(contacts, velocity);
-        UpdateFlip(velocity);
+        UpdateMovementAnimation(contacts, velocity, isPushing);
+        UpdateIdleVariation(contacts, velocity, isPushing);
+        UpdateFlip(velocity, isPushing);
     }
 
-    private void UpdateMovementAnimation(PlayerController.ContactState contacts, Vector2 velocity)
+    private void UpdateMovementAnimation(PlayerController.ContactState contacts, Vector2 velocity, bool isPushing)
     {
         bool grounded = contacts.grounded;
 
         animator.SetBool("Grounded", grounded);
-        animator.SetFloat("speed", Mathf.Abs(velocity.x));
+        animator.SetFloat("speed", isPushing ? 0f : Mathf.Abs(velocity.x));
         animator.SetFloat("VerticalVelocity", velocity.y);
 
         // Landing detection
@@ -57,13 +59,16 @@ public class PlayerAnimationController : MonoBehaviour
             //animator.SetTrigger("FallStart");
         }
 
+        animator.SetBool("Pushing", isPushing);
+
         wasGrounded = grounded;
         wasFalling = isFalling;
+        wasPushing = isPushing;
     }
 
-    private void UpdateIdleVariation(PlayerController.ContactState contacts, Vector2 velocity)
+    private void UpdateIdleVariation(PlayerController.ContactState contacts, Vector2 velocity, bool isPushing)
     {
-        bool isIdle = contacts.grounded && Mathf.Abs(velocity.x) < 0.01f;
+        bool isIdle = !isPushing && contacts.grounded && Mathf.Abs(velocity.x) < 0.01f;
 
         if (!isIdle)
         {
@@ -84,8 +89,19 @@ public class PlayerAnimationController : MonoBehaviour
         }
     }
 
-    private void UpdateFlip(Vector2 velocity)
+    private void UpdateFlip(Vector2 velocity, bool isPushing)
     {
+        // 推动时即使被夹断（velocity.x ≈ 0）也要按当前推动方向保持朝向。
+        if (isPushing && controller != null)
+        {
+            spriteRenderer.flipX = controller.Contacts.leftBlocked && !controller.Contacts.rightBlocked;
+            if (Mathf.Abs(velocity.x) > 0.01f)
+            {
+                spriteRenderer.flipX = velocity.x < 0f;
+            }
+            return;
+        }
+
         if (Mathf.Abs(velocity.x) > 0.01f)
         {
             spriteRenderer.flipX = velocity.x < 0f;
