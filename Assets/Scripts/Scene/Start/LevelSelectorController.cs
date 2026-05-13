@@ -1,5 +1,6 @@
 using System;
-using System.Collections.Generic;using Kuchinashi.SceneFlow;
+using System.Collections.Generic;
+using Kuchinashi.SceneFlow;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
