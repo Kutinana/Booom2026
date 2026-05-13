@@ -199,6 +199,8 @@ public class WorldBox : StandardBox
         return playerCollider3D != null ? CalculateBounds(playerCollider3D) : new Bounds(playerTransform.position, Vector3.zero);
     }
 
+    [SerializeField] private float padding = 0.03f;
+
     private void MovePlayerToInnerSide(BoxPushDirection direction, Bounds outerBounds, Bounds innerBounds, Bounds playerBounds)
     {
         if (innerBounds.size == Vector3.zero)
@@ -216,11 +218,11 @@ public class WorldBox : StandardBox
         switch (direction)
         {
             case BoxPushDirection.Left:
-                position.x = innerBounds.min.x - extents.x;
+                position.x = innerBounds.min.x - extents.x - padding;
                 position.y = RemapClamped(playerBounds.center.y, outerBounds.min.y, outerBounds.max.y, innerInsideMinY, innerInsideMaxY);
                 break;
             case BoxPushDirection.Right:
-                position.x = innerBounds.max.x + extents.x;
+                position.x = innerBounds.max.x + extents.x + padding;
                 position.y = RemapClamped(playerBounds.center.y, outerBounds.min.y, outerBounds.max.y, innerInsideMinY, innerInsideMaxY);
                 break;
             case BoxPushDirection.Down:
