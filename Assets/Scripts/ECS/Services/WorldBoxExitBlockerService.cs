@@ -4,6 +4,10 @@ using UnityEngine.SceneManagement;
 
 public class WorldBoxExitBlockerService : ServiceBase
 {
+    private const string PlatformTag = "Platform";
+    private const string SceneBricksLayerName = "SceneBricks";
+    private const string UntaggedTag = "Untagged";
+
     [SerializeField, Min(0f)] private float innerCheckPadding = 0.02f;
     [SerializeField, Min(0.01f)] private float fallbackCellSize = 0.5f;
     [SerializeField, Min(0.01f)] private float fallbackDepth = 1f;
@@ -35,13 +39,18 @@ public class WorldBoxExitBlockerService : ServiceBase
             use2D = true;
         }
 
-        if (!HasStaticBlockingCollider(innerTargetBounds, worldBox, blockingMask, use2D, use3D))
+        if (!TryGetStaticBlockingColliderTag(innerTargetBounds, worldBox, blockingMask, use2D, use3D, out string blockingTag))
+        {
+            return false;
+        }
+
+        if (IsPlatformTag(blockingTag) && IsPastOuterBottomEdge(direction, outerBounds, playerBounds))
         {
             return false;
         }
 
         Bounds wallBounds = CalculateOuterWallBounds(worldBox, direction, outerBounds, playerBounds);
-        RefreshWall(worldBox, direction, wallBounds, use2D, use3D);
+        RefreshWall(worldBox, direction, wallBounds, use2D, use3D, blockingTag);
         return true;
     }
 
@@ -85,25 +94,41 @@ public class WorldBoxExitBlockerService : ServiceBase
         }
     }
 
-    private bool HasStaticBlockingCollider(
+    private bool TryGetStaticBlockingColliderTag(
         Bounds targetBounds,
         WorldBox worldBox,
         LayerMask blockingMask,
         bool check2D,
-        bool check3D)
+        bool check3D,
+        out string blockingTag)
     {
+        blockingTag = null;
         Bounds queryBounds = targetBounds;
         queryBounds.Expand(innerCheckPadding * 2f);
 
         Physics.SyncTransforms();
         Physics2D.SyncTransforms();
 
-        return (check2D && HasStaticBlockingCollider2D(queryBounds, worldBox, blockingMask)) ||
-            (check3D && HasStaticBlockingCollider3D(queryBounds, worldBox, blockingMask));
+        if (check2D && TryGetStaticBlockingColliderTag2D(queryBounds, worldBox, blockingMask, out blockingTag))
+        {
+            return true;
+        }
+
+        if (check3D && TryGetStaticBlockingColliderTag3D(queryBounds, worldBox, blockingMask, out blockingTag))
+        {
+            return true;
+        }
+
+        return false;
     }
 
-    private bool HasStaticBlockingCollider2D(Bounds queryBounds, WorldBox worldBox, LayerMask blockingMask)
+    private bool TryGetStaticBlockingColliderTag2D(
+        Bounds queryBounds,
+        WorldBox worldBox,
+        LayerMask blockingMask,
+        out string blockingTag)
     {
+        blockingTag = null;
         Vector2 size = new Vector2(
             Mathf.Max(minimumColliderSize, queryBounds.size.x),
             Mathf.Max(minimumColliderSize, queryBounds.size.y));
@@ -111,8 +136,10 @@ public class WorldBoxExitBlockerService : ServiceBase
         int hitCount = Physics2D.OverlapBoxNonAlloc((Vector2)queryBounds.center, size, 0f, overlapHits2D, blockingMask);
         for (int i = 0; i < hitCount; i++)
         {
-            if (IsStaticBlockingCollider(overlapHits2D[i], worldBox))
+            Collider2D hit = overlapHits2D[i];
+            if (IsStaticBlockingCollider(hit, worldBox))
             {
+                blockingTag = GetBlockingTag(hit.transform);
                 return true;
             }
         }
@@ -120,8 +147,13 @@ public class WorldBoxExitBlockerService : ServiceBase
         return false;
     }
 
-    private bool HasStaticBlockingCollider3D(Bounds queryBounds, WorldBox worldBox, LayerMask blockingMask)
+    private bool TryGetStaticBlockingColliderTag3D(
+        Bounds queryBounds,
+        WorldBox worldBox,
+        LayerMask blockingMask,
+        out string blockingTag)
     {
+        blockingTag = null;
         Vector3 halfExtents = queryBounds.extents;
         halfExtents.x = Mathf.Max(minimumColliderSize * 0.5f, halfExtents.x);
         halfExtents.y = Mathf.Max(minimumColliderSize * 0.5f, halfExtents.y);
@@ -137,8 +169,10 @@ public class WorldBoxExitBlockerService : ServiceBase
 
         for (int i = 0; i < hitCount; i++)
         {
-            if (IsStaticBlockingCollider(overlapHits3D[i], worldBox))
+            Collider hit = overlapHits3D[i];
+            if (IsStaticBlockingCollider(hit, worldBox))
             {
+                blockingTag = GetBlockingTag(hit.transform);
                 return true;
             }
         }
@@ -203,11 +237,20 @@ public class WorldBoxExitBlockerService : ServiceBase
         return new Bounds(center, size);
     }
 
-    private void RefreshWall(WorldBox worldBox, BoxPushDirection direction, Bounds wallBounds, bool use2D, bool use3D)
+    private void RefreshWall(
+        WorldBox worldBox,
+        BoxPushDirection direction,
+        Bounds wallBounds,
+        bool use2D,
+        bool use3D,
+        string blockingTag)
     {
         TemporaryWall wall = GetOrCreateWall(worldBox);
         GameObject wallObject = wall.GameObject;
-        wallObject.layer = worldBox.gameObject.layer;
+        bool isPlatformBlocker = IsPlatformTag(blockingTag);
+        int fallbackLayer = worldBox.gameObject.layer;
+        wallObject.layer = isPlatformBlocker ? fallbackLayer : GetSceneBricksLayer(fallbackLayer);
+        wallObject.tag = isPlatformBlocker ? PlatformTag : UntaggedTag;
         wallObject.transform.position = wallBounds.center;
         wallObject.transform.rotation = Quaternion.identity;
         wallObject.transform.localScale = Vector3.one;
@@ -257,10 +300,7 @@ public class WorldBoxExitBlockerService : ServiceBase
             return wall;
         }
 
-        GameObject wallObject = new GameObject($"WorldBoxExitBlocker.{worldBox.name}")
-        {
-            layer = LayerMask.NameToLayer("SceneBricks")
-        };
+        GameObject wallObject = new GameObject($"WorldBoxExitBlocker.{worldBox.name}");
         Scene scene = worldBox.gameObject.scene;
         if (scene.IsValid())
         {
@@ -356,6 +396,38 @@ public class WorldBoxExitBlockerService : ServiceBase
         }
 
         return false;
+    }
+
+    private static string GetBlockingTag(Transform start)
+    {
+        Transform current = start;
+        while (current != null)
+        {
+            if (current.CompareTag(PlatformTag))
+            {
+                return PlatformTag;
+            }
+
+            current = current.parent;
+        }
+
+        return start != null ? start.tag : null;
+    }
+
+    private static bool IsPlatformTag(string tag)
+    {
+        return tag == PlatformTag;
+    }
+
+    private static bool IsPastOuterBottomEdge(BoxPushDirection direction, Bounds outerBounds, Bounds playerBounds)
+    {
+        return direction == BoxPushDirection.Down && playerBounds.max.y < outerBounds.min.y;
+    }
+
+    private static int GetSceneBricksLayer(int fallbackLayer)
+    {
+        int sceneBricksLayer = LayerMask.NameToLayer(SceneBricksLayerName);
+        return sceneBricksLayer >= 0 ? sceneBricksLayer : fallbackLayer;
     }
 
     private sealed class TemporaryWall

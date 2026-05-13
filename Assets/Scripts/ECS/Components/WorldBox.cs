@@ -345,13 +345,14 @@ public class WorldBox : StandardBox
     {
         direction = default;
         float threshold = Mathf.Max(0f, outerEdgeBlockerTouchTolerance);
+        float downThreshold = Mathf.Max(threshold, GetCellAxisSize(true));
         float leftDistance = playerBounds.min.x - outerBounds.min.x;
         float rightDistance = outerBounds.max.x - playerBounds.max.x;
         float downDistance = playerBounds.min.y - outerBounds.min.y;
         float upDistance = outerBounds.max.y - playerBounds.max.y;
         bool touchesLeft = leftDistance <= threshold;
         bool touchesRight = rightDistance <= threshold;
-        bool touchesDown = downDistance <= threshold;
+        bool touchesDown = downDistance <= downThreshold;
         bool touchesUp = upDistance <= threshold;
 
         if (!touchesLeft && !touchesRight && !touchesDown && !touchesUp)
@@ -422,6 +423,17 @@ public class WorldBox : StandardBox
         }
 
         return found;
+    }
+
+    private float GetCellAxisSize(bool vertical)
+    {
+        Grid grid = Grid;
+        if (grid == null)
+        {
+            return 0f;
+        }
+
+        return Mathf.Abs(vertical ? grid.cellSize.y : grid.cellSize.x);
     }
 
     private bool TryMovePlayerToOuterEntrance(BoxPushDirection direction)
