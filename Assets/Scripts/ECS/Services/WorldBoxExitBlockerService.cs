@@ -16,6 +16,9 @@ public class WorldBoxExitBlockerService : ServiceBase
     [SerializeField, Min(0.01f)] private float minimumColliderSize = 0.05f;
     [SerializeField, Min(0.02f)] private float keepAliveDuration = 0.15f;
 
+    [Header("Debug")]
+    [SerializeField] private bool logInnerTargetOverlapHits = false;
+
     private readonly Collider2D[] overlapHits2D = new Collider2D[32];
     private readonly Collider[] overlapHits3D = new Collider[32];
     private readonly Dictionary<WorldBox, TemporaryWall> walls = new Dictionary<WorldBox, TemporaryWall>();
@@ -106,7 +109,7 @@ public class WorldBoxExitBlockerService : ServiceBase
     {
         blockingTag = null;
         Bounds queryBounds = targetBounds;
-        queryBounds.Expand(innerCheckPadding * 2f);
+        queryBounds.Expand(-innerCheckPadding * 2f);
 
         Physics.SyncTransforms();
         Physics2D.SyncTransforms();
@@ -136,10 +139,13 @@ public class WorldBoxExitBlockerService : ServiceBase
             Mathf.Max(minimumColliderSize, queryBounds.size.y));
 
         int hitCount = Physics2D.OverlapBoxNonAlloc((Vector2)queryBounds.center, size, 0f, overlapHits2D, blockingMask);
+        LogTargetScan("2D", worldBox, queryBounds, blockingMask, hitCount);
         for (int i = 0; i < hitCount; i++)
         {
             Collider2D hit = overlapHits2D[i];
-            if (IsStaticBlockingCollider(hit, worldBox, queryBounds))
+            bool accepted = IsStaticBlockingCollider(hit, worldBox, queryBounds, out string rejectReason);
+            LogTargetHit("2D", worldBox, hit, accepted, rejectReason);
+            if (accepted)
             {
                 blockingTag = GetBlockingTag(hit.transform);
                 return true;
@@ -169,10 +175,13 @@ public class WorldBoxExitBlockerService : ServiceBase
             blockingMask,
             QueryTriggerInteraction.Ignore);
 
+        LogTargetScan("3D", worldBox, queryBounds, blockingMask, hitCount);
         for (int i = 0; i < hitCount; i++)
         {
             Collider hit = overlapHits3D[i];
-            if (IsStaticBlockingCollider(hit, worldBox))
+            bool accepted = IsStaticBlockingCollider(hit, worldBox, out string rejectReason);
+            LogTargetHit("3D", worldBox, hit, accepted, rejectReason);
+            if (accepted)
             {
                 blockingTag = GetBlockingTag(hit.transform);
                 return true;
@@ -184,30 +193,24 @@ public class WorldBoxExitBlockerService : ServiceBase
 
     private bool IsStaticBlockingCollider(Collider2D hit, WorldBox worldBox)
     {
-        return IsStaticBlockingCollider(hit, worldBox, null);
+        return IsStaticBlockingCollider(hit, worldBox, null, out _);
     }
 
-    private bool IsStaticBlockingCollider(Collider2D hit, WorldBox worldBox, Bounds? queryBounds)
+    private bool IsStaticBlockingCollider(Collider2D hit, WorldBox worldBox, Bounds? queryBounds, out string rejectReason)
     {
-        return hit != null &&
-            hit.enabled &&
-            !hit.isTrigger &&
-            hit.bounds.size != Vector3.zero &&
-            !IsTemporaryWallCollider(hit) &&
-            !IsOwnedByWorldBox(hit.transform, worldBox) &&
-            !HasSceneMovableItem(hit.transform) &&
-            (!queryBounds.HasValue || TilemapHasTileInBounds(hit, queryBounds.Value));
+        rejectReason = GetStaticBlockingRejectReason(hit, worldBox, queryBounds);
+        return rejectReason == null;
     }
 
     private bool IsStaticBlockingCollider(Collider hit, WorldBox worldBox)
     {
-        return hit != null &&
-            hit.enabled &&
-            !hit.isTrigger &&
-            hit.bounds.size != Vector3.zero &&
-            !IsTemporaryWallCollider(hit) &&
-            !IsOwnedByWorldBox(hit.transform, worldBox) &&
-            !HasSceneMovableItem(hit.transform);
+        return IsStaticBlockingCollider(hit, worldBox, out _);
+    }
+
+    private bool IsStaticBlockingCollider(Collider hit, WorldBox worldBox, out string rejectReason)
+    {
+        rejectReason = GetStaticBlockingRejectReason(hit, worldBox);
+        return rejectReason == null;
     }
 
     private Bounds CalculateOuterWallBounds(WorldBox worldBox, BoxPushDirection direction, Bounds outerBounds, Bounds playerBounds)
@@ -347,6 +350,54 @@ public class WorldBoxExitBlockerService : ServiceBase
         }
     }
 
+    private void LogTargetScan(string physicsType, WorldBox worldBox, Bounds queryBounds, LayerMask blockingMask, int hitCount)
+    {
+        if (!logInnerTargetOverlapHits)
+        {
+            return;
+        }
+
+        Debug.Log(
+            $"[WorldBoxExitBlocker] Target scan {physicsType}: worldBox={GetObjectPath(worldBox != null ? worldBox.transform : null)}, hitCount={hitCount}, center={queryBounds.center}, size={queryBounds.size}, mask={blockingMask.value}",
+            this);
+    }
+
+    private void LogTargetHit(string physicsType, WorldBox worldBox, Collider2D hit, bool accepted, string rejectReason)
+    {
+        if (!logInnerTargetOverlapHits)
+        {
+            return;
+        }
+
+        if (hit == null)
+        {
+            Debug.Log($"[WorldBoxExitBlocker] Target hit {physicsType}: null, status=ignore: {rejectReason}", this);
+            return;
+        }
+
+        Debug.Log(
+            $"[WorldBoxExitBlocker] Target hit {physicsType}: status={FormatHitStatus(accepted, rejectReason)}, worldBox={GetObjectPath(worldBox != null ? worldBox.transform : null)}, collider={GetObjectPath(hit.transform)}, tag={hit.tag}, layer={GetLayerLabel(hit.gameObject.layer)}, enabled={hit.enabled}, isTrigger={hit.isTrigger}, boundsCenter={hit.bounds.center}, boundsSize={hit.bounds.size}",
+            hit);
+    }
+
+    private void LogTargetHit(string physicsType, WorldBox worldBox, Collider hit, bool accepted, string rejectReason)
+    {
+        if (!logInnerTargetOverlapHits)
+        {
+            return;
+        }
+
+        if (hit == null)
+        {
+            Debug.Log($"[WorldBoxExitBlocker] Target hit {physicsType}: null, status=ignore: {rejectReason}", this);
+            return;
+        }
+
+        Debug.Log(
+            $"[WorldBoxExitBlocker] Target hit {physicsType}: status={FormatHitStatus(accepted, rejectReason)}, worldBox={GetObjectPath(worldBox != null ? worldBox.transform : null)}, collider={GetObjectPath(hit.transform)}, tag={hit.tag}, layer={GetLayerLabel(hit.gameObject.layer)}, enabled={hit.enabled}, isTrigger={hit.isTrigger}, boundsCenter={hit.bounds.center}, boundsSize={hit.bounds.size}",
+            hit);
+    }
+
     private void RemoveWall(WorldBox worldBox)
     {
         if (!walls.TryGetValue(worldBox, out TemporaryWall wall))
@@ -467,6 +518,124 @@ public class WorldBoxExitBlockerService : ServiceBase
 
         return false;
     }
+
+    #region String Processing
+
+    private string GetStaticBlockingRejectReason(Collider2D hit, WorldBox worldBox, Bounds? queryBounds)
+    {
+        if (hit == null)
+        {
+            return "null";
+        }
+
+        if (!hit.enabled)
+        {
+            return "disabled";
+        }
+
+        if (hit.isTrigger)
+        {
+            return "isTrigger";
+        }
+
+        if (hit.bounds.size == Vector3.zero)
+        {
+            return "zero bounds";
+        }
+
+        if (IsTemporaryWallCollider(hit))
+        {
+            return "temporary wall";
+        }
+
+        if (IsOwnedByWorldBox(hit.transform, worldBox))
+        {
+            return "owned by WorldBox";
+        }
+
+        if (HasSceneMovableItem(hit.transform))
+        {
+            return "scene movable item";
+        }
+
+        if (queryBounds.HasValue && !TilemapHasTileInBounds(hit, queryBounds.Value))
+        {
+            return "tilemap has no tile in target bounds";
+        }
+
+        return null;
+    }
+
+    private string GetStaticBlockingRejectReason(Collider hit, WorldBox worldBox)
+    {
+        if (hit == null)
+        {
+            return "null";
+        }
+
+        if (!hit.enabled)
+        {
+            return "disabled";
+        }
+
+        if (hit.isTrigger)
+        {
+            return "isTrigger";
+        }
+
+        if (hit.bounds.size == Vector3.zero)
+        {
+            return "zero bounds";
+        }
+
+        if (IsTemporaryWallCollider(hit))
+        {
+            return "temporary wall";
+        }
+
+        if (IsOwnedByWorldBox(hit.transform, worldBox))
+        {
+            return "owned by WorldBox";
+        }
+
+        if (HasSceneMovableItem(hit.transform))
+        {
+            return "scene movable item";
+        }
+
+        return null;
+    }
+
+    private static string FormatHitStatus(bool accepted, string rejectReason)
+    {
+        return accepted ? "ACCEPT" : $"ignore: {rejectReason}";
+    }
+
+    private static string GetLayerLabel(int layer)
+    {
+        string layerName = LayerMask.LayerToName(layer);
+        return string.IsNullOrEmpty(layerName) ? layer.ToString() : $"{layer}:{layerName}";
+    }
+
+    private static string GetObjectPath(Transform transform)
+    {
+        if (transform == null)
+        {
+            return "null";
+        }
+
+        string path = transform.name;
+        Transform current = transform.parent;
+        while (current != null)
+        {
+            path = current.name + "/" + path;
+            current = current.parent;
+        }
+
+        return path;
+    }
+
+    #endregion
 
     private static bool TilemapHasTileInBounds(Collider2D hit, Bounds queryBounds)
     {
