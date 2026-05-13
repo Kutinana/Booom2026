@@ -13752,11 +13752,11 @@ PrefabInstance:
     m_Modifications:
     - target: {fileID: 2688996201221799278, guid: b854b1a77dbb2a247a1b3b2101ba42ef, type: 3}
       propertyPath: m_Radius
-      value: 0.2
+      value: 0.18
       objectReference: {fileID: 0}
     - target: {fileID: 2688996201221799278, guid: b854b1a77dbb2a247a1b3b2101ba42ef, type: 3}
       propertyPath: m_Offset.y
-      value: -0.05
+      value: -0.07
       objectReference: {fileID: 0}
     - target: {fileID: 5530570425877885675, guid: b854b1a77dbb2a247a1b3b2101ba42ef, type: 3}
       propertyPath: gravity
@@ -13768,7 +13768,7 @@ PrefabInstance:
       objectReference: {fileID: 1822326675}
     - target: {fileID: 5530570425877885675, guid: b854b1a77dbb2a247a1b3b2101ba42ef, type: 3}
       propertyPath: moveSpeed
-      value: 3
+      value: 2.3
       objectReference: {fileID: 0}
     - target: {fileID: 5530570425877885675, guid: b854b1a77dbb2a247a1b3b2101ba42ef, type: 3}
       propertyPath: cellOffset.x

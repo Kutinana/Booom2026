@@ -100,11 +100,14 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: dacb42e4c622dbe45ad9a0b280211f0c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  animator: {fileID: 0}
   cellOffset: {x: 0.5, y: 0.5, z: 0}
-  moveSpeed: 4
+  moveSpeed: 2.5
   jumpGridHeight: 2.5
   gravity: 28
   maxFallSpeed: 18
+  retainedVelocityDrag: 18
+  retainedVelocityStopSpeed: 0.05
   collisionMask:
     serializedVersion: 2
     m_Bits: 4294967295
