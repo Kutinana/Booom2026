@@ -74,6 +74,12 @@ public partial class PlayerController : MonoBehaviour, ISceneMovableItem, IPoint
     }
 
     /// <summary>
+    /// 玩家是否处于"被砸死"过渡：动画/物理层据此完全冻结玩家位置并切换到 crashed 动画。
+    /// 由 <see cref="PlayerService"/> 维护，新玩家注册时清零。
+    /// </summary>
+    public bool IsDying => ServiceBase.TryGet(out PlayerService ps) && ps.IsDying && ps.Player == this;
+
+    /// <summary>
     /// 为 <c>true</c> 时不读取键盘产生的移动、跳跃与平台下落输入；重力与已有速度仍正常结算。
     /// </summary>
     public bool MovementInputDisabled { get; set; }
@@ -184,6 +190,13 @@ public partial class PlayerController : MonoBehaviour, ISceneMovableItem, IPoint
 
     private void FixedUpdate()
     {
+        // 死亡过渡中：完全冻结 player（不解算重力/输入/碰撞），让 crashed 动画在原地播放，
+        // 同时避免 ResolveTerrainOverlaps 在落下的箱子穿过 player 时把 player 沿 X 轴挤开。
+        if (IsDying)
+        {
+            return;
+        }
+
         RefreshContacts();
         ProcessPlatformDropRequest();
 
@@ -626,24 +639,26 @@ public partial class PlayerController : MonoBehaviour, ISceneMovableItem, IPoint
         float moveDown = otherBounds.min.y - playerBounds.max.y - OverlapResolveEpsilon;
         float moveUp = otherBounds.max.y - playerBounds.min.y + OverlapResolveEpsilon;
 
-        if (Mathf.Abs(movedDelta.x) > 0f && Mathf.Abs(movedDelta.x) >= Mathf.Abs(movedDelta.y))
-        {
-            return new Vector3(movedDelta.x > 0f ? moveLeft : moveRight, 0f, 0f);
-        }
+        // 每轴内：优先沿 movedDelta 反方向回退（保留"撞墙被推回入侵前"的语义）；
+        // 该轴 movedDelta 为 0 时退化为几何上较短的一侧。
+        float xCorrection = movedDelta.x > 0f
+            ? moveLeft
+            : movedDelta.x < 0f
+                ? moveRight
+                : (Mathf.Abs(moveLeft) < Mathf.Abs(moveRight) ? moveLeft : moveRight);
+        float yCorrection = movedDelta.y > 0f
+            ? moveDown
+            : movedDelta.y < 0f
+                ? moveUp
+                : (Mathf.Abs(moveDown) < Mathf.Abs(moveUp) ? moveDown : moveUp);
 
-        if (Mathf.Abs(movedDelta.y) > 0f)
-        {
-            return new Vector3(0f, movedDelta.y > 0f ? moveDown : moveUp, 0f);
-        }
-
-        Vector3 xCorrection = Mathf.Abs(moveLeft) < Mathf.Abs(moveRight)
-            ? new Vector3(moveLeft, 0f, 0f)
-            : new Vector3(moveRight, 0f, 0f);
-        Vector3 yCorrection = Mathf.Abs(moveDown) < Mathf.Abs(moveUp)
-            ? new Vector3(0f, moveDown, 0f)
-            : new Vector3(0f, moveUp, 0f);
-
-        return xCorrection.sqrMagnitude < yCorrection.sqrMagnitude ? xCorrection : yCorrection;
+        // 跨轴：取 MTV——分离距离较小的那条轴。
+        // 旧实现按 movedDelta 主轴强制选 X 或 Y，会在"头顶 ε overlap + 水平走动"时把 player
+        // 沿 X 推出整整一格（"挤出那一格" bug）。改用 MTV 后，Y 轴的 ε 级修正会胜出，
+        // 仅产生肉眼不可见的位移；对正常撞墙/落地场景无回归（侵入轴本身就是较短的一侧）。
+        return Mathf.Abs(xCorrection) < Mathf.Abs(yCorrection)
+            ? new Vector3(xCorrection, 0f, 0f)
+            : new Vector3(0f, yCorrection, 0f);
     }
 
     private static bool OverlapsXY(Bounds a, Bounds b)

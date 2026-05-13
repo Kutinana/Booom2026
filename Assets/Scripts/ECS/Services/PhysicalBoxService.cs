@@ -165,6 +165,16 @@ public class PhysicalBoxService : ServiceBase<StandardBox>
         if (verticalHit.Player != null)
         {
             TryHandlePlayerImpact(box, from, from + Vector3.down * distance, dt);
+
+            // 致死的那一帧：impact 已经把 PlayerService.IsDying 翻成 true（事件是同步派发的），
+            // 此时 Cast 会过滤掉 player，重新 resolve 一遍可以让箱子在死亡帧本身就开始穿过 player
+            // 继续下落，而不是被 clamp 到 player 头顶停一帧。这样"砸落速度不变"才贯通：
+            // 撞死 player → 同帧穿过 → 受重力继续加速 → 一路落到真实地面。
+            if (ServiceBase.TryGet(out PlayerService deathService) && deathService.IsDying)
+            {
+                resolved = ResolveVertical(box, distance, out _);
+                to = from + Vector3.down * resolved;
+            }
         }
         else
         {
@@ -212,6 +222,12 @@ public class PhysicalBoxService : ServiceBase<StandardBox>
         }
 
         if (!ServiceBase.TryGet(out PlayerService playerService) || playerService.Player == null)
+        {
+            return false;
+        }
+
+        // 死亡过渡中：跳过 impact 处理，避免在 reload 期间被多个箱子重复砸。
+        if (playerService.IsDying)
         {
             return false;
         }
@@ -479,6 +495,10 @@ public class PhysicalBoxService : ServiceBase<StandardBox>
         float bestDistance = float.PositiveInfinity;
         hit = default;
 
+        // 死亡过渡中：让箱子的 cast 看不到当前 player，使 SimulateFall 不再被 player 头顶卡住，
+        // 自然继续受重力加速、穿过 player、直到落到真实地面，匹配"砸落速度不变"的需求。
+        GameObject ignoredPlayer = TryGetDyingPlayerGameObject();
+
         Collider2D boxCollider2D = box.Collider2D;
         if (boxCollider2D != null)
         {
@@ -486,10 +506,21 @@ public class PhysicalBoxService : ServiceBase<StandardBox>
             for (int i = 0; i < hitCount; i++)
             {
                 RaycastHit2D hit2D = hits2D[i];
-                if (hit2D.collider != null && !hit2D.collider.isTrigger && hit2D.collider != boxCollider2D && hit2D.distance < bestDistance)
+                if (hit2D.collider == null || hit2D.collider.isTrigger || hit2D.collider == boxCollider2D)
+                {
+                    continue;
+                }
+
+                PlayerController hitPlayer = hit2D.collider.GetComponentInParent<PlayerController>();
+                if (ignoredPlayer != null && hitPlayer != null && hitPlayer.gameObject == ignoredPlayer)
+                {
+                    continue;
+                }
+
+                if (hit2D.distance < bestDistance)
                 {
                     bestDistance = hit2D.distance;
-                    hit = new RayHit(bestDistance, hit2D.collider.GetComponentInParent<PlayerController>());
+                    hit = new RayHit(bestDistance, hitPlayer);
                 }
             }
         }
@@ -501,15 +532,36 @@ public class PhysicalBoxService : ServiceBase<StandardBox>
             for (int i = 0; i < hitCount; i++)
             {
                 RaycastHit hit3D = hits3D[i];
-                if (hit3D.collider != null && hit3D.collider != boxCollider3D && hit3D.distance < bestDistance)
+                if (hit3D.collider == null || hit3D.collider == boxCollider3D)
+                {
+                    continue;
+                }
+
+                PlayerController hitPlayer = hit3D.collider.GetComponentInParent<PlayerController>();
+                if (ignoredPlayer != null && hitPlayer != null && hitPlayer.gameObject == ignoredPlayer)
+                {
+                    continue;
+                }
+
+                if (hit3D.distance < bestDistance)
                 {
                     bestDistance = hit3D.distance;
-                    hit = new RayHit(bestDistance, hit3D.collider.GetComponentInParent<PlayerController>());
+                    hit = new RayHit(bestDistance, hitPlayer);
                 }
             }
         }
 
         return bestDistance < float.PositiveInfinity;
+    }
+
+    private GameObject TryGetDyingPlayerGameObject()
+    {
+        if (ServiceBase.TryGet(out PlayerService playerService) && playerService.IsDying && playerService.Player != null)
+        {
+            return playerService.Player.gameObject;
+        }
+
+        return null;
     }
 
     private float GetCellDistance(StandardBox box, Vector3 axis)

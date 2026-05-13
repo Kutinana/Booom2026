@@ -17,6 +17,11 @@ public class PlayerAnimationController : MonoBehaviour
     private bool wasGrounded;
     private bool wasFalling;
     private bool wasPushing;
+    private bool wasDying;
+
+    // controller 中名为 "Crashed" 的 state：被箱子砸死时 force-Play 进入；该 state 没有任何转出过渡，
+    // 因此会在最后一帧定格直到场景 reload，刚好契合"砸扁后停留 0.5s 再重置"的需求。
+    private static readonly int CrashedStateHash = Animator.StringToHash("Crashed");
 
     private void Reset()
     {
@@ -28,6 +33,21 @@ public class PlayerAnimationController : MonoBehaviour
     private void Update()
     {
         if (controller == null) return;
+
+        // 死亡过渡：第一帧进入 IsDying 时强制 Play("Crashed")，之后不再写其它 animator 参数，
+        // 避免 speed/Grounded/Pushing 触发到别的 state（虽然 Crashed 本身没有出口转移，但保持
+        // 整段死亡帧只播放这一个 clip 更稳）。
+        bool isDying = controller.IsDying;
+        if (isDying)
+        {
+            if (!wasDying)
+            {
+                animator.Play(CrashedStateHash, 0, 0f);
+            }
+            wasDying = true;
+            return;
+        }
+        wasDying = false;
 
         var contacts = controller.Contacts;
         var velocity = controller.Velocity;

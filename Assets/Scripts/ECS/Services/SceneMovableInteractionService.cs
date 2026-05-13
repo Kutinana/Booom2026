@@ -100,6 +100,13 @@ public class SceneMovableInteractionService : ServiceBase
             return;
         }
 
+        // 死亡过渡中：跳过整个 impact 扫描，避免在 reload 等待期间继续 dispatch impact。
+        if (playerService.IsDying)
+        {
+            StoreItemBounds();
+            return;
+        }
+
         PlayerController player = playerService.Player;
         if (playerBoundsProvider == null || playerBoundsProvider.Player != player)
         {
