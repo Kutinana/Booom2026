@@ -105,6 +105,13 @@ public partial class PlayerController : MonoBehaviour, ISceneMovableItem, IPoint
     private StandardBox activePushBox;
     private BoxPushDirection activePushDirection;
     private bool activePushCanPush;
+
+    // 空中（!grounded）状态下禁止真正推动 box，但仍要触发 InitializePush 让 WorldBox 等监听者
+    // 处理进入逻辑。下面这组字段对"接触相同 box+方向"做节流，避免每帧重复派发 InitializePush
+    // 导致 WorldBox 每帧把玩家瞬移到 outer entrance。
+    private bool hasAirborneInit;
+    private StandardBox airborneInitBox;
+    private BoxPushDirection airborneInitDirection;
     private bool hasRetainedVelocity;
     private Vector2 retainedVelocityAxis;
     private float retainedVelocitySpeed;
@@ -338,8 +345,32 @@ public partial class PlayerController : MonoBehaviour, ISceneMovableItem, IPoint
         if (box == null)
         {
             EndPushSession();
+            ResetAirborneInitState();
             return;
         }
+
+        // 空中（跳跃/落体）状态下不允许实质性推动 box：
+        //  - 起跳前已有 push 会话则触发释放过渡（按 50% 规则收尾）；
+        //  - 不进入新的 linear push 会话；
+        //  - 但仍调用 InitializePush，让 WorldBox 等监听者通过 BoxPushInitializeEvent.CanPush=false
+        //    把玩家瞬移到 outer entrance（保留"贴 WorldBox 起跳按方向键能进入"的语义）；
+        //  - 对同一 box+direction 只发一次，避免每帧重复派发导致 WorldBox 每帧瞬移玩家。
+        if (!contacts.grounded)
+        {
+            EndPushSession();
+
+            if (!hasAirborneInit || airborneInitBox != box || airborneInitDirection != direction)
+            {
+                box.InitializePush(direction, gameObject);
+                hasAirborneInit = true;
+                airborneInitBox = box;
+                airborneInitDirection = direction;
+            }
+
+            return;
+        }
+
+        ResetAirborneInitState();
 
         // 切换箱子或换方向：先把旧会话释放（触发 50% 规则收尾），再 InitializePush 新会话。
         if (activePushBox != box || activePushDirection != direction)
@@ -401,6 +432,12 @@ public partial class PlayerController : MonoBehaviour, ISceneMovableItem, IPoint
 
         activePushBox = null;
         activePushCanPush = false;
+    }
+
+    private void ResetAirborneInitState()
+    {
+        hasAirborneInit = false;
+        airborneInitBox = null;
     }
 
     private void MoveByAndResolve(Vector3 delta)
