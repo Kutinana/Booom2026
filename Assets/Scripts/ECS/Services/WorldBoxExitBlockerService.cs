@@ -1,3 +1,4 @@
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -254,7 +255,7 @@ public class WorldBoxExitBlockerService : ServiceBase
         bool use3D,
         string blockingTag)
     {
-        TemporaryWall wall = GetOrCreateWall(worldBox);
+        TemporaryWall wall = GetOrCreateWall(worldBox, out bool created);
         GameObject wallObject = wall.GameObject;
         bool isPlatformBlocker = IsPlatformTag(blockingTag);
         int fallbackLayer = worldBox.gameObject.layer;
@@ -300,16 +301,30 @@ public class WorldBoxExitBlockerService : ServiceBase
 
         wall.Direction = direction;
         wall.ExpireAt = Time.time + keepAliveDuration;
+
+        if (created)
+        {
+            if (isPlatformBlocker)
+            {
+                StartCoroutine(ActivateNextFrame(wallObject));
+            }
+            else
+            {
+                wallObject.SetActive(true);
+            }
+        }
     }
 
-    private TemporaryWall GetOrCreateWall(WorldBox worldBox)
+    private TemporaryWall GetOrCreateWall(WorldBox worldBox, out bool created)
     {
+        created = false;
         if (walls.TryGetValue(worldBox, out TemporaryWall wall) && wall != null && wall.GameObject != null)
         {
             return wall;
         }
 
         GameObject wallObject = new GameObject($"WorldBoxExitBlocker.{worldBox.name}");
+        wallObject.SetActive(false);
         Scene scene = worldBox.gameObject.scene;
         if (scene.IsValid())
         {
@@ -318,7 +333,18 @@ public class WorldBoxExitBlockerService : ServiceBase
 
         wall = new TemporaryWall(wallObject);
         walls[worldBox] = wall;
+        created = true;
         return wall;
+    }
+
+    private IEnumerator ActivateNextFrame(GameObject wallObject)
+    {
+        yield return null;
+
+        if (wallObject != null)
+        {
+            wallObject.SetActive(true);
+        }
     }
 
     private void RemoveWall(WorldBox worldBox)
