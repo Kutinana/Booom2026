@@ -24,6 +24,15 @@ public class PhysicalBoxService : ServiceBase<StandardBox>
     private readonly List<StandardBox> linearPushScratch = new List<StandardBox>(8);
     private readonly RaycastHit2D[] hits2D = new RaycastHit2D[8];
     private readonly RaycastHit[] hits3D = new RaycastHit[8];
+
+    // 纵向堆叠联动（推下方箱体时上方紧贴的箱体一并平移）的复用 buffer。
+    // StackContactEpsilon：判定"紧贴"的最大允许竖向间隙；StackHorizontalOverlapRatio：要求的最小 X 重叠占比（取较小者半宽）。
+    private readonly List<StandardBox> stackGroupScratch = new List<StandardBox>(8);
+    private readonly Collider2D[] stackOverlapHits2D = new Collider2D[16];
+    private readonly Collider[] stackOverlapHits3D = new Collider[16];
+    private const float StackContactEpsilon = 0.04f;
+    private const float StackHorizontalOverlapRatio = 0.5f;
+
     private IUnRegister pushAttemptUnRegister;
 
     protected override void Awake()
@@ -564,6 +573,182 @@ public class PhysicalBoxService : ServiceBase<StandardBox>
         return null;
     }
 
+    /// <summary>
+    /// 从 root 出发，BFS 向上收集"被 root（或 root 间接支撑的箱体）"竖直支撑的堆叠成员。
+    /// 不含 root 自身；输出顺序为底→顶（每一层先于上一层）。
+    /// 判定规则：
+    ///   - 紧贴：上方 box.min.y 与下方 box.max.y 之间的差 ≤ StackContactEpsilon；
+    ///   - X overlap：两 box 在 X 上的重叠 > min(width) * StackHorizontalOverlapRatio。
+    /// </summary>
+    private void CollectVerticalStack(StandardBox root, List<StandardBox> outGroup)
+    {
+        outGroup.Clear();
+        if (root == null)
+        {
+            return;
+        }
+
+        // 广度优先：处理 root 与已加入 outGroup 的成员，依次为每个成员追加其顶面紧贴的更上层箱体。
+        AppendStackedAbove(root, outGroup);
+        for (int i = 0; i < outGroup.Count; i++)
+        {
+            AppendStackedAbove(outGroup[i], outGroup);
+        }
+    }
+
+    private void AppendStackedAbove(StandardBox below, List<StandardBox> outGroup)
+    {
+        if (below == null)
+        {
+            return;
+        }
+
+        Bounds belowBounds = below.Bounds;
+        if (belowBounds.size == Vector3.zero)
+        {
+            return;
+        }
+
+        float top = belowBounds.max.y;
+
+        Collider2D below2D = below.Collider2D;
+        if (below2D != null)
+        {
+            // 在 below 顶面正上方一条 epsilon 厚的薄带里 OverlapBox：捕获所有底面与 below 顶面紧贴的候选 box。
+            Vector2 stripCenter = new Vector2(belowBounds.center.x, top + StackContactEpsilon * 0.5f);
+            Vector2 stripSize = new Vector2(belowBounds.size.x + StackContactEpsilon, StackContactEpsilon);
+            int hitCount = Physics2D.OverlapBoxNonAlloc(stripCenter, stripSize, 0f, stackOverlapHits2D, below.CollisionMask);
+
+            for (int i = 0; i < hitCount; i++)
+            {
+                Collider2D col = stackOverlapHits2D[i];
+                if (col == null || col.isTrigger)
+                {
+                    continue;
+                }
+
+                StandardBox stacked = col.GetComponentInParent<StandardBox>();
+                if (!IsStackCandidate(stacked, below, top, outGroup))
+                {
+                    continue;
+                }
+
+                outGroup.Add(stacked);
+            }
+
+            return;
+        }
+
+        Collider below3D = below.Collider3D;
+        if (below3D != null)
+        {
+            Vector3 stripCenter = new Vector3(belowBounds.center.x, top + StackContactEpsilon * 0.5f, belowBounds.center.z);
+            Vector3 stripHalfExtents = new Vector3((belowBounds.size.x + StackContactEpsilon) * 0.5f, StackContactEpsilon * 0.5f, Mathf.Max(belowBounds.size.z, StackContactEpsilon) * 0.5f);
+            int hitCount = Physics.OverlapBoxNonAlloc(stripCenter, stripHalfExtents, stackOverlapHits3D, Quaternion.identity, below.CollisionMask, QueryTriggerInteraction.Ignore);
+
+            for (int i = 0; i < hitCount; i++)
+            {
+                Collider col = stackOverlapHits3D[i];
+                if (col == null)
+                {
+                    continue;
+                }
+
+                StandardBox stacked = col.GetComponentInParent<StandardBox>();
+                if (!IsStackCandidate(stacked, below, top, outGroup))
+                {
+                    continue;
+                }
+
+                outGroup.Add(stacked);
+            }
+        }
+    }
+
+    /// <summary>
+    /// 把 root 的水平位移 (axis * magnitude) 同步到给定堆叠组成员；按 Q3=lower_only 处理：
+    /// 成员能走多少走多少，撞墙就停在 cast 距离处与 root 脱节。撞 player 时按 Q4 触发 impact。
+    /// </summary>
+    private void ApplyStackedFollow(List<StandardBox> stackGroup, Vector3 axis, float magnitude, float dt)
+    {
+        if (stackGroup == null || stackGroup.Count == 0 || magnitude <= 0f)
+        {
+            return;
+        }
+
+        for (int i = 0; i < stackGroup.Count; i++)
+        {
+            StandardBox stacked = stackGroup[i];
+            if (stacked == null)
+            {
+                continue;
+            }
+
+            Vector3 stackedFrom = stacked.transform.position;
+            float stackedMagnitude = magnitude;
+
+            if (Cast(stacked, axis, stackedMagnitude + skinWidth, out RayHit stackedHit))
+            {
+                // 撞 player：先派发 impact（与 SimulateFall 撞 player 一致地传"未 clamp 的目标位置"，
+                // 让 impact 能感知"如果没有 player，箱子本应走多远"），随后将 stacked 限制到 cast 距离处。
+                if (stackedHit.Player != null)
+                {
+                    TryHandlePlayerImpact(stacked, stackedFrom, stackedFrom + axis * stackedMagnitude, dt);
+                }
+
+                stackedMagnitude = Mathf.Max(0f, stackedHit.Distance - skinWidth);
+            }
+
+            if (stackedMagnitude > 0f)
+            {
+                stacked.MoveTo(stackedFrom + axis * stackedMagnitude);
+            }
+        }
+    }
+
+    private bool IsStackCandidate(StandardBox stacked, StandardBox below, float belowTop, List<StandardBox> outGroup)
+    {
+        if (stacked == null || stacked == below)
+        {
+            return false;
+        }
+
+        if (outGroup.Contains(stacked))
+        {
+            return false;
+        }
+
+        Bounds stackedBounds = stacked.Bounds;
+        if (stackedBounds.size == Vector3.zero)
+        {
+            return false;
+        }
+
+        // Q1：紧贴——stacked 底面与 below 顶面之差必须 ≤ epsilon（同时排除明显穿插）。
+        float gap = stackedBounds.min.y - belowTop;
+        if (gap < -StackContactEpsilon || gap > StackContactEpsilon)
+        {
+            return false;
+        }
+
+        // Q2：X 重叠 > 较窄者半宽。box 都贴 grid 的前提下，正常堆叠 → overlap = full width，正好半格错位 → overlap = halfWidth（< 严格不通过）。
+        float xOverlap = Mathf.Min(stackedBounds.max.x, below.Bounds.max.x) - Mathf.Max(stackedBounds.min.x, below.Bounds.min.x);
+        float minWidth = Mathf.Min(stackedBounds.size.x, below.Bounds.size.x);
+        if (xOverlap <= minWidth * StackHorizontalOverlapRatio)
+        {
+            return false;
+        }
+
+        // 已经有自己 active linear push state 的 box 不参与堆叠跟随，避免被 root 推动与自身 release/advance
+        // 同帧双重驱动导致位置抖动。罕见情况（成员还有遗留 release 没收尾就被推），让它走自己的状态收完。
+        if (linearPushes.TryGetValue(stacked, out LinearPushState memberState) && memberState.Active)
+        {
+            return false;
+        }
+
+        return true;
+    }
+
     private float GetCellDistance(StandardBox box, Vector3 axis)
     {
         Grid grid = box.Grid;
@@ -657,8 +842,16 @@ public class PhysicalBoxService : ServiceBase<StandardBox>
             return 0f;
         }
 
+        // 纵向堆叠联动：在 root 实际移动之前先固化堆叠关系——root 一旦移走，顶面就不再
+        // 紧贴上方 box，AppendStackedAbove 的紧贴判定就会失效。先快照成员列表，再各自移动。
+        CollectVerticalStack(box, stackGroupScratch);
+
         Vector3 to = from + axis * magnitude;
         box.MoveTo(to);
+
+        // Q3=lower_only：成员能走多少走多少，撞墙就停（与 root 脱节，下一帧自然下落）；
+        // Q4：撞 player 触发 impact（路径与 root 自身一致）。
+        ApplyStackedFollow(stackGroupScratch, axis, magnitude, Time.fixedDeltaTime);
 
         // 越过 50% 阈值则推进原点；允许一次跨越多次（防止 dt 过大）。
         float cellSize = GetCellDistance(box, axis);
@@ -803,6 +996,10 @@ public class PhysicalBoxService : ServiceBase<StandardBox>
                 }
             }
 
+            // 堆叠组同步：释放过渡阶段同样按 Q3=lower_only / Q4=impact 联动。先固化关系（root 移动前），
+            // 再让 root 与成员各自 MoveTo。
+            CollectVerticalStack(box, stackGroupScratch);
+
             Vector3 next = current + new Vector3(dir * move, 0f, 0f);
 
             // 释放过渡途中如果撞到东西也夹断，直接停在当前位置并清状态。
@@ -818,12 +1015,14 @@ public class PhysicalBoxService : ServiceBase<StandardBox>
 
                 next = current + new Vector3(dir * allowed, 0f, 0f);
                 box.MoveTo(next);
+                ApplyStackedFollow(stackGroupScratch, axis, allowed, dt);
                 // 撞到障碍物：放弃后续滑行，保持当前位置；若仍未到达目标，作为最终结果（不再尝试对齐）。
                 linearPushes.Remove(box);
                 continue;
             }
 
             box.MoveTo(next);
+            ApplyStackedFollow(stackGroupScratch, axis, move, dt);
 
             if (Mathf.Abs(target.x - next.x) <= Mathf.Epsilon)
             {
