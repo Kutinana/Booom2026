@@ -63,7 +63,12 @@ public class PlayerAnimationController : MonoBehaviour
         bool grounded = contacts.grounded;
 
         animator.SetBool("Grounded", grounded);
-        animator.SetFloat("speed", isPushing ? 0f : Mathf.Abs(velocity.x));
+        // walking 动画依赖 speed > 0.01。直接读 |velocity.x| 会被 ResolveTerrainOverlaps 在某些帧
+        // 短暂清零（X 方向 collider 修正），导致 speed 在 [0, 4] 间抖动 → walking 与 idle 反复切换。
+        // 改用玩家的输入意图（MoveInput.x）：按方向键持续 ±1，不按为 0，物理修正不影响。
+        // 撞墙时玩家原地按方向键，walking 动画"原地踏步"，符合常见 2D 平台游戏的视觉约定。
+        float walkIntention = Mathf.Abs(controller.MoveInput.x);
+        animator.SetFloat("speed", isPushing ? 0f : walkIntention);
         animator.SetFloat("VerticalVelocity", velocity.y);
 
         // Landing detection
@@ -88,7 +93,9 @@ public class PlayerAnimationController : MonoBehaviour
 
     private void UpdateIdleVariation(PlayerController.ContactState contacts, Vector2 velocity, bool isPushing)
     {
-        bool isIdle = !isPushing && contacts.grounded && Mathf.Abs(velocity.x) < 0.01f;
+        // 与 speed 参数同步：用 MoveInput 判断"是否在主动行走"，避免 velocity.x 抖动让 idle variant
+        // 计时器被反复重置而触发不到。
+        bool isIdle = !isPushing && contacts.grounded && Mathf.Abs(controller.MoveInput.x) < 0.01f;
 
         if (!isIdle)
         {

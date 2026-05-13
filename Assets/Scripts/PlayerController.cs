@@ -44,10 +44,20 @@ public partial class PlayerController : MonoBehaviour, ISceneMovableItem, IPoint
     [Header("Push")]
     [SerializeField, Min(0.05f), Tooltip("线性推动期间玩家水平移动速度相对 moveSpeed 的倍率；当 PhysicalBoxService 暴露 LinearPushSpeed 时优先使用其值。")]
     private float pushSpeedMultiplier = 0.4f;
+    [SerializeField, Min(0f), Tooltip("一帧内 push 实际位移小于该阈值视为'无进展'，用于 stall 检测；建议略大于墙壁碰撞箱的 ε 偏移。")]
+    private float pushStallProgressThreshold = 0.01f;
+    [SerializeField, Min(0f), Tooltip("连续无进展超过这个时长就视为撞墙不动，主动结束推动会话避免动画卡 push 状态。")]
+    private float pushStallTimeout = 0.1f;
 
     public Grid Grid => grid;
     public ContactState Contacts => contacts;
     public Vector2 Velocity => velocity;
+    /// <summary>
+    /// 玩家本帧的水平/垂直输入意图（GetAxisRaw 原始值，未做平滑）。
+    /// 比 Velocity 更稳定——动画状态（如 walking 是否触发）应优先使用此值，避免 ResolveTerrainOverlaps
+    /// 等物理修正在某些帧把 velocity.x 短暂清零导致的动画抖动。
+    /// </summary>
+    public Vector2 MoveInput => moveInput;
     public GameObject Owner => gameObject;
     public ISceneMovableBoundsProvider BoundsProvider => sceneMovableBoundsProvider;
     public bool IsSceneMovableActive => isActiveAndEnabled;
@@ -112,6 +122,15 @@ public partial class PlayerController : MonoBehaviour, ISceneMovableItem, IPoint
     private bool hasAirborneInit;
     private StandardBox airborneInitBox;
     private BoxPushDirection airborneInitDirection;
+
+    // Push stall 检测：箱子被推到墙边/死角时 PhysicalBoxService 每帧返回 clamped≈0，
+    // 但 activePushBox 仍非空，导致 IsPushing 一直为 true、动画卡在 push。
+    // 这组字段在连续无进展超过 pushStallTimeout 后主动 EndPushSession 并标记
+    // (box, direction) 已 stalled，避免下一帧又重新进入推动会话造成 ping-pong。
+    private float pushStallTime;
+    private bool pushStalled;
+    private StandardBox stalledBox;
+    private BoxPushDirection stalledDirection;
     private bool hasRetainedVelocity;
     private Vector2 retainedVelocityAxis;
     private float retainedVelocitySpeed;
@@ -346,6 +365,14 @@ public partial class PlayerController : MonoBehaviour, ISceneMovableItem, IPoint
         {
             EndPushSession();
             ResetAirborneInitState();
+            ResetStallState();
+            return;
+        }
+
+        // 之前已对相同 (box, direction) 判定为撞墙不动：直接静默退出，让 IsPushing 变 false，
+        // 动画恢复 idle。stalled 状态在玩家松开方向键 / 切换 box 或方向时清除。
+        if (pushStalled && stalledBox == box && stalledDirection == direction)
+        {
             return;
         }
 
@@ -376,6 +403,8 @@ public partial class PlayerController : MonoBehaviour, ISceneMovableItem, IPoint
         if (activePushBox != box || activePushDirection != direction)
         {
             EndPushSession();
+            // 切换上下文意味着旧的 stall 判断不再适用；新 (box, direction) 重新允许尝试。
+            ResetStallState();
             bool canPush = box.InitializePush(direction, gameObject).CanPush;
             if (!canPush)
             {
@@ -418,9 +447,41 @@ public partial class PlayerController : MonoBehaviour, ISceneMovableItem, IPoint
         }
 
         float clamped = physicalBoxService.TryAdvanceLinearPush(box, direction, delta.x, gameObject);
+
+        // Stall 检测：墙体/死角让 magnitude 被 clamp 到 0 或 ε 抖动时，clamped 持续接近 0；
+        // 累计无进展时间超过 pushStallTimeout 就强制结束推动会话，并把当前 (box, direction)
+        // 标记为 stalled，让 IsPushing 立刻变 false 从而退出 push 动画。
+        if (Mathf.Abs(clamped) < pushStallProgressThreshold)
+        {
+            pushStallTime += dt;
+            if (pushStallTime >= pushStallTimeout)
+            {
+                EndPushSession();
+                pushStalled = true;
+                stalledBox = box;
+                stalledDirection = direction;
+                pushStallTime = 0f;
+                delta.x = 0f;
+                baseVelocity.x = 0f;
+                velocity.x = 0f;
+                return;
+            }
+        }
+        else
+        {
+            pushStallTime = 0f;
+        }
+
         delta.x = clamped;
         baseVelocity.x = clamped / Mathf.Max(dt, Mathf.Epsilon);
         velocity.x = baseVelocity.x;
+    }
+
+    private void ResetStallState()
+    {
+        pushStallTime = 0f;
+        pushStalled = false;
+        stalledBox = null;
     }
 
     private void EndPushSession()
