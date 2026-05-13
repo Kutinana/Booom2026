@@ -13599,7 +13599,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   cellOffset: {x: 0.5, y: 0.5, z: 0}
-  pushableFrom: 1
+  pushableFrom: 13
   collisionMask:
     serializedVersion: 2
     m_Bits: 4294967295
@@ -13609,14 +13609,8 @@ MonoBehaviour:
   OuterEntrances:
   - Direction: 0
     Entrance: {fileID: 1857928788}
-  - Direction: 1
-    Entrance: {fileID: 799451004}
-  - Direction: 2
-    Entrance: {fileID: 215454610}
-  - Direction: 3
-    Entrance: {fileID: 448511902}
-  paddingX: 0.03
-  paddingY: 0.03
+  paddingX: 0.05
+  paddingY: 0.05
   outerEdgeBlockerTouchTolerance: 0.04
 --- !u!61 &1284175442
 BoxCollider2D:
@@ -16770,7 +16764,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6086128289500971824, guid: b854b1a77dbb2a247a1b3b2101ba42ef, type: 3}
       propertyPath: m_LocalPosition.y
-      value: 3.48
+      value: 3.23
       objectReference: {fileID: 0}
     - target: {fileID: 6086128289500971824, guid: b854b1a77dbb2a247a1b3b2101ba42ef, type: 3}
       propertyPath: m_LocalPosition.z
