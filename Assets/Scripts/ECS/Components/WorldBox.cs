@@ -300,6 +300,11 @@ public class WorldBox : StandardBox
 
     private Vector3 SnapToGridTargetCenter(Vector3 position)
     {
+        if (!AlignToGrid)
+        {
+            return position;
+        }
+
         Grid grid = Grid;
         if (grid == null)
         {

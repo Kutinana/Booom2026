@@ -9,12 +9,16 @@ public class StandardBox : MonoBehaviour, ISceneMovableItem
 {
     [Header("Grid")]
     [SerializeField] private Vector3 cellOffset = new Vector3(0.5f, 0.5f, 0f);
+    public bool AlignToGrid = true;
 
     [Header("Push")]
     [SerializeField] public BoxPushDirectionMask pushableFrom = BoxPushDirectionMask.Horizontal;
 
     [Header("Collision")]
     [SerializeField] private LayerMask collisionMask = ~0;
+
+    [Header("Physical Simulation")]
+    public bool ApplyGravity = true;
 
     public Vector3 CellOffset => cellOffset;
     public LayerMask CollisionMask => collisionMask;
@@ -187,7 +191,7 @@ public class StandardBox : MonoBehaviour, ISceneMovableItem
 
     private void SnapToGrid()
     {
-        if (grid == null)
+        if (!AlignToGrid || grid == null)
         {
             return;
         }

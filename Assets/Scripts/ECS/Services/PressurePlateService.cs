@@ -95,7 +95,7 @@ public class PressurePlateService : ServiceBase<PressurePlate>
             return false;
         }
 
-        if (box.Grid == null)
+        if (box.Grid == null || !box.AlignToGrid)
         {
             return QueryBoundsOverlapAnyRegisteredPlateXY(box.Bounds);
         }
@@ -110,7 +110,7 @@ public class PressurePlateService : ServiceBase<PressurePlate>
 
     public void SnapBoxXToNearestHorizontalGridIfOverlappingAnyPlate(StandardBox box)
     {
-        if (box == null || !QueryBoundsOverlapAnyRegisteredPlateXY(box.Bounds))
+        if (box == null || !box.AlignToGrid || !QueryBoundsOverlapAnyRegisteredPlateXY(box.Bounds))
         {
             return;
         }

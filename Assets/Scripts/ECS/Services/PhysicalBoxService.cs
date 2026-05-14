@@ -100,7 +100,7 @@ public class PhysicalBoxService : ServiceBase<StandardBox>
         float dt = Time.fixedDeltaTime;
         foreach (StandardBox box in RegisteredComponents)
         {
-            if (box == null)
+            if (box == null || !box.ApplyGravity)
             {
                 continue;
             }
@@ -155,7 +155,7 @@ public class PhysicalBoxService : ServiceBase<StandardBox>
 
         Vector3 to = from + axis * distance;
         Grid grid = box.Grid;
-        if (grid != null)
+        if (grid != null && box.AlignToGrid)
         {
             Vector3Int cell = grid.WorldToCell(to);
             to = grid.CellToWorld(cell) + Vector3.Scale(grid.cellSize, box.CellOffset);
@@ -1003,7 +1003,7 @@ public class PhysicalBoxService : ServiceBase<StandardBox>
     /// </summary>
     private void TryQueueAlignmentRelease(StandardBox box)
     {
-        if (box == null || linearPushes.ContainsKey(box))
+        if (box == null || !box.AlignToGrid || linearPushes.ContainsKey(box))
         {
             return;
         }
@@ -1042,6 +1042,11 @@ public class PhysicalBoxService : ServiceBase<StandardBox>
     {
         alignedX = box != null ? box.transform.position.x : 0f;
         if (box == null)
+        {
+            return false;
+        }
+
+        if (!box.AlignToGrid)
         {
             return false;
         }
