@@ -135,13 +135,13 @@ public partial class PlayerController : MonoBehaviour, ISceneMovableItem, IPoint
     private StandardBox stalledBox;
     private BoxPushDirection stalledDirection;
 
-    // WorldBox：内侧静态阻挡（ExitBlocker 与传送门一致）在推的过程中从「有」变「无」时，
-    // CanPush 掩码不会变，用边沿检测打断线性推并走 TryPassThroughInnerFromActivePush（方案 C）。
+    // WorldBox inner exit: static inner block cleared mid-push -> TryPassThroughInnerFromActivePush.
     private bool worldBoxExitHadInnerBlock;
-    // 压力板从按下→松开时，关卡常通过 UnityEvent 逻辑开门，但传送门碰撞体未必同帧从 Overlap 消失，
-    // 导致 QueryInnerExitBlocked 仍为 true。收到松板事件且本推会话曾记过「内侧挡」时，本帧将 inner 视为已开。
+    // One-frame relax after plate release when inner query lags collider disable.
     private bool worldBoxExitPendingPressureLogicalUnblock;
     private IUnRegister pressurePlateStateUnRegister;
+    private bool worldBoxPressureLatchHadPlayerOnAnyPlate;
+    private bool worldBoxPrevFrameBoxOnPlate;
     private bool hasRetainedVelocity;
     private Vector2 retainedVelocityAxis;
     private float retainedVelocitySpeed;
@@ -438,6 +438,10 @@ public partial class PlayerController : MonoBehaviour, ISceneMovableItem, IPoint
             activePushBox = box;
             activePushDirection = direction;
             activePushCanPush = true;
+            if (box is WorldBox worldBoxForSession)
+            {
+                InitializeWorldBoxPressurePlateSessionTracking(worldBoxForSession);
+            }
         }
 
         if (!activePushCanPush)
@@ -512,6 +516,17 @@ public partial class PlayerController : MonoBehaviour, ISceneMovableItem, IPoint
 
         float clamped = physicalBoxService.TryAdvanceLinearPush(box, direction, delta.x, gameObject);
 
+        if (box is WorldBox worldBoxPressure && activePushBox == box && activePushDirection == direction)
+        {
+            if (TryHandleWorldBoxPressurePlatePushInterrupts(worldBoxPressure, direction, physicalBoxService))
+            {
+                delta.x = 0f;
+                baseVelocity.x = 0f;
+                velocity.x = 0f;
+                return;
+            }
+        }
+
         // Stall 检测：墙体/死角让 magnitude 被 clamp 到 0 或 ε 抖动时，clamped 持续接近 0；
         // 累计无进展时间超过 pushStallTimeout 就强制结束推动会话，并把当前 (box, direction)
         // 标记为 stalled，让 IsPushing 立刻变 false 从而退出 push 动画。
@@ -541,6 +556,71 @@ public partial class PlayerController : MonoBehaviour, ISceneMovableItem, IPoint
         velocity.x = baseVelocity.x;
     }
 
+    private void InitializeWorldBoxPressurePlateSessionTracking(WorldBox worldBox)
+    {
+        worldBoxPressureLatchHadPlayerOnAnyPlate = false;
+        worldBoxPrevFrameBoxOnPlate = false;
+        if (!ServiceBase.TryGet(out PressurePlateService pressurePlateService))
+        {
+            return;
+        }
+
+        worldBoxPrevFrameBoxOnPlate = pressurePlateService.QueryWorldBoxGridSnapStablePressingAnyRegisteredPlateXY(worldBox);
+        worldBoxPressureLatchHadPlayerOnAnyPlate = pressurePlateService.QueryBoundsOverlapAnyRegisteredPlateXY(GetBounds());
+    }
+
+    private bool TryHandleWorldBoxPressurePlatePushInterrupts(
+        WorldBox worldBox,
+        BoxPushDirection direction,
+        PhysicalBoxService physicalBoxService)
+    {
+        if (!ServiceBase.TryGet(out PressurePlateService pressurePlateService))
+        {
+            return false;
+        }
+
+        Bounds playerBounds = GetBounds();
+        bool playerOnPlate = pressurePlateService.QueryBoundsOverlapAnyRegisteredPlateXY(playerBounds);
+        if (playerOnPlate)
+        {
+            worldBoxPressureLatchHadPlayerOnAnyPlate = true;
+        }
+
+        if (worldBoxPressureLatchHadPlayerOnAnyPlate && !playerOnPlate)
+        {
+            ApplyWorldBoxPressurePlateInterrupt(worldBox, direction, physicalBoxService, pressurePlateService, snapBoxXOnPlateAfterCancel: false);
+            return true;
+        }
+
+        bool boxStrictlyOnPlate = pressurePlateService.QueryWorldBoxGridSnapStablePressingAnyRegisteredPlateXY(worldBox);
+        if (!worldBoxPrevFrameBoxOnPlate && boxStrictlyOnPlate)
+        {
+            ApplyWorldBoxPressurePlateInterrupt(worldBox, direction, physicalBoxService, pressurePlateService, snapBoxXOnPlateAfterCancel: true);
+            return true;
+        }
+
+        worldBoxPrevFrameBoxOnPlate = boxStrictlyOnPlate;
+        return false;
+    }
+
+    private void ApplyWorldBoxPressurePlateInterrupt(
+        WorldBox worldBox,
+        BoxPushDirection direction,
+        PhysicalBoxService physicalBoxService,
+        PressurePlateService pressurePlateService,
+        bool snapBoxXOnPlateAfterCancel)
+    {
+        EndPushSession(cancelLinearPushImmediate: true);
+        ResetStallState();
+        if (snapBoxXOnPlateAfterCancel)
+        {
+            pressurePlateService.SnapBoxXToNearestHorizontalGridIfOverlappingAnyPlate(worldBox);
+        }
+
+        worldBox.TryTeleportPusherToOuterEntranceForPushInterrupt(direction);
+        physicalBoxService.QueueGridAlignmentRelease(worldBox);
+    }
+
     private void ResetStallState()
     {
         pushStallTime = 0f;
@@ -566,6 +646,8 @@ public partial class PlayerController : MonoBehaviour, ISceneMovableItem, IPoint
         activePushCanPush = false;
         worldBoxExitHadInnerBlock = false;
         worldBoxExitPendingPressureLogicalUnblock = false;
+        worldBoxPressureLatchHadPlayerOnAnyPlate = false;
+        worldBoxPrevFrameBoxOnPlate = false;
     }
 
     private void ResetAirborneInitState()

@@ -2,30 +2,29 @@ using System.Collections.Generic;
 using QFramework;
 using UnityEngine;
 
+[DefaultExecutionOrder(1200)]
 public class PressurePlateService : ServiceBase<PressurePlate>
 {
     private float activationPadding = 0.04f;
 
     private readonly List<PressurePlate> plateSnapshot = new List<PressurePlate>(16);
     private readonly List<ISceneMovableItem> movableHits = new List<ISceneMovableItem>(16);
-    private IUnRegister sceneMovableChangedUnRegister;
+    private readonly Dictionary<PressurePlate, bool> worldBoxHorizontalPushPlayerEverOnPlate = new Dictionary<PressurePlate, bool>(16);
 
-    protected override void Awake()
+    protected override void OnDestroy()
     {
-        base.Awake();
+        worldBoxHorizontalPushPlayerEverOnPlate.Clear();
+        base.OnDestroy();
+    }
+
+    private void FixedUpdate()
+    {
         if (!IsActiveService)
         {
             return;
         }
 
-        sceneMovableChangedUnRegister = RegisterEvent<SceneMovableItemsChangedEvent>(OnSceneMovablesChanged);
-    }
-
-    protected override void OnDestroy()
-    {
-        sceneMovableChangedUnRegister?.UnRegister();
-        sceneMovableChangedUnRegister = null;
-        base.OnDestroy();
+        RefreshAll();
     }
 
     public override void Register(PressurePlate component)
@@ -40,31 +39,155 @@ public class PressurePlateService : ServiceBase<PressurePlate>
         RefreshAll();
     }
 
-    private void OnSceneMovablesChanged(SceneMovableItemsChangedEvent e)
-    {
-        RefreshAll();
-    }
-
     private void RefreshAll()
     {
         ServiceBase.TryGet(out SceneMovableInteractionService sceneMovableService);
-        plateSnapshot.Clear();
-        foreach (PressurePlate pressurePlate in RegisteredComponents)
+        bool worldBoxHorizontalPush = false;
+        Bounds playerBounds = default;
+        bool hasPlayerBounds = false;
+        if (ServiceBase.TryGet(out PhysicalBoxService physicalBoxService) &&
+            ServiceBase.TryGet(out PlayerService playerService) &&
+            playerService.Player != null &&
+            physicalBoxService.TryGetActiveLinearHorizontalPushForPusher(playerService.Player.gameObject, out StandardBox pushedBox, out _) &&
+            pushedBox is WorldBox)
         {
-            if (pressurePlate == null)
-            {
-                continue;
-            }
-
-            plateSnapshot.Add(pressurePlate);
+            worldBoxHorizontalPush = true;
+            hasPlayerBounds = TryGetPlayerColliderWorldBounds(playerService.Player.gameObject, out playerBounds);
         }
+
+        if (!worldBoxHorizontalPush)
+        {
+            worldBoxHorizontalPushPlayerEverOnPlate.Clear();
+        }
+
+        FillPlateSnapshot();
 
         for (int i = 0; i < plateSnapshot.Count; i++)
         {
             PressurePlate pressurePlate = plateSnapshot[i];
-            bool pressed = sceneMovableService != null && IsPressedBySceneMovable(pressurePlate, sceneMovableService);
+            Bounds plateBounds = ExpandTowardLocalUp(pressurePlate.transform, pressurePlate.Bounds, activationPadding);
+            bool playerOnThis = worldBoxHorizontalPush && hasPlayerBounds && IntersectsXY(playerBounds, plateBounds);
+            if (worldBoxHorizontalPush && playerOnThis)
+            {
+                worldBoxHorizontalPushPlayerEverOnPlate[pressurePlate] = true;
+            }
+
+            bool hadPlayerEverOnThisPlate = worldBoxHorizontalPushPlayerEverOnPlate.TryGetValue(pressurePlate, out bool had) && had;
+            bool defaultPressed = sceneMovableService != null && IsPressedBySceneMovable(pressurePlate, sceneMovableService);
+            bool pressed;
+            if (worldBoxHorizontalPush && hadPlayerEverOnThisPlate && !playerOnThis)
+            {
+                pressed = false;
+            }
+            else
+            {
+                pressed = defaultPressed || (worldBoxHorizontalPush && playerOnThis);
+            }
+
             pressurePlate.SetPressed(pressed);
         }
+    }
+
+    public bool QueryWorldBoxGridSnapStablePressingAnyRegisteredPlateXY(StandardBox box)
+    {
+        if (box == null || box.Bounds.size == Vector3.zero)
+        {
+            return false;
+        }
+
+        if (box.Grid == null)
+        {
+            return QueryBoundsOverlapAnyRegisteredPlateXY(box.Bounds);
+        }
+
+        if (!ServiceBase.TryGet(out PhysicalBoxService physicalBoxService) || !physicalBoxService.IsNearHorizontalGridCenter(box))
+        {
+            return false;
+        }
+
+        return QueryBoundsOverlapAnyRegisteredPlateXY(box.Bounds);
+    }
+
+    public void SnapBoxXToNearestHorizontalGridIfOverlappingAnyPlate(StandardBox box)
+    {
+        if (box == null || !QueryBoundsOverlapAnyRegisteredPlateXY(box.Bounds))
+        {
+            return;
+        }
+
+        if (!ServiceBase.TryGet(out PhysicalBoxService physicalBoxService) ||
+            !physicalBoxService.TryGetHorizontalGridAlignedWorldX(box, out float alignedX))
+        {
+            return;
+        }
+
+        Vector3 position = box.transform.position;
+        position.x = alignedX;
+        box.MoveTo(position);
+    }
+
+    public bool QueryBoundsOverlapAnyRegisteredPlateXY(Bounds worldBounds)
+    {
+        if (worldBounds.size == Vector3.zero)
+        {
+            return false;
+        }
+
+        FillPlateSnapshot();
+
+        for (int i = 0; i < plateSnapshot.Count; i++)
+        {
+            PressurePlate pressurePlate = plateSnapshot[i];
+            Bounds plateBounds = ExpandTowardLocalUp(pressurePlate.transform, pressurePlate.Bounds, activationPadding);
+            if (IntersectsXY(worldBounds, plateBounds))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private void FillPlateSnapshot()
+    {
+        plateSnapshot.Clear();
+        foreach (PressurePlate pressurePlate in RegisteredComponents)
+        {
+            if (pressurePlate != null)
+            {
+                plateSnapshot.Add(pressurePlate);
+            }
+        }
+    }
+
+    private static bool TryGetPlayerColliderWorldBounds(GameObject playerObject, out Bounds bounds)
+    {
+        bounds = default;
+        if (playerObject == null)
+        {
+            return false;
+        }
+
+        Collider2D collider2D = playerObject.GetComponent<Collider2D>();
+        if (collider2D != null)
+        {
+            bounds = collider2D.bounds;
+            return bounds.size != Vector3.zero;
+        }
+
+        Collider collider3D = playerObject.GetComponent<Collider>();
+        if (collider3D != null)
+        {
+            bounds = collider3D.bounds;
+            return bounds.size != Vector3.zero;
+        }
+
+        return false;
+    }
+
+    private static bool IntersectsXY(Bounds a, Bounds b)
+    {
+        return a.min.x <= b.max.x && a.max.x >= b.min.x && a.min.y <= b.max.y && a.max.y >= b.min.y;
     }
 
     private bool IsPressedBySceneMovable(PressurePlate pressurePlate, SceneMovableInteractionService sceneMovableService)

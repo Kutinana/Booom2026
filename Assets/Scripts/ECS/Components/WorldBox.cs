@@ -212,6 +212,17 @@ public class WorldBox : StandardBox
         return true;
     }
 
+    /// <summary>Teleport pusher to outer entrance opposite <paramref name="pushDirection"/> (blocked-push semantics).</summary>
+    public bool TryTeleportPusherToOuterEntranceForPushInterrupt(BoxPushDirection pushDirection)
+    {
+        if (!EnsurePlayer())
+        {
+            return false;
+        }
+
+        return TeleportPlayerToOuterEntrance(Opposite(pushDirection));
+    }
+
     private Bounds GetPlayerBounds()
     {
         if (playerCollider2D != null)

@@ -1023,6 +1023,33 @@ public class PhysicalBoxService : ServiceBase<StandardBox>
         return true;
     }
 
+    /// <summary>Nearest horizontal grid-aligned world X (same as release snap).</summary>
+    public bool TryGetHorizontalGridAlignedWorldX(StandardBox box, out float alignedX)
+    {
+        return TryGetAlignedX(box, out alignedX);
+    }
+
+    /// <summary>True if box X is within tolerance of nearest horizontal grid column center (default skinWidth*2).</summary>
+    public bool IsNearHorizontalGridCenter(StandardBox box, float tolerance = -1f)
+    {
+        if (box == null)
+        {
+            return false;
+        }
+
+        if (tolerance < 0f)
+        {
+            tolerance = Mathf.Max(0.001f, skinWidth * 2f);
+        }
+
+        if (!TryGetAlignedX(box, out float alignedX))
+        {
+            return false;
+        }
+
+        return Mathf.Abs(box.transform.position.x - alignedX) <= tolerance;
+    }
+
     /// <summary>
     /// 把 chain 与 stack 两组合并到 combinedIgnoreScratch，便于 cast 时整组忽略。
     /// </summary>
@@ -1267,6 +1294,37 @@ public class PhysicalBoxService : ServiceBase<StandardBox>
         }
 
         linearPushes.Remove(box);
+    }
+
+    /// <summary>Active horizontal linear push for <paramref name="pusher"/> (not in release transition).</summary>
+    public bool TryGetActiveLinearHorizontalPushForPusher(GameObject pusher, out StandardBox box, out BoxPushDirection direction)
+    {
+        box = null;
+        direction = default;
+        if (pusher == null)
+        {
+            return false;
+        }
+
+        foreach (KeyValuePair<StandardBox, LinearPushState> entry in linearPushes)
+        {
+            LinearPushState state = entry.Value;
+            if (!state.Active || state.ReleaseTransition || state.Pusher != pusher)
+            {
+                continue;
+            }
+
+            if (state.Direction != BoxPushDirection.Left && state.Direction != BoxPushDirection.Right)
+            {
+                continue;
+            }
+
+            box = entry.Key;
+            direction = state.Direction;
+            return true;
+        }
+
+        return false;
     }
 
     /// <summary>
