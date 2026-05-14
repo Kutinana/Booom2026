@@ -4,7 +4,7 @@ using UnityEngine;
 
 public class GameManager : MonoSingleton<GameManager>
 {
-    private const string StartContentSceneName = "StartScene";
+    private const string StartContentSceneName = "World 1";
 
     private void Awake()
     {

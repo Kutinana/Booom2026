@@ -545,7 +545,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ab98920f12b934647ba8b3fd86a7747f, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  m_InitialContentScene: StartScene
+  m_InitialContentScene: World 1
   m_LoadInitialOnStart: 1
   m_WaitContentReadyOnInitialLoad: 0
   m_TransitionViewBehaviour: {fileID: 1638731509}
