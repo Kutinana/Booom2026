@@ -165,6 +165,7 @@ public class PhysicalBoxService : ServiceBase<StandardBox>
 
         TryHandlePlayerImpact(box, from, to, dt: Time.fixedDeltaTime);
         box.MoveTo(to);
+        RefreshSceneMovableBaselineForStandardBox(box);
         SendEvent(new BoxPhysicalPushEvent(box, direction, true, false, from, to));
         return true;
     }
@@ -321,6 +322,49 @@ public class PhysicalBoxService : ServiceBase<StandardBox>
         }
 
         return handled;
+    }
+
+    private static void RefreshSceneMovableBaselineForStandardBox(StandardBox box)
+    {
+        if (box == null)
+        {
+            return;
+        }
+
+        if (ServiceBase.TryGet(out SceneMovableInteractionService sceneMovable))
+        {
+            sceneMovable.RefreshItemImpactBaseline(box);
+        }
+    }
+
+    /// <summary>
+    /// 推箱子时 pusher 站在施力侧（相对当前推动轴的“后侧”）；chain cast 可能因重叠扫到该玩家，
+    /// 不应与“被挤在前方砸死”混淆。frontal &gt; slop 表示玩家明显在前进方向一侧，仍按砸落处理。
+    /// </summary>
+    private bool IsPusherRearRelativeToMemberAlongPushAxis(StandardBox member, Vector3 axis, PlayerController player)
+    {
+        if (member == null || player == null)
+        {
+            return false;
+        }
+
+        ISceneMovableBoundsProvider provider = player.BoundsProvider;
+        if (provider == null || !provider.IsValid)
+        {
+            return false;
+        }
+
+        Vector2 toPlayer = (Vector2)(provider.Bounds.center - member.Bounds.center);
+        Vector2 ax = new Vector2(axis.x, axis.y);
+        float axMag = ax.magnitude;
+        if (axMag <= Mathf.Epsilon)
+        {
+            return false;
+        }
+
+        float frontal = Vector2.Dot(ax / axMag, toPlayer);
+        float rearSlop = Mathf.Max(0.05f, impactContactTolerance);
+        return frontal <= rearSlop;
     }
 
     private bool TryGetSweptImpactFace(Bounds previousItem, Bounds playerBounds, Vector2 itemDelta, out BoxPushDirection face)
@@ -1189,6 +1233,8 @@ public class PhysicalBoxService : ServiceBase<StandardBox>
                 snap.z = currentPos.z;
                 box.MoveTo(snap);
                 currentPos = snap;
+                // 避免 SceneMovableInteractionService 在下一帧把 snap 当成一帧内极高速位移而误判砸死。
+                RefreshSceneMovableBaselineForStandardBox(box);
             }
 
             state = new LinearPushState
@@ -1223,13 +1269,24 @@ public class PhysicalBoxService : ServiceBase<StandardBox>
             StandardBox member = chainGroupScratch[i];
             if (Cast(member, axis, magnitude + skinWidth, out RayHit chainHit, chainGroupScratch))
             {
-                if (chainHit.Player != null)
+                PlayerController hitPlayer = chainHit.Player;
+                bool suppressRearPusher =
+                    hitPlayer != null &&
+                    pusher != null &&
+                    hitPlayer.gameObject == pusher &&
+                    IsPusherRearRelativeToMemberAlongPushAxis(member, axis, hitPlayer);
+
+                if (hitPlayer != null && !suppressRearPusher)
                 {
                     Vector3 memberFrom = member.transform.position;
                     TryHandlePlayerImpact(member, memberFrom, memberFrom + axis * magnitude, Time.fixedDeltaTime);
                 }
 
-                magnitude = Mathf.Min(magnitude, Mathf.Max(0f, chainHit.Distance - skinWidth));
+                if (!suppressRearPusher)
+                {
+                    magnitude = Mathf.Min(magnitude, Mathf.Max(0f, chainHit.Distance - skinWidth));
+                }
+
                 if (magnitude <= 0f)
                 {
                     break;
@@ -1393,6 +1450,18 @@ public class PhysicalBoxService : ServiceBase<StandardBox>
         return false;
     }
 
+    /// <summary>
+    /// 线性推动释放过渡中箱子与 pusher 同向协同位移时，chain cast 会沿“回退”方向扫到身后的 pusher，
+    /// 不应按砸落处理（例如推箱子时突然反向导致松手回退）。
+    /// </summary>
+    private static bool ShouldSuppressPlayerImpactDuringLinearReleaseCoMove(LinearPushState state, PlayerController hitPlayer)
+    {
+        return state.MovePusherWithBox &&
+            state.Pusher != null &&
+            hitPlayer != null &&
+            hitPlayer.gameObject == state.Pusher;
+    }
+
     private void UpdateLinearPushTransitions(float dt)
     {
         if (linearPushes.Count == 0)
@@ -1475,13 +1544,22 @@ public class PhysicalBoxService : ServiceBase<StandardBox>
                 StandardBox member = chainGroupScratch[j];
                 if (Cast(member, axis, allowed + skinWidth, out RayHit chainHit, chainGroupScratch))
                 {
-                    if (chainHit.Player != null)
+                    bool suppressPusherCoMoveHit = chainHit.Player != null &&
+                        ShouldSuppressPlayerImpactDuringLinearReleaseCoMove(state, chainHit.Player);
+
+                    // 松手/换向触发 <50% 回退时，箱子沿释放方向移向玩家一侧；Cast 从朝前的面射出会先扫到
+                    // 正在协同让位的 pusher，误当成“砸落”致死。协同回退路径上跳过对 pusher 的 impact，
+                    // 且不把该命中当作阻挡（否则 allowed≈0 会误删整条 release 会话）。
+                    if (chainHit.Player != null && !suppressPusherCoMoveHit)
                     {
                         Vector3 memberFrom = member.transform.position;
                         TryHandlePlayerImpact(member, memberFrom, memberFrom + axis * allowed, dt);
                     }
 
-                    allowed = Mathf.Min(allowed, Mathf.Max(0f, chainHit.Distance - skinWidth));
+                    if (!suppressPusherCoMoveHit)
+                    {
+                        allowed = Mathf.Min(allowed, Mathf.Max(0f, chainHit.Distance - skinWidth));
+                    }
                     if (allowed <= 0f)
                     {
                         break;
@@ -1534,6 +1612,7 @@ public class PhysicalBoxService : ServiceBase<StandardBox>
     {
         box.MoveTo(target);
         linearPushes.Remove(box);
+        RefreshSceneMovableBaselineForStandardBox(box);
     }
 
     private struct LinearPushState

@@ -75,6 +75,26 @@ public class SceneMovableInteractionService : ServiceBase
         nextImpactTimes[item] = Time.time + impactCooldown;
     }
 
+    /// <summary>
+    /// 将某可动物体的 impact 基线 bounds 同步为当前 AABB，避免下一帧把瞬移/MoveTo 当成一帧内极高速度而误判砸落。
+    /// 在线性推动 snap、释放对齐等离散位移后调用。
+    /// </summary>
+    public void RefreshItemImpactBaseline(ISceneMovableItem item)
+    {
+        if (!IsValid(item))
+        {
+            return;
+        }
+
+        Bounds bounds = item.BoundsProvider.Bounds;
+        if (bounds.size == Vector3.zero)
+        {
+            return;
+        }
+
+        previousItemBounds[item] = bounds;
+    }
+
     protected override void OnDestroy()
     {
         items.Clear();
