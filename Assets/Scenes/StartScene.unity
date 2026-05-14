@@ -925,6 +925,10 @@ MonoBehaviour:
   - Level 1-4
   - Level-Tutorial
   - Level 1-9
+  - Level 1-1
+  - Level 1-5.5
+  - Level 1-6.4
+  - Level 1-6.5
 --- !u!1 &1825256078
 GameObject:
   m_ObjectHideFlags: 0
