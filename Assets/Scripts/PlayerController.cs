@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using QFramework;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.SceneManagement;
@@ -48,6 +49,8 @@ public partial class PlayerController : MonoBehaviour, ISceneMovableItem, IPoint
     private float pushStallProgressThreshold = 0.01f;
     [SerializeField, Min(0f), Tooltip("连续无进展超过这个时长就视为撞墙不动，主动结束推动会话避免动画卡 push 状态。")]
     private float pushStallTimeout = 0.1f;
+    [SerializeField, Tooltip("勾选后每帧 FixedUpdate 在推 WorldBox 时打印 innerBlocked / worldBoxExitHadInnerBlock（仅用于排查穿门边沿）。")]
+    private bool debugWorldBoxInnerExitEdge;
 
     public Grid Grid => grid;
     public ContactState Contacts => contacts;
@@ -131,6 +134,14 @@ public partial class PlayerController : MonoBehaviour, ISceneMovableItem, IPoint
     private bool pushStalled;
     private StandardBox stalledBox;
     private BoxPushDirection stalledDirection;
+
+    // WorldBox：内侧静态阻挡（ExitBlocker 与传送门一致）在推的过程中从「有」变「无」时，
+    // CanPush 掩码不会变，用边沿检测打断线性推并走 TryPassThroughInnerFromActivePush（方案 C）。
+    private bool worldBoxExitHadInnerBlock;
+    // 压力板从按下→松开时，关卡常通过 UnityEvent 逻辑开门，但传送门碰撞体未必同帧从 Overlap 消失，
+    // 导致 QueryInnerExitBlocked 仍为 true。收到松板事件且本推会话曾记过「内侧挡」时，本帧将 inner 视为已开。
+    private bool worldBoxExitPendingPressureLogicalUnblock;
+    private IUnRegister pressurePlateStateUnRegister;
     private bool hasRetainedVelocity;
     private Vector2 retainedVelocityAxis;
     private float retainedVelocitySpeed;
@@ -150,6 +161,7 @@ public partial class PlayerController : MonoBehaviour, ISceneMovableItem, IPoint
         sceneMovableBoundsProvider = new ColliderSceneMovableBoundsProvider(gameObject, transform, m_Collider3D, m_Collider2D);
         ServiceBase.Get<PlayerService>()?.Register(this);
         ServiceBase.Get<SceneMovableInteractionService>()?.Register(this);
+        pressurePlateStateUnRegister = TypeEventSystem.Global.Register<PressurePlateStateEvent>(OnPressurePlateState);
 
         if (body3D != null)
         {
@@ -166,6 +178,9 @@ public partial class PlayerController : MonoBehaviour, ISceneMovableItem, IPoint
 
     private void OnDestroy()
     {
+        pressurePlateStateUnRegister?.UnRegister();
+        pressurePlateStateUnRegister = null;
+
         EndPushSession();
 
         if (ServiceBase.TryGet(out PlayerService playerService))
@@ -335,6 +350,14 @@ public partial class PlayerController : MonoBehaviour, ISceneMovableItem, IPoint
         worldBox.TryPush(BoxPushDirection.Up, gameObject);
     }
 
+    private void OnPressurePlateState(PressurePlateStateEvent e)
+    {
+        if (!e.Pressed && e.WasPressed)
+        {
+            worldBoxExitPendingPressureLogicalUnblock = true;
+        }
+    }
+
     private void HandleBoxPush(float dt, ref Vector3 delta)
     {
         // 释放过渡中、且玩家被拖动时：屏蔽玩家自身的水平位移，让 PhysicalBoxService 全权驱动。
@@ -427,6 +450,47 @@ public partial class PlayerController : MonoBehaviour, ISceneMovableItem, IPoint
             return;
         }
 
+        if (box is WorldBox worldBoxForExit && activePushBox == box && activePushDirection == direction)
+        {
+            bool rawInnerBlocked = worldBoxForExit.QueryInnerExitBlockedForActivePush(direction);
+            bool innerBlocked = rawInnerBlocked;
+            if (worldBoxExitPendingPressureLogicalUnblock)
+            {
+                if (worldBoxExitHadInnerBlock)
+                {
+                    innerBlocked = false;
+                }
+
+                worldBoxExitPendingPressureLogicalUnblock = false;
+            }
+
+            if (debugWorldBoxInnerExitEdge)
+            {
+                Debug.Log(
+                    $"[Player] WorldBox exit edge: rawInnerBlocked={rawInnerBlocked} innerBlocked={innerBlocked} hadInnerBlock={worldBoxExitHadInnerBlock} box={box.name} dir={direction}",
+                    this);
+            }
+
+            if (innerBlocked)
+            {
+                worldBoxExitHadInnerBlock = true;
+            }
+            else if (worldBoxExitHadInnerBlock)
+            {
+                worldBoxExitHadInnerBlock = false;
+                // 穿门必须立刻清掉 linearPushes；ReleaseLinearPush 只会进入 ReleaseTransition，
+                // 会话在字典里仍存在，TryAdvance/过渡会与世界箱传送语义冲突。
+                EndPushSession(cancelLinearPushImmediate: true);
+                ResetStallState();
+                worldBoxForExit.TryPassThroughInnerFromActivePush(direction);
+                physicalBoxService.QueueGridAlignmentRelease(worldBoxForExit);
+                delta.x = 0f;
+                baseVelocity.x = 0f;
+                velocity.x = 0f;
+                return;
+            }
+        }
+
         float pushSpeed = physicalBoxService.LinearPushSpeed;
         if (pushSpeed <= 0f)
         {
@@ -484,15 +548,24 @@ public partial class PlayerController : MonoBehaviour, ISceneMovableItem, IPoint
         stalledBox = null;
     }
 
-    private void EndPushSession()
+    private void EndPushSession(bool cancelLinearPushImmediate = false)
     {
         if (activePushBox != null && ServiceBase.TryGet(out PhysicalBoxService physicalBoxService))
         {
-            physicalBoxService.ReleaseLinearPush(activePushBox);
+            if (cancelLinearPushImmediate)
+            {
+                physicalBoxService.CancelLinearPush(activePushBox);
+            }
+            else
+            {
+                physicalBoxService.ReleaseLinearPush(activePushBox);
+            }
         }
 
         activePushBox = null;
         activePushCanPush = false;
+        worldBoxExitHadInnerBlock = false;
+        worldBoxExitPendingPressureLogicalUnblock = false;
     }
 
     private void ResetAirborneInitState()

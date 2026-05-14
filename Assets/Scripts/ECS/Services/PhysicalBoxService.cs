@@ -936,6 +936,21 @@ public class PhysicalBoxService : ServiceBase<StandardBox>
     }
 
     /// <summary>
+    /// 为箱子排队一次 X 向 grid 对齐（与堆叠脱节、落地后使用的 <see cref="TryQueueAlignmentRelease"/> 相同）：
+    /// 误差小于 skinWidth 则直接 snap，否则注入 <c>ReleaseTransition</c> 由 <see cref="UpdateLinearPushTransitions"/> 匀速滑过去。
+    /// 用于 WorldBox 穿门等强制 <see cref="CancelLinearPush"/> 后补上未走完的 release 对齐。
+    /// </summary>
+    public void QueueGridAlignmentRelease(StandardBox box)
+    {
+        if (box == null || !IsRegistered(box))
+        {
+            return;
+        }
+
+        TryQueueAlignmentRelease(box);
+    }
+
+    /// <summary>
     /// 给一个"刚刚脱离堆叠跟随"的 box 注入一次 alignment release：找到最近的 grid 对齐 X，
     /// 构造一个 ReleaseTransition state 让它在下一帧平滑滑过去。
     ///   - 误差小于 skinWidth：直接 snap，不走过渡；
@@ -1238,6 +1253,20 @@ public class PhysicalBoxService : ServiceBase<StandardBox>
 
         linearPushes[box] = state;
         return magnitude * sign;
+    }
+
+    /// <summary>
+    /// 立即移除箱子的线性推动状态（不进入 50% release 过渡、不写 ReleaseTarget）。
+    /// 用于 WorldBox 穿门等必须立刻打断 <c>linearPushes</c> 会话的场景；普通松手收尾仍用 <see cref="ReleaseLinearPush"/>。
+    /// </summary>
+    public void CancelLinearPush(StandardBox box)
+    {
+        if (box == null)
+        {
+            return;
+        }
+
+        linearPushes.Remove(box);
     }
 
     /// <summary>

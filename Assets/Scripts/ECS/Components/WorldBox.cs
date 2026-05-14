@@ -341,6 +341,107 @@ public class WorldBox : StandardBox
         exitBlockerService?.Clear(this);
     }
 
+    /// <summary>
+    /// 与 <see cref="UpdateOuterEdgeExitBlocker"/> / <see cref="TryRefreshExitBlocker"/> 使用<strong>同一套</strong>外缘方向解析：
+    /// 优先 <see cref="TryGetOuterContactDirection"/>（与临时墙检测一致）；若无法解析则退回 <c>Opposite(pushDirection)</c>。
+    /// </summary>
+    private bool TryResolveExitFaceForExitBlockerSync(
+        BoxPushDirection pushDirection,
+        Bounds outerBounds,
+        Bounds innerBounds,
+        Bounds playerBounds,
+        out BoxPushDirection exitFace)
+    {
+        exitFace = Opposite(pushDirection);
+        if (outerBounds.size == Vector3.zero || playerBounds.size == Vector3.zero)
+        {
+            return false;
+        }
+
+        if (!IntersectsXY(outerBounds, playerBounds))
+        {
+            return false;
+        }
+
+        if (TryGetOuterContactDirection(outerBounds, playerBounds, out BoxPushDirection outerDir))
+        {
+            exitFace = outerDir;
+        }
+
+        return true;
+    }
+
+    /// <summary>
+    /// 当前外缘穿入方向（与 ExitBlocker 刷新逻辑一致）上，内侧落点是否存在静态阻挡。
+    /// 不修改物理、不建临时墙。
+    /// </summary>
+    public bool QueryInnerExitBlockedForActivePush(BoxPushDirection pushDirection)
+    {
+        if (!EnsurePlayer())
+        {
+            return false;
+        }
+
+        Bounds outerBounds = CalculateBounds(OuterQuadCollider);
+        Bounds innerBounds = CalculateBounds(InnerQuadCollider);
+        Bounds playerBounds = GetPlayerBounds();
+        if (!TryResolveExitFaceForExitBlockerSync(pushDirection, outerBounds, innerBounds, playerBounds, out BoxPushDirection exitFace))
+        {
+            return false;
+        }
+
+        TryGetInnerTargetBounds(exitFace, outerBounds, innerBounds, playerBounds, out Bounds innerTargetBounds);
+        WorldBoxExitBlockerService service = GetExitBlockerService();
+
+        bool use2D = playerCollider2D != null;
+        bool use3D = playerCollider3D != null;
+        bool blocked = service.QueryInnerExitStaticallyBlocked(
+            this,
+            exitFace,
+            outerBounds,
+            innerTargetBounds,
+            playerBounds,
+            CollisionMask,
+            use2D,
+            use3D);
+
+        return blocked;
+    }
+
+    /// <summary>
+    /// 线性推 WorldBox 过程中内侧静态阻挡已消失时由 <see cref="PlayerController"/> 调用：
+    /// 先结束推会话再瞬移到内侧（与离开 outer 的 FixedUpdate 路径一致的状态更新）。
+    /// </summary>
+    public bool TryPassThroughInnerFromActivePush(BoxPushDirection pushDirection)
+    {
+        if (!EnsurePlayer())
+        {
+            return false;
+        }
+
+        Bounds outerBounds = CalculateBounds(OuterQuadCollider);
+        Bounds innerBounds = CalculateBounds(InnerQuadCollider);
+        Bounds playerBounds = GetPlayerBounds();
+        if (outerBounds.size == Vector3.zero || innerBounds.size == Vector3.zero || playerBounds.size == Vector3.zero)
+        {
+            return false;
+        }
+
+        if (!TryResolveExitFaceForExitBlockerSync(pushDirection, outerBounds, innerBounds, playerBounds, out BoxPushDirection exitFace))
+        {
+            return false;
+        }
+
+        ClearExitBlocker();
+        HasLastExitDirection = true;
+        LastExitDirection = exitFace;
+        wasPlayerInOuterBounds = false;
+        wasPlayerOutsideInnerBounds = true;
+        hasPreviousPlayerBounds = false;
+        MovePlayerToInnerSide(exitFace, outerBounds, innerBounds, playerBounds);
+        return true;
+    }
+
     private bool TryGetOuterContactDirection(Bounds outerBounds, Bounds playerBounds, out BoxPushDirection direction)
     {
         direction = default;

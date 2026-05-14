@@ -59,6 +59,43 @@ public class WorldBoxExitBlockerService : ServiceBase
         return true;
     }
 
+    /// <summary>
+    /// 只读：与 <see cref="TryRefreshBlockerForStaticInnerHit"/> 相同的「内侧落点是否有静态阻挡」判定，
+    /// 但不创建或刷新临时墙。用于 Player 推动 WorldBox 过程中检测阻挡边沿（门开/关等）。
+    /// </summary>
+    public bool QueryInnerExitStaticallyBlocked(
+        WorldBox worldBox,
+        BoxPushDirection direction,
+        Bounds outerBounds,
+        Bounds innerTargetBounds,
+        Bounds playerBounds,
+        LayerMask blockingMask,
+        bool use2D,
+        bool use3D)
+    {
+        if (worldBox == null || outerBounds.size == Vector3.zero || innerTargetBounds.size == Vector3.zero)
+        {
+            return false;
+        }
+
+        if (!use2D && !use3D)
+        {
+            use2D = true;
+        }
+
+        if (!TryGetStaticBlockingColliderTag(innerTargetBounds, worldBox, blockingMask, use2D, use3D, out string blockingTag))
+        {
+            return false;
+        }
+
+        if (IsPlatformTag(blockingTag) && ShouldSkipOuterPlatformBlocker(direction, outerBounds, playerBounds))
+        {
+            return false;
+        }
+
+        return true;
+    }
+
     public void Clear(WorldBox worldBox)
     {
         if (worldBox == null)
