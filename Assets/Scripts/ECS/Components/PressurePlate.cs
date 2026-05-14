@@ -6,8 +6,15 @@ using UnityEngine.Events;
 public class PressurePlate : MonoBehaviour, IPlayerRelativePositionTarget
 {
     public bool IsPressed { get; private set; }
+
     public UnityEvent OnPressed;
     public UnityEvent OnReleased;
+
+    [Header("Animation")]
+    public Animator Animator;
+
+    [Header("Animator Parameters")]
+    public string PressedParameter = "Pressed";
 
     public Bounds Bounds
     {
@@ -18,7 +25,9 @@ public class PressurePlate : MonoBehaviour, IPlayerRelativePositionTarget
                 return _collider2D.bounds;
             }
 
-            return _collider3D != null ? _collider3D.bounds : new Bounds(transform.position, Vector3.zero);
+            return _collider3D != null
+                ? _collider3D.bounds
+                : new Bounds(transform.position, Vector3.zero);
         }
     }
 
@@ -29,7 +38,14 @@ public class PressurePlate : MonoBehaviour, IPlayerRelativePositionTarget
     {
         _collider3D = GetComponent<Collider>();
         _collider2D = GetComponent<Collider2D>();
+
         ServiceBase.Get<PressurePlateService>()?.Register(this);
+
+        
+        if (Animator != null)
+        {
+            Animator.SetBool(PressedParameter, IsPressed);
+        }
     }
 
     private void OnDestroy()
@@ -49,7 +65,17 @@ public class PressurePlate : MonoBehaviour, IPlayerRelativePositionTarget
 
         bool wasPressed = IsPressed;
         IsPressed = pressed;
-        TypeEventSystem.Global.Send(new PressurePlateStateEvent(this, IsPressed, wasPressed));
+
+        
+        if (Animator != null)
+        {
+            Animator.SetBool(PressedParameter, IsPressed);
+        }
+
+        TypeEventSystem.Global.Send(
+            new PressurePlateStateEvent(this, IsPressed, wasPressed)
+        );
+
         if (IsPressed)
         {
             OnPressed?.Invoke();
@@ -58,6 +84,9 @@ public class PressurePlate : MonoBehaviour, IPlayerRelativePositionTarget
         {
             OnReleased?.Invoke();
         }
-        Debug.Log($"Pressure Plate '{name}' is now {(IsPressed ? "Pressed" : "Released")}");
+
+        Debug.Log(
+            $"Pressure Plate '{name}' is now {(IsPressed ? "Pressed" : "Released")}"
+        );
     }
 }
