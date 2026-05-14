@@ -16,8 +16,17 @@ public class WorldBoxExitBlockerService : ServiceBase
     [SerializeField, Min(0.01f)] private float minimumColliderSize = 0.05f;
     [SerializeField, Min(0.02f)] private float keepAliveDuration = 0.15f;
 
+    #region Debug Fields
+
     [Header("Debug")]
-    [SerializeField] private bool logInnerTargetOverlapHits = false;
+    [SerializeField] private bool logInnerTargetOverlapHits = true;
+    [SerializeField] private bool drawInnerTargetOverlapGizmos = true;
+    [SerializeField, Min(0f)] private float innerTargetOverlapGizmoDuration = 1f;
+
+    private readonly Dictionary<WorldBox, DebugOverlapQuery2D> debugOverlapQueries2D = new Dictionary<WorldBox, DebugOverlapQuery2D>();
+    private readonly List<WorldBox> expiredDebugOverlapOwners = new List<WorldBox>(16);
+
+    #endregion
 
     private readonly Collider2D[] overlapHits2D = new Collider2D[32];
     private readonly Collider[] overlapHits3D = new Collider[32];
@@ -44,7 +53,7 @@ public class WorldBoxExitBlockerService : ServiceBase
             use2D = true;
         }
 
-        if (!TryGetStaticBlockingColliderTag(innerTargetBounds, worldBox, blockingMask, use2D, use3D, out string blockingTag))
+        if (!TryGetStaticBlockingColliderTag(innerTargetBounds, worldBox, direction, blockingMask, use2D, use3D, out string blockingTag))
         {
             return false;
         }
@@ -83,7 +92,7 @@ public class WorldBoxExitBlockerService : ServiceBase
             use2D = true;
         }
 
-        if (!TryGetStaticBlockingColliderTag(innerTargetBounds, worldBox, blockingMask, use2D, use3D, out string blockingTag))
+        if (!TryGetStaticBlockingColliderTag(innerTargetBounds, worldBox, direction, blockingMask, use2D, use3D, out string blockingTag))
         {
             return false;
         }
@@ -115,6 +124,8 @@ public class WorldBoxExitBlockerService : ServiceBase
 
         walls.Clear();
         expiredWallOwners.Clear();
+        debugOverlapQueries2D.Clear();
+        expiredDebugOverlapOwners.Clear();
         base.OnDestroy();
     }
 
@@ -134,11 +145,14 @@ public class WorldBoxExitBlockerService : ServiceBase
         {
             RemoveWall(expiredWallOwners[i]);
         }
+
+        PruneDebugOverlapQueries();
     }
 
     private bool TryGetStaticBlockingColliderTag(
         Bounds targetBounds,
         WorldBox worldBox,
+        BoxPushDirection direction,
         LayerMask blockingMask,
         bool check2D,
         bool check3D,
@@ -151,7 +165,7 @@ public class WorldBoxExitBlockerService : ServiceBase
         Physics.SyncTransforms();
         Physics2D.SyncTransforms();
 
-        if (check2D && TryGetStaticBlockingColliderTag2D(queryBounds, worldBox, blockingMask, out blockingTag))
+        if (check2D && TryGetStaticBlockingColliderTag2D(queryBounds, worldBox, direction, blockingMask, out blockingTag))
         {
             return true;
         }
@@ -167,6 +181,7 @@ public class WorldBoxExitBlockerService : ServiceBase
     private bool TryGetStaticBlockingColliderTag2D(
         Bounds queryBounds,
         WorldBox worldBox,
+        BoxPushDirection direction,
         LayerMask blockingMask,
         out string blockingTag)
     {
@@ -175,8 +190,10 @@ public class WorldBoxExitBlockerService : ServiceBase
             Mathf.Max(minimumColliderSize, queryBounds.size.x),
             Mathf.Max(minimumColliderSize, queryBounds.size.y));
 
-        int hitCount = Physics2D.OverlapBoxNonAlloc((Vector2)queryBounds.center, size, 0f, overlapHits2D, blockingMask);
-        LogTargetScan("2D", worldBox, queryBounds, blockingMask, hitCount);
+        Bounds actualQueryBounds = Create2DOverlapQueryBounds(queryBounds, size);
+        int hitCount = Physics2D.OverlapBoxNonAlloc((Vector2)actualQueryBounds.center, size, 0f, overlapHits2D, blockingMask);
+        RecordDebugOverlapQuery2D(worldBox, direction, actualQueryBounds, blockingMask, hitCount);
+        LogTargetScan("2D", worldBox, actualQueryBounds, blockingMask, hitCount);
         for (int i = 0; i < hitCount; i++)
         {
             Collider2D hit = overlapHits2D[i];
@@ -387,6 +404,8 @@ public class WorldBoxExitBlockerService : ServiceBase
         }
     }
 
+    #region Debug
+
     private void LogTargetScan(string physicsType, WorldBox worldBox, Bounds queryBounds, LayerMask blockingMask, int hitCount)
     {
         if (!logInnerTargetOverlapHits)
@@ -434,6 +453,141 @@ public class WorldBoxExitBlockerService : ServiceBase
             $"[WorldBoxExitBlocker] Target hit {physicsType}: status={FormatHitStatus(accepted, rejectReason)}, worldBox={GetObjectPath(worldBox != null ? worldBox.transform : null)}, collider={GetObjectPath(hit.transform)}, tag={hit.tag}, layer={GetLayerLabel(hit.gameObject.layer)}, enabled={hit.enabled}, isTrigger={hit.isTrigger}, boundsCenter={hit.bounds.center}, boundsSize={hit.bounds.size}",
             hit);
     }
+
+    private void RecordDebugOverlapQuery2D(
+        WorldBox worldBox,
+        BoxPushDirection direction,
+        Bounds actualQueryBounds,
+        LayerMask blockingMask,
+        int hitCount)
+    {
+        if (!drawInnerTargetOverlapGizmos || worldBox == null)
+        {
+            return;
+        }
+
+        debugOverlapQueries2D[worldBox] = new DebugOverlapQuery2D(
+            actualQueryBounds,
+            direction,
+            blockingMask,
+            hitCount,
+            Time.time);
+    }
+
+    private void PruneDebugOverlapQueries()
+    {
+        if (debugOverlapQueries2D.Count == 0)
+        {
+            return;
+        }
+
+        expiredDebugOverlapOwners.Clear();
+        float now = Time.time;
+        foreach (KeyValuePair<WorldBox, DebugOverlapQuery2D> pair in debugOverlapQueries2D)
+        {
+            if (pair.Key == null ||
+                (innerTargetOverlapGizmoDuration > 0f && now - pair.Value.CapturedAt > innerTargetOverlapGizmoDuration))
+            {
+                expiredDebugOverlapOwners.Add(pair.Key);
+            }
+        }
+
+        for (int i = 0; i < expiredDebugOverlapOwners.Count; i++)
+        {
+            debugOverlapQueries2D.Remove(expiredDebugOverlapOwners[i]);
+        }
+    }
+
+    private void OnDrawGizmos()
+    {
+        if (!drawInnerTargetOverlapGizmos || debugOverlapQueries2D.Count == 0)
+        {
+            return;
+        }
+
+        PruneDebugOverlapQueries();
+
+        Color previousColor = Gizmos.color;
+#if UNITY_EDITOR
+        Color previousHandlesColor = UnityEditor.Handles.color;
+#endif
+        foreach (KeyValuePair<WorldBox, DebugOverlapQuery2D> pair in debugOverlapQueries2D)
+        {
+            DebugOverlapQuery2D query = pair.Value;
+            Gizmos.color = query.HitCount > 0
+                ? new Color(1f, 0.75f, 0.05f, 0.95f)
+                : new Color(0f, 0.85f, 1f, 0.95f);
+
+            DrawBoundsXY(query.ActualBounds);
+
+#if UNITY_EDITOR
+            UnityEditor.Handles.color = Gizmos.color;
+            UnityEditor.Handles.Label(
+                new Vector3(query.ActualBounds.min.x, query.ActualBounds.max.y, query.ActualBounds.center.z),
+                FormatDebugOverlapQueryLabel(pair.Key, query));
+#endif
+        }
+
+        Gizmos.color = previousColor;
+#if UNITY_EDITOR
+        UnityEditor.Handles.color = previousHandlesColor;
+#endif
+    }
+
+    private static Bounds Create2DOverlapQueryBounds(Bounds queryBounds, Vector2 actualSize)
+    {
+        Vector3 center = queryBounds.center;
+        Vector3 size = new Vector3(actualSize.x, actualSize.y, 0f);
+        return new Bounds(center, size);
+    }
+
+    private static void DrawBoundsXY(Bounds bounds)
+    {
+        Vector3 min = bounds.min;
+        Vector3 max = bounds.max;
+        float z = bounds.center.z;
+
+        Vector3 bottomLeft = new Vector3(min.x, min.y, z);
+        Vector3 bottomRight = new Vector3(max.x, min.y, z);
+        Vector3 topRight = new Vector3(max.x, max.y, z);
+        Vector3 topLeft = new Vector3(min.x, max.y, z);
+
+        Gizmos.DrawLine(bottomLeft, bottomRight);
+        Gizmos.DrawLine(bottomRight, topRight);
+        Gizmos.DrawLine(topRight, topLeft);
+        Gizmos.DrawLine(topLeft, bottomLeft);
+    }
+
+    private static string FormatDebugOverlapQueryLabel(WorldBox worldBox, DebugOverlapQuery2D query)
+    {
+        Vector3 size = query.ActualBounds.size;
+        return $"OverlapBox2D {query.Direction} hits={query.HitCount} size=({size.x:F3}, {size.y:F3}) mask={query.BlockingMask.value} box={GetObjectPath(worldBox != null ? worldBox.transform : null)}";
+    }
+
+    private readonly struct DebugOverlapQuery2D
+    {
+        public readonly Bounds ActualBounds;
+        public readonly BoxPushDirection Direction;
+        public readonly LayerMask BlockingMask;
+        public readonly int HitCount;
+        public readonly float CapturedAt;
+
+        public DebugOverlapQuery2D(
+            Bounds actualBounds,
+            BoxPushDirection direction,
+            LayerMask blockingMask,
+            int hitCount,
+            float capturedAt)
+        {
+            ActualBounds = actualBounds;
+            Direction = direction;
+            BlockingMask = blockingMask;
+            HitCount = hitCount;
+            CapturedAt = capturedAt;
+        }
+    }
+
+    #endregion
 
     private void RemoveWall(WorldBox worldBox)
     {

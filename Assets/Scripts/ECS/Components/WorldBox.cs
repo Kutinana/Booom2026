@@ -270,6 +270,7 @@ public class WorldBox : StandardBox
                 break;
         }
 
+        position = SnapToGridTargetCenter(position);
         return true;
     }
 
@@ -282,16 +283,22 @@ public class WorldBox : StandardBox
         }
 
         targetBounds = playerBounds;
-        if (playerTransform != null)
+        targetBounds.center = targetPosition;
+        return true;
+    }
+
+    private Vector3 SnapToGridTargetCenter(Vector3 position)
+    {
+        Grid grid = Grid;
+        if (grid == null)
         {
-            targetBounds.center += targetPosition - playerTransform.position;
-        }
-        else
-        {
-            targetBounds.center = targetPosition;
+            return position;
         }
 
-        return true;
+        Vector3Int cell = grid.WorldToCell(position);
+        Vector3 snapped = grid.CellToWorld(cell) + Vector3.Scale(grid.cellSize, CellOffset);
+        snapped.z = position.z;
+        return snapped;
     }
 
     private void UpdateOuterEdgeExitBlocker(Bounds outerBounds, Bounds innerBounds, Bounds playerBounds)
