@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using Kuchinashi.SceneFlow;
 using UnityEngine;
@@ -5,14 +6,22 @@ using UnityEngine;
 /// <summary>
 /// 世界地图选关盒子：玩家在各自 <see cref="interactionRadius"/> 内时参与竞争；
 /// 仅统计位于玩家<strong>视线朝向一侧</strong>（与 <see cref="PlayerAnimationController"/> 的 flip 一致）的盒子，在其中取最近者为 <see cref="CurrentFocus"/>；按 E 经 SceneFlow 进入 <see cref="levelSceneName"/>。
+/// 同物体上的 <see cref="StandardBox"/> 在 <see cref="Start"/> 中按存档与 <see cref="GameConfig"/> 判定：已完成则与正常箱子一致；未完成则上浮、微动、关闭碰撞但仍可 E 进入。
 /// </summary>
 [DisallowMultipleComponent]
-[DefaultExecutionOrder(50)]
+[DefaultExecutionOrder(-51)]
 public class LevelBoxController : MonoBehaviour
 {
     private const float ForwardHalfPlaneEpsilon = 0.02f;
 
     [SerializeField] private string levelSceneName;
+
+    [Header("未完成关卡：展示用 StandardBox")]
+    [SerializeField, Min(0f)]
+    private float incompleteFloatAmplitude = 0.035f;
+
+    [SerializeField, Min(0f)]
+    private float incompleteFloatFrequencyHz = 0.9f;
 
     [Header("选中描边（Custom/SpriteEdgeGlow）")]
     [Tooltip("例如 Assets/Art/Shaders/Custom_SpriteEdgeGlow.mat")]
@@ -37,9 +46,23 @@ public class LevelBoxController : MonoBehaviour
     private Material baselineSharedMaterial;
     private bool baselineCaptured;
 
+    private StandardBox standardBox;
+    private bool incompletePresentMode;
+    private Vector3 incompleteBobbleAnchorWorld;
+
     private void Awake()
     {
         spriteRenderer = GetComponent<SpriteRenderer>();
+        standardBox = GetComponent<StandardBox>();
+        if (standardBox == null)
+        {
+            Debug.LogError("[LevelBox] 需要与本物体同挂的 StandardBox。", this);
+        }
+    }
+
+    private void Start()
+    {
+        ApplyStandardBoxInitialStateFromSaveAndConfig();
     }
 
     private void OnEnable()
@@ -67,6 +90,15 @@ public class LevelBoxController : MonoBehaviour
 
     private void LateUpdate()
     {
+        if (incompletePresentMode && standardBox != null)
+        {
+            float wobble =
+                Mathf.Sin(Time.time * (Mathf.PI * 2f * incompleteFloatFrequencyHz)) * incompleteFloatAmplitude;
+            Vector3 p = incompleteBobbleAnchorWorld;
+            p.y += wobble;
+            standardBox.MoveTo(p);
+        }
+
         if (Time.frameCount != s_LastGlobalFrame)
         {
             s_LastGlobalFrame = Time.frameCount;
@@ -269,5 +301,91 @@ public class LevelBoxController : MonoBehaviour
         {
             spriteRenderer.sharedMaterial = target;
         }
+    }
+
+    private void ApplyStandardBoxInitialStateFromSaveAndConfig()
+    {
+        if (standardBox == null)
+        {
+            return;
+        }
+
+        string targetScene = string.IsNullOrWhiteSpace(levelSceneName) ? string.Empty : levelSceneName.Trim();
+        bool completed = IsLevelCompletedForSceneName(targetScene);
+
+        if (completed)
+        {
+            incompletePresentMode = false;
+            standardBox.ApplyGravity = true;
+            standardBox.AlignToGrid = true;
+            return;
+        }
+
+        incompletePresentMode = true;
+        standardBox.ApplyGravity = false;
+        standardBox.AlignToGrid = false;
+
+        if (standardBox.Collider2D != null)
+        {
+            standardBox.Collider2D.enabled = false;
+        }
+
+        if (standardBox.Collider3D != null)
+        {
+            standardBox.Collider3D.enabled = false;
+        }
+
+        float stepY = 1f;
+        Grid grid = standardBox.Grid;
+        if (grid != null)
+        {
+            stepY = Mathf.Abs(grid.cellSize.y);
+            if (stepY < 1e-4f)
+            {
+                stepY = 1f;
+            }
+        }
+
+        Vector3 raised = standardBox.transform.position + Vector3.up * stepY;
+        incompleteBobbleAnchorWorld = raised;
+        standardBox.MoveTo(raised);
+    }
+
+    private static bool IsLevelCompletedForSceneName(string sceneName)
+    {
+        if (string.IsNullOrEmpty(sceneName))
+        {
+            return false;
+        }
+
+        GameConfig config = GameConfig.Current;
+        if (config == null || config.Levels == null)
+        {
+            return false;
+        }
+
+        LevelData matched = null;
+        for (int i = 0; i < config.Levels.Count; i++)
+        {
+            LevelData row = config.Levels[i];
+            if (row == null || string.IsNullOrEmpty(row.ScenePath))
+            {
+                continue;
+            }
+
+            if (string.Equals(row.ScenePath.Trim(), sceneName, StringComparison.Ordinal))
+            {
+                matched = row;
+                break;
+            }
+        }
+
+        if (matched == null)
+        {
+            return false;
+        }
+
+        Save save = new Save().DeSerialize<Save>();
+        return save.FinishedLevels != null && save.FinishedLevels.Contains(matched.Index);
     }
 }
