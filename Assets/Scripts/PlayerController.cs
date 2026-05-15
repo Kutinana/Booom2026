@@ -36,6 +36,8 @@ public partial class PlayerController : MonoBehaviour, ISceneMovableItem, IPoint
     [SerializeField] private float maxFallSpeed = 18f;
     [SerializeField, Min(0f)] private float retainedVelocityDrag = 18f;
     [SerializeField, Min(0f)] private float retainedVelocityStopSpeed = 0.05f;
+    [SerializeField, Min(0f)]
+    private float coyoteTime = 0.08f;
 
     [Header("Collision")]
     [SerializeField] private LayerMask collisionMask = ~0;
@@ -112,6 +114,7 @@ public partial class PlayerController : MonoBehaviour, ISceneMovableItem, IPoint
     private bool jumpQueued;
     private bool jumping;
     private float jumpApexY;
+    private float coyoteTimeLeft;
     private float fixedZ;
     private StandardBox leftBox;
     private StandardBox rightBox;
@@ -257,6 +260,14 @@ public partial class PlayerController : MonoBehaviour, ISceneMovableItem, IPoint
         ProcessPlatformDropRequest();
 
         float dt = Time.fixedDeltaTime;
+        if (contacts.grounded)
+        {
+            coyoteTimeLeft = coyoteTime;
+        }
+        else
+        {
+            coyoteTimeLeft = Mathf.Max(0f, coyoteTimeLeft - dt);
+        }
         baseVelocity.x = Mathf.Clamp(moveInput.x, -1f, 1f) * moveSpeed;
 
         // 落地时若仍带向上的 retained，会在 base 被清零后让 velocity.y 仍为正 → 贴板小跳再下落；先清掉竖直向上的 retained。
@@ -275,12 +286,13 @@ public partial class PlayerController : MonoBehaviour, ISceneMovableItem, IPoint
             jumping = false;
         }
 
-        if (jumpQueued && contacts.grounded)
+        if (jumpQueued && (contacts.grounded || coyoteTimeLeft > 0f))
         {
             float height = Mathf.Max(0.01f, GetCellHeight() * jumpGridHeight);
             baseVelocity.y = Mathf.Sqrt(2f * gravity * height);
             jumpApexY = transform.position.y + height;
             jumping = true;
+            coyoteTimeLeft = 0f;
         }
 
         jumpQueued = false;
@@ -1122,6 +1134,7 @@ public partial class PlayerController : MonoBehaviour, ISceneMovableItem, IPoint
         BeginRetainedVelocity(newVelocity);
         jumpQueued = false;
         jumping = false;
+        coyoteTimeLeft = 0f;
     }
 
     /// <summary>
