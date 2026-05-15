@@ -4,7 +4,7 @@ using UnityEngine;
 
 public class GameManager : MonoSingleton<GameManager>
 {
-    private const string StartContentSceneName = "World 1";
+    public const string StartContentSceneName = "World 1";
 
     [SerializeField] private GameConfig m_GameConfig;
 

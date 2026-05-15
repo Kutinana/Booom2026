@@ -9,7 +9,7 @@ using UnityEngine.Events;
 
 /// <summary>
 /// 挂在关卡内容场景中，集中处理本关生命周期与 <see cref="TypeEventSystem.Global"/> 等监听。
-/// 内置默认目标：同场景内收集满 <see cref="starsRequired"/> 颗 <see cref="CollectiveStar"/> 后触发一次事件；默认再播放玩家 Happy、等待 <see cref="delayBeforeReturnToStartSeconds"/> 秒后切回 <see cref="startSceneName"/>（均可配置）。
+/// 内置默认目标：同场景内收集满 <see cref="starsRequired"/> 颗 <see cref="CollectiveStar"/> 后触发一次事件；默认再播放玩家 Happy、等待 <see cref="delayBeforeReturnToStartSeconds"/> 秒后切场景——教程关（Levels 中 Index 0）进 <see cref="GameManager.StartContentSceneName"/>，其余关进 <see cref="startSceneName"/>（均可配置）。
 /// 用法：本类挂在关卡根物体上（建议每关仅一个）；复杂逻辑可继承并重写虚方法，或在 Inspector 绑定 <see cref="UnityEvent"/>。
 /// </summary>
 [DisallowMultipleComponent]
@@ -20,16 +20,12 @@ public class LevelManager : MonoBehaviour
     [Tooltip(">=0 时从 GameConfig.Current.Levels 按 Index 取条目；<0 时按本场景名与 LevelData.ScenePath（即场景名）字符串相等匹配。")]
     [SerializeField] private int m_LevelIndexOverride = -1;
 
-    [Header("星星目标（默认开启，满 3 颗触发一次）")]
     [SerializeField] private bool enableStarCollectGoal = true;
     [SerializeField, Min(1)] private int starsRequired = 3;
-    [Tooltip("仅统计与本组件同 Unity 场景的星星，避免 Shell 常驻时误计其他场景。")]
     [SerializeField] private UnityEvent onStarsRequirementMet;
     [SerializeField] private UnityEventInt onStarsProgress;
-
-    [Header("集齐星星后（默认 Happy → 等待 → 回开始场景）")]
     [SerializeField, Min(0f)] private float delayBeforeReturnToStartSeconds = 2f;
-    [SerializeField] private string startSceneName = "StartScene";
+
     [Tooltip("若留空，运行时查找场景中的 SceneFlowHost（与选关界面一致）。")]
     [SerializeField] private SceneFlowHost sceneFlowHost;
     [SerializeField] private bool disablePlayerInputWhenStarsComplete = true;
@@ -188,15 +184,20 @@ public class LevelManager : MonoBehaviour
         m_PostAllStarsRoutine = null;
     }
 
+    /// <summary>
+    /// 教程关（<see cref="LevelData.Index"/> 为 0）集齐星星后进 <see cref="GameManager.StartContentSceneName"/>；
+    /// 其余关卡仍进 <see cref="startSceneName"/>（如 StartScene）。
+    /// </summary>
     private void TryRequestSwitchToStartScene()
     {
-        if (string.IsNullOrWhiteSpace(startSceneName))
+        string target = GameManager.StartContentSceneName;
+        if (string.IsNullOrWhiteSpace(target))
         {
-            Debug.LogWarning("[LevelManager] startSceneName 为空，无法切换场景。");
+            Debug.LogWarning("[LevelManager] 通关后目标场景名为空（请配置 startSceneName）。", this);
             return;
         }
 
-        string target = startSceneName.Trim();
+        target = target.Trim();
         SceneFlowController flow = SceneFlowController.Instance;
         if (flow != null && flow.IsConfigured)
         {
