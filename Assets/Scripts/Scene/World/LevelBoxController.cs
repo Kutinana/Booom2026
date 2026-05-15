@@ -50,6 +50,8 @@ public class LevelBoxController : MonoBehaviour
     private bool incompletePresentMode;
     private Vector3 incompleteBobbleAnchorWorld;
 
+    private ParticleSystem[] incompleteChildParticles;
+
     private void Awake()
     {
         spriteRenderer = GetComponent<SpriteRenderer>();
@@ -58,6 +60,8 @@ public class LevelBoxController : MonoBehaviour
         {
             Debug.LogError("[LevelBox] 需要与本物体同挂的 StandardBox。", this);
         }
+
+        incompleteChildParticles = GetComponentsInChildren<ParticleSystem>(true);
     }
 
     private void Start()
@@ -316,6 +320,7 @@ public class LevelBoxController : MonoBehaviour
         if (completed)
         {
             incompletePresentMode = false;
+            SetIncompleteChildParticlesActive(false);
             standardBox.ApplyGravity = true;
             standardBox.AlignToGrid = true;
             return;
@@ -324,6 +329,8 @@ public class LevelBoxController : MonoBehaviour
         incompletePresentMode = true;
         standardBox.ApplyGravity = false;
         standardBox.AlignToGrid = false;
+
+        SetIncompleteChildParticlesActive(true);
 
         if (standardBox.Collider2D != null)
         {
@@ -387,5 +394,47 @@ public class LevelBoxController : MonoBehaviour
 
         Save save = new Save().DeSerialize<Save>();
         return save.FinishedLevels != null && save.FinishedLevels.Contains(matched.Index);
+    }
+
+    private void SetIncompleteChildParticlesActive(bool active)
+    {
+        if (incompleteChildParticles == null)
+        {
+            return;
+        }
+
+        for (int i = 0; i < incompleteChildParticles.Length; i++)
+        {
+            ParticleSystem ps = incompleteChildParticles[i];
+            if (ps == null)
+            {
+                continue;
+            }
+
+            GameObject go = ps.gameObject;
+            if (go == null)
+            {
+                continue;
+            }
+
+            bool isRootObject = go == gameObject;
+            if (active)
+            {
+                if (!isRootObject)
+                {
+                    go.SetActive(true);
+                }
+
+                ps.Play(true);
+            }
+            else
+            {
+                ps.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+                if (!isRootObject)
+                {
+                    go.SetActive(false);
+                }
+            }
+        }
     }
 }
