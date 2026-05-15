@@ -89,6 +89,9 @@ public class CollectiveStar : MonoBehaviour
 
         yield return new WaitForSeconds(waitSeconds);
 
+        // Destroy 会立刻停掉 Animator；若动画正在写材质 alpha 等，停写的那一帧会回到 Renderer 上的默认值，容易闪一帧。
+        SetSubtreeRenderersEnabled(transform, false);
+
         if (destroyAfterCollect)
         {
             Destroy(gameObject);
@@ -99,6 +102,15 @@ public class CollectiveStar : MonoBehaviour
         }
 
         collectRoutine = null;
+    }
+
+    private static void SetSubtreeRenderersEnabled(Transform root, bool enabled)
+    {
+        Renderer[] renderers = root.GetComponentsInChildren<Renderer>(true);
+        for (int i = 0; i < renderers.Length; i++)
+        {
+            renderers[i].enabled = enabled;
+        }
     }
 
     private void SetPickupCollidersEnabled(bool enabled)
