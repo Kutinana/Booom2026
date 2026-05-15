@@ -41,6 +41,8 @@ public partial class PlayerController : MonoBehaviour, ISceneMovableItem, IPoint
     [SerializeField] private LayerMask collisionMask = ~0;
     [SerializeField] private float skinWidth = 0.02f;
     [SerializeField, Min(2)] private int raysPerSide = 2;
+    [SerializeField, Min(0f), Tooltip("脚底有支撑时，若竖直速度严格大于该值则不视为 grounded（避免向上穿过单向板时脚扫到板顶假接地）。")]
+    private float groundedMaxUpwardSpeedToRemainGrounded = 0.001f;
 
     [Header("Push")]
     [SerializeField, Min(0.05f), Tooltip("线性推动期间玩家水平移动速度相对 moveSpeed 的倍率；当 PhysicalBoxService 暴露 LinearPushSpeed 时优先使用其值。")]
@@ -244,6 +246,16 @@ public partial class PlayerController : MonoBehaviour, ISceneMovableItem, IPoint
         float dt = Time.fixedDeltaTime;
         baseVelocity.x = Mathf.Clamp(moveInput.x, -1f, 1f) * moveSpeed;
 
+        // 落地时若仍带向上的 retained，会在 base 被清零后让 velocity.y 仍为正 → 贴板小跳再下落；先清掉竖直向上的 retained。
+        if (contacts.grounded &&
+            !jumping &&
+            hasRetainedVelocity &&
+            retainedVelocityAxis.y > 0f &&
+            baseVelocity.y <= 0f)
+        {
+            ClearRetainedVelocity();
+        }
+
         if (contacts.grounded && baseVelocity.y < 0f)
         {
             baseVelocity.y = 0f;
@@ -322,7 +334,6 @@ public partial class PlayerController : MonoBehaviour, ISceneMovableItem, IPoint
         contacts.upBlocked = Cast(Vector3.up, skinWidth * 2f, out RayHit upHit);
         contacts.leftBlocked = Cast(Vector3.left, skinWidth * 2f, out RayHit leftHit);
         contacts.rightBlocked = Cast(Vector3.right, skinWidth * 2f, out RayHit rightHit);
-        contacts.grounded = contacts.downBlocked;
         contacts.downTag = downHit.tag;
         contacts.upTag = upHit.tag;
         contacts.leftTag = leftHit.tag;
@@ -332,6 +343,7 @@ public partial class PlayerController : MonoBehaviour, ISceneMovableItem, IPoint
         downBox = downHit.box;
         leftBox = leftHit.box;
         rightBox = rightHit.box;
+        contacts.grounded = contacts.downBlocked && velocity.y <= groundedMaxUpwardSpeedToRemainGrounded;
     }
 
     private void HandleWorldBoxUpPush(float verticalDelta)

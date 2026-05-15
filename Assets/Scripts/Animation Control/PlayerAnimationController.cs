@@ -12,6 +12,10 @@ public class PlayerAnimationController : MonoBehaviour
     [SerializeField] private float idleTriggerTime = 3f;
     [SerializeField] private Vector2 idleRandomInterval = new Vector2(3f, 6f);
 
+    [Header("Landing")]
+    [SerializeField, Tooltip("触发 Land 时竖直速度须不大于此值（避免仍在上穿平台时误触地动画）；与 PlayerController 的 grounded 竖直判定一致思路。")]
+    private float landTriggerMaxVerticalVelocity = 0.001f;
+
     private float idleTimer;
     private float nextIdleTime;
     private bool wasGrounded;
@@ -60,8 +64,8 @@ public class PlayerAnimationController : MonoBehaviour
         animator.SetFloat("speed", isPushing ? 0f : walkIntention);
         animator.SetFloat("VerticalVelocity", velocity.y);
 
-        // Landing detection
-        if (!wasGrounded && grounded)
+        // Landing detection：仍在明显上升时不打 Land（与 PlayerController 按竖直速度收紧 grounded 配套）
+        if (!wasGrounded && grounded && velocity.y <= landTriggerMaxVerticalVelocity)
         {
             animator.SetTrigger("Land");
         }

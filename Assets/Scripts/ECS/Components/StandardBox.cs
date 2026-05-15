@@ -1,8 +1,6 @@
 using System.Collections.Generic;
 using QFramework;
-using Unity.VisualScripting;
 using UnityEngine;
-using UnityEngine.SceneManagement;
 
 [DisallowMultipleComponent]
 public class StandardBox : MonoBehaviour, ISceneMovableItem
@@ -204,11 +202,10 @@ public class StandardBox : MonoBehaviour, ISceneMovableItem
 
     private Grid FindSceneGrid()
     {
-        Scene scene = gameObject.scene;
         Grid found = null;
         bfsQueue.Clear();
 
-        foreach (GameObject root in scene.GetRootGameObjects())
+        foreach (GameObject root in gameObject.scene.GetRootGameObjects())
         {
             bfsQueue.Enqueue(root.transform);
         }
