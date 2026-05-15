@@ -684,6 +684,9 @@ public partial class PlayerController : MonoBehaviour, ISceneMovableItem, IPoint
 
     private void ResolveTerrainOverlaps(Vector3 movedDelta)
     {
+        bool skipHorizontalVelocityStopFromOverlap =
+            !contacts.grounded && contacts.leftBlocked && contacts.rightBlocked;
+
         for (int i = 0; i < MaxOverlapResolveIterations; i++)
         {
             Bounds bounds = GetBounds();
@@ -705,16 +708,22 @@ public partial class PlayerController : MonoBehaviour, ISceneMovableItem, IPoint
             if (Mathf.Abs(correction.x) > 0f)
             {
                 StopRetainedVelocityForCollision(movedDelta, true);
-                baseVelocity.x = 0f;
-                velocity.x = 0f;
+                if (Mathf.Abs(movedDelta.x) > OverlapResolveEpsilon && !skipHorizontalVelocityStopFromOverlap)
+                {
+                    baseVelocity.x = 0f;
+                    velocity.x = 0f;
+                }
             }
 
             if (Mathf.Abs(correction.y) > 0f)
             {
                 StopRetainedVelocityForCollision(movedDelta, false);
-                baseVelocity.y = 0f;
-                velocity.y = 0f;
-                jumping = false;
+                if (Mathf.Abs(movedDelta.y) > OverlapResolveEpsilon)
+                {
+                    baseVelocity.y = 0f;
+                    velocity.y = 0f;
+                    jumping = false;
+                }
             }
         }
     }
