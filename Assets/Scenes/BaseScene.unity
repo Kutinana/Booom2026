@@ -298,6 +298,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 11e69119d1d831b4fa525cd7403766bf, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  m_GameConfig: {fileID: 11400000, guid: c7c54c0fc3d2ead48a5fde6c3f1c3b86, type: 2}
 --- !u!4 &312826532
 Transform:
   m_ObjectHideFlags: 0
@@ -526,6 +527,7 @@ GameObject:
   m_Component:
   - component: {fileID: 477928945}
   - component: {fileID: 477928944}
+  - component: {fileID: 477928946}
   m_Layer: 0
   m_Name: SceneController
   m_TagString: Untagged
@@ -545,8 +547,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ab98920f12b934647ba8b3fd86a7747f, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  m_InitialContentScene: World 1
-  m_LoadInitialOnStart: 1
+  m_InitialContentScene: 
+  m_LoadInitialOnStart: 0
   m_WaitContentReadyOnInitialLoad: 0
   m_TransitionViewBehaviour: {fileID: 1638731509}
   m_InspectorJumpSceneName: StartScene
@@ -565,6 +567,19 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &477928946
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 477928943}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: cea04a26105201d4ea401c4e88320a63, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  m_SceneFlowHost: {fileID: 0}
 --- !u!1 &519420028
 GameObject:
   m_ObjectHideFlags: 0

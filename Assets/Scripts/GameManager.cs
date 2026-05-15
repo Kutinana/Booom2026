@@ -6,9 +6,18 @@ public class GameManager : MonoSingleton<GameManager>
 {
     private const string StartContentSceneName = "World 1";
 
+    [SerializeField] private GameConfig m_GameConfig;
+
     private void Awake()
     {
         DontDestroyOnLoad(gameObject);
+        GameConfig.SetRuntimeCurrent(m_GameConfig);
+    }
+
+    protected override void OnDestroy()
+    {
+        base.OnDestroy();
+        GameConfig.ClearRuntimeCurrentIf(m_GameConfig);
     }
 
     private void Update()

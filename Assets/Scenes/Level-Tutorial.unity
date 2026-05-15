@@ -9739,7 +9739,7 @@ PlayableDirector:
   m_GameObject: {fileID: 436145067}
   m_Enabled: 1
   serializedVersion: 3
-  m_PlayableAsset: {fileID: 11400000, guid: efd38fb655c41974f8d3cdfc8416f246, type: 2}
+  m_PlayableAsset: {fileID: 11400000, guid: 3a9d73995ea6a7b458ea90d1010605ac, type: 2}
   m_InitialState: 0
   m_WrapMode: 2
   m_DirectorUpdateMode: 1
@@ -13058,10 +13058,12 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   cellOffset: {x: 0.5, y: 0.5, z: 0}
+  AlignToGrid: 1
   pushableFrom: 2
   collisionMask:
     serializedVersion: 2
     m_Bits: 4294967295
+  ApplyGravity: 1
   TestDirection: 0
   OuterQuadCollider: {fileID: 1030242292}
   InnerQuadCollider: {fileID: 1261429945}
@@ -14256,10 +14258,12 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   cellOffset: {x: 0.5, y: 0.5, z: 0}
+  AlignToGrid: 1
   pushableFrom: 3
   collisionMask:
     serializedVersion: 2
     m_Bits: 4294967295
+  ApplyGravity: 1
   TestDirection: 0
 --- !u!61 &1579278815
 BoxCollider2D:
@@ -14784,6 +14788,7 @@ MonoBehaviour:
   animator: {fileID: 1822326675}
   idleTriggerTime: 3
   idleRandomInterval: {x: 3, y: 6}
+  landTriggerMaxVerticalVelocity: 0.001
 --- !u!95 &1822326675
 Animator:
   serializedVersion: 5
