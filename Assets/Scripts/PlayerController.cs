@@ -214,7 +214,7 @@ public partial class PlayerController : MonoBehaviour, ISceneMovableItem, IPoint
 
     private void Update()
     {
-        if (MovementInputDisabled)
+        if (MovementInputDisabled || IsMovementBlockedByAppearIntro())
         {
             moveInput = Vector2.zero;
             return;
@@ -229,6 +229,19 @@ public partial class PlayerController : MonoBehaviour, ISceneMovableItem, IPoint
         }
 
         HandlePlatformInput();
+    }
+
+    /// <summary>
+    /// Animator 默认入口为 Appear 等时：在该状态结束前不读取移动/跳跃/平台下落输入（与 <see cref="MovementInputDisabled"/> 独立）。
+    /// </summary>
+    private bool IsMovementBlockedByAppearIntro()
+    {
+        if (animator == null || !animator.isActiveAndEnabled)
+        {
+            return false;
+        }
+
+        return animator.GetCurrentAnimatorStateInfo(0).IsName("Appear");
     }
 
     private void FixedUpdate()
