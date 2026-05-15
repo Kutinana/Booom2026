@@ -92,13 +92,9 @@ public class TutorialManager : MonoBehaviour
         if (player != null)
             player.MovementInputDisabled = false;
 
-        if (timelineDirector.playableAsset is PlayableAsset tutorialAsset)
-        {
-            UserConfig.Write("HasAlreadyPlayedTutorial", true);
-        }
         else if (timelineDirector.playableAsset is PlayableAsset afterTutorialAsset)
         {
-            UserConfig.Write("HasAlreadyPlayedAfterTutorial", true);
+            UserConfig.Write("HasAlreadyStartedAfterTutorial", true);
         }
     }
 
