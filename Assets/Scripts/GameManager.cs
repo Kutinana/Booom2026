@@ -39,8 +39,14 @@ public class GameManager : MonoSingleton<GameManager>
             return;
         }
 
-        if (string.IsNullOrEmpty(flow.CurrentContentSceneName) ||
-            flow.CurrentContentSceneName == StartContentSceneName)
+        var content = flow.CurrentContentSceneName;
+        if (content == StartContentSceneName)
+        {
+            TypeEventSystem.Global.Send(new TryQuitGameRequestedEvent());
+            return;
+        }
+
+        if (string.IsNullOrEmpty(content))
         {
             return;
         }
