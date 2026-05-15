@@ -109,10 +109,16 @@ public class PhysicalBoxService : ServiceBase<StandardBox>
         }
 
         UpdateLinearPushTransitions(dt);
+
     }
 
     private void OnPushAttempted(BoxPushAttemptEvent e)
     {
+        if (IsFalling(e.Box))
+        {
+            return;
+        }
+
         if (!e.CanPush || e.Box == null || !IsRegistered(e.Box))
         {
             return;
@@ -603,6 +609,14 @@ public class PhysicalBoxService : ServiceBase<StandardBox>
             {
                 RaycastHit2D hit2D = hits2D[i];
                 if (hit2D.collider == null || hit2D.collider.isTrigger || hit2D.collider == boxCollider2D)
+                {
+                    continue;
+                }
+
+                bool vertical = Mathf.Abs(direction.y) > 0f;
+
+               
+                if (!vertical && hit2D.collider.CompareTag("Platform"))
                 {
                     continue;
                 }
@@ -1155,9 +1169,12 @@ public class PhysicalBoxService : ServiceBase<StandardBox>
 
         // Q2：X 重叠 > 较窄者宽 * StackOverlapRatio。box 都对齐 grid 的前提下，X overlap 只可能是 0/0.5/1。
         // 阈值 0.4 → 完全对齐(1.0) 与 半搭横跨(0.5) 都算堆叠成员，错开(0.0) 不算。
-        float xOverlap = Mathf.Min(stackedBounds.max.x, below.Bounds.max.x) - Mathf.Max(stackedBounds.min.x, below.Bounds.min.x);
-        float minWidth = Mathf.Min(stackedBounds.size.x, below.Bounds.size.x);
-        if (xOverlap <= minWidth * StackOverlapRatio)
+        float centerDeltaX = Mathf.Abs(stackedBounds.center.x - below.Bounds.center.x);
+
+       
+        float alignTolerance = 0.05f;
+
+        if (centerDeltaX > alignTolerance)
         {
             return false;
         }
@@ -1195,6 +1212,10 @@ public class PhysicalBoxService : ServiceBase<StandardBox>
     /// </summary>
     public float TryAdvanceLinearPush(StandardBox box, BoxPushDirection direction, float requestedDelta, GameObject pusher)
     {
+        if (IsFalling(box))
+        {
+            return 0f;
+        }
         if (box == null || !IsRegistered(box))
         {
             return 0f;
@@ -1642,5 +1663,15 @@ public class PhysicalBoxService : ServiceBase<StandardBox>
             Distance = distance;
             Player = player;
         }
+    }
+    public bool IsFalling(StandardBox box)
+    {
+        if (box == null)
+        {
+            return false;
+        }
+
+        return fallSpeeds.TryGetValue(box, out float speed) &&
+               speed > PushContactTolerance;
     }
 }

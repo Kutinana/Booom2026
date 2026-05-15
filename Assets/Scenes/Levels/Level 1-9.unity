@@ -1062,6 +1062,7 @@ GameObject:
   - component: {fileID: 364084397}
   - component: {fileID: 364084396}
   - component: {fileID: 364084395}
+  - component: {fileID: 364084398}
   m_Layer: 0
   m_Name: pressure1 (3)
   m_TagString: Untagged
@@ -1126,6 +1127,8 @@ MonoBehaviour:
           m_StringArgument: 
           m_BoolArgument: 0
         m_CallState: 2
+  Animator: {fileID: 0}
+  PressedParameter: Pressed
 --- !u!61 &364084396
 BoxCollider2D:
   m_ObjectHideFlags: 0
@@ -1223,6 +1226,27 @@ SpriteRenderer:
   m_WasSpriteAssigned: 1
   m_MaskInteraction: 0
   m_SpriteSortPoint: 0
+--- !u!95 &364084398
+Animator:
+  serializedVersion: 5
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 364084393}
+  m_Enabled: 1
+  m_Avatar: {fileID: 0}
+  m_Controller: {fileID: 9100000, guid: 67487a48e43f12041ab810afb1e17be5, type: 2}
+  m_CullingMode: 0
+  m_UpdateMode: 0
+  m_ApplyRootMotion: 0
+  m_LinearVelocityBlending: 0
+  m_StabilizeFeet: 0
+  m_WarningMessage: 
+  m_HasTransformHierarchy: 1
+  m_AllowConstantClipSamplingOptimization: 1
+  m_KeepAnimatorStateOnDisable: 0
+  m_WriteDefaultValuesOnDisable: 0
 --- !u!1001 &381325741
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -10068,6 +10092,7 @@ GameObject:
   - component: {fileID: 524028210}
   - component: {fileID: 524028209}
   - component: {fileID: 524028208}
+  - component: {fileID: 524028211}
   m_Layer: 0
   m_Name: pressure1 (2)
   m_TagString: Untagged
@@ -10132,6 +10157,8 @@ MonoBehaviour:
           m_StringArgument: 
           m_BoolArgument: 0
         m_CallState: 2
+  Animator: {fileID: 0}
+  PressedParameter: Pressed
 --- !u!61 &524028209
 BoxCollider2D:
   m_ObjectHideFlags: 0
@@ -10229,6 +10256,27 @@ SpriteRenderer:
   m_WasSpriteAssigned: 1
   m_MaskInteraction: 0
   m_SpriteSortPoint: 0
+--- !u!95 &524028211
+Animator:
+  serializedVersion: 5
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 524028206}
+  m_Enabled: 1
+  m_Avatar: {fileID: 0}
+  m_Controller: {fileID: 9100000, guid: 67487a48e43f12041ab810afb1e17be5, type: 2}
+  m_CullingMode: 0
+  m_UpdateMode: 0
+  m_ApplyRootMotion: 0
+  m_LinearVelocityBlending: 0
+  m_StabilizeFeet: 0
+  m_WarningMessage: 
+  m_HasTransformHierarchy: 1
+  m_AllowConstantClipSamplingOptimization: 1
+  m_KeepAnimatorStateOnDisable: 0
+  m_WriteDefaultValuesOnDisable: 0
 --- !u!1 &524263881
 GameObject:
   m_ObjectHideFlags: 0
@@ -13934,6 +13982,7 @@ GameObject:
   - component: {fileID: 1228185042}
   - component: {fileID: 1228185043}
   - component: {fileID: 1228185044}
+  - component: {fileID: 1228185045}
   m_Layer: 0
   m_Name: pressure1
   m_TagString: Untagged
@@ -14143,6 +14192,29 @@ MonoBehaviour:
           m_StringArgument: 
           m_BoolArgument: 1
         m_CallState: 2
+  Animator: {fileID: 0}
+  PressedParameter: Pressed
+--- !u!95 &1228185045
+Animator:
+  serializedVersion: 5
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1228185040}
+  m_Enabled: 1
+  m_Avatar: {fileID: 0}
+  m_Controller: {fileID: 9100000, guid: 67487a48e43f12041ab810afb1e17be5, type: 2}
+  m_CullingMode: 0
+  m_UpdateMode: 0
+  m_ApplyRootMotion: 0
+  m_LinearVelocityBlending: 0
+  m_StabilizeFeet: 0
+  m_WarningMessage: 
+  m_HasTransformHierarchy: 1
+  m_AllowConstantClipSamplingOptimization: 1
+  m_KeepAnimatorStateOnDisable: 0
+  m_WriteDefaultValuesOnDisable: 0
 --- !u!1 &1228290772
 GameObject:
   m_ObjectHideFlags: 0
@@ -16374,6 +16446,7 @@ GameObject:
   - component: {fileID: 1671844767}
   - component: {fileID: 1671844766}
   - component: {fileID: 1671844765}
+  - component: {fileID: 1671844768}
   m_Layer: 0
   m_Name: pressure1 (1)
   m_TagString: Untagged
@@ -16438,6 +16511,8 @@ MonoBehaviour:
           m_StringArgument: 
           m_BoolArgument: 0
         m_CallState: 2
+  Animator: {fileID: 0}
+  PressedParameter: Pressed
 --- !u!61 &1671844766
 BoxCollider2D:
   m_ObjectHideFlags: 0
@@ -16535,6 +16610,27 @@ SpriteRenderer:
   m_WasSpriteAssigned: 1
   m_MaskInteraction: 0
   m_SpriteSortPoint: 0
+--- !u!95 &1671844768
+Animator:
+  serializedVersion: 5
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1671844763}
+  m_Enabled: 1
+  m_Avatar: {fileID: 0}
+  m_Controller: {fileID: 9100000, guid: 67487a48e43f12041ab810afb1e17be5, type: 2}
+  m_CullingMode: 0
+  m_UpdateMode: 0
+  m_ApplyRootMotion: 0
+  m_LinearVelocityBlending: 0
+  m_StabilizeFeet: 0
+  m_WarningMessage: 
+  m_HasTransformHierarchy: 1
+  m_AllowConstantClipSamplingOptimization: 1
+  m_KeepAnimatorStateOnDisable: 0
+  m_WriteDefaultValuesOnDisable: 0
 --- !u!4 &1735869853 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 4278056204737627312, guid: d09c7471a3a95a74aa28e36029ae0237, type: 3}

@@ -16,6 +16,10 @@ public class PressurePlate : MonoBehaviour, IPlayerRelativePositionTarget
     [Header("Animator Parameters")]
     public string PressedParameter = "Pressed";
 
+    private void Start()
+    {
+        Animator=GetComponent<Animator>();
+    }
     public Bounds Bounds
     {
         get
