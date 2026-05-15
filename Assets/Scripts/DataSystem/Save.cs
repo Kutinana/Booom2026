@@ -5,7 +5,7 @@ using UnityEngine;
 
 public class Save : ReadableAndWriteableData
 {
-    public override string Path => "save";
+    public override string Path => System.IO.Path.Combine(Application.persistentDataPath, "save.json");
 
     public List<int> FinishedLevels;
 }

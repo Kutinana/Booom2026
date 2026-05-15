@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using Kuchinashi.DataSystem;
 using Kuchinashi.SceneFlow;
 using QFramework;
 using UnityEngine;
@@ -15,6 +16,10 @@ using UnityEngine.Events;
 [DefaultExecutionOrder(-50)]
 public class LevelManager : MonoBehaviour
 {
+    [Header("关卡配置")]
+    [Tooltip(">=0 时从 GameConfig.Current.Levels 按 Index 取条目；<0 时按本场景名与 LevelData.ScenePath（即场景名）字符串相等匹配。")]
+    [SerializeField] private int m_LevelIndexOverride = -1;
+
     [Header("星星目标（默认开启，满 3 颗触发一次）")]
     [SerializeField] private bool enableStarCollectGoal = true;
     [SerializeField, Min(1)] private int starsRequired = 3;
@@ -39,6 +44,7 @@ public class LevelManager : MonoBehaviour
     private int m_StarsCollectedInLevel;
     private bool m_StarsRequirementMet;
     private Coroutine m_PostAllStarsRoutine;
+    private LevelData m_LevelData;
 
     /// <summary>本关已计入目标的星星数（同场景、去重后的事件次数）。</summary>
     public int StarsCollectedInLevel => m_StarsCollectedInLevel;
@@ -46,10 +52,14 @@ public class LevelManager : MonoBehaviour
     /// <summary>是否已达到 <see cref="starsRequired"/> 并已触发过达成逻辑。</summary>
     public bool IsStarsRequirementMet => m_StarsRequirementMet;
 
+    /// <summary>由 <see cref="ResolveLevelData"/> 从 <see cref="GameConfig.Current"/> 解析得到的本关数据；未匹配则为 null。</summary>
+    public LevelData LevelData => m_LevelData;
+
     private void Awake()
     {
         m_StarsCollectedInLevel = 0;
         m_StarsRequirementMet = false;
+        ResolveLevelData();
         OnLevelAwake();
         onLevelAwake?.Invoke();
     }
@@ -148,6 +158,7 @@ public class LevelManager : MonoBehaviour
         }
 
         m_StarsRequirementMet = true;
+        PersistLevelFinishedToSave();
         OnLevelStarsRequirementMet();
         onStarsRequirementMet?.Invoke();
         m_PostAllStarsRoutine ??= StartCoroutine(PostAllStarsHappyThenReturnRoutine());
@@ -205,6 +216,68 @@ public class LevelManager : MonoBehaviour
         }
 
         Debug.LogWarning("[LevelManager] 未找到可用的 SceneFlowController / SceneFlowHost，或切换被拒绝。");
+    }
+
+    private void ResolveLevelData()
+    {
+        m_LevelData = null;
+        GameConfig config = GameConfig.Current;
+        if (config == null || config.Levels == null)
+        {
+            Debug.LogWarning("[LevelManager] GameConfig.Current 或 Levels 为空，无法解析关卡数据。", this);
+            return;
+        }
+
+        if (m_LevelIndexOverride >= 0)
+        {
+            for (var i = 0; i < config.Levels.Count; i++)
+            {
+                LevelData row = config.Levels[i];
+                if (row != null && row.Index == m_LevelIndexOverride)
+                {
+                    m_LevelData = row;
+                    return;
+                }
+            }
+
+            Debug.LogWarning($"[LevelManager] Levels 中不存在 Index={m_LevelIndexOverride}。", this);
+            return;
+        }
+
+        string sceneName = gameObject.scene.name;
+        for (var i = 0; i < config.Levels.Count; i++)
+        {
+            LevelData row = config.Levels[i];
+            if (row == null || string.IsNullOrEmpty(row.ScenePath))
+            {
+                continue;
+            }
+
+            if (string.Equals(row.ScenePath.Trim(), sceneName, StringComparison.Ordinal))
+            {
+                m_LevelData = row;
+                return;
+            }
+        }
+
+        Debug.LogWarning($"[LevelManager] Levels 中无 ScenePath 与当前场景名「{sceneName}」一致的条目。", this);
+    }
+
+    private void PersistLevelFinishedToSave()
+    {
+        if (m_LevelData == null)
+        {
+            return;
+        }
+
+        Save save = new Save().DeSerialize<Save>();
+        save.FinishedLevels ??= new List<int>();
+        if (!save.FinishedLevels.Contains(m_LevelData.Index))
+        {
+            save.FinishedLevels.Add(m_LevelData.Index);
+        }
+
+        save.Serialize();
     }
 
     /// <summary>订阅 <see cref="TypeEventSystem.Global"/>；在 OnDisable 时由基类统一 <c>UnRegister</c>。</summary>
