@@ -319,7 +319,7 @@ public class Barrier : MonoBehaviour
         {
             return;
         }
-
+        AudioMng.Instance.PlaySfx(isOpen ? "BarrierOn" : "BarrierOff", 1f);
         if (animationCoroutine != null)
         {
             StopCoroutine(animationCoroutine);

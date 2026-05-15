@@ -1,10 +1,13 @@
 using System;
+using System.Collections.Generic;
+using System.Globalization;
 using QFramework;
 using UnityEngine;
 
 public class AudioMng : MonoBehaviour
 {
     private const int FootstepClipCount = 2;
+    private const string SfxConfigPath = "sfx_config";
 
     private static AudioMng m_Instance;
 
@@ -13,6 +16,9 @@ public class AudioMng : MonoBehaviour
 
     private AudioSource m_AudioSource;
     private int m_FootstepIndex;
+    private readonly Queue<SfxRequest> m_SfxQueue = new Queue<SfxRequest>();
+    private readonly Dictionary<string, float> m_SfxLastPlayTimes = new Dictionary<string, float>();
+    private readonly Dictionary<string, float> m_SfxCooldowns = new Dictionary<string, float>();
 
     public static AudioMng Instance
     {
@@ -46,13 +52,14 @@ public class AudioMng : MonoBehaviour
         m_Instance = this;
         DontDestroyOnLoad(gameObject);
         EnsureAudioSource();
+        LoadSfxConfig();
     }
 
     void Start()
     {
         QFramework.TypeEventSystem.Global.Register<CollectiveStarCollectedEvent>(e =>
         {
-            PlaySfx("star", 1f);
+            PlaySfx("Star", 1f);
         }).UnRegisterWhenGameObjectDestroyed(this);
     }
 
@@ -61,6 +68,15 @@ public class AudioMng : MonoBehaviour
         if (m_Instance == this)
         {
             m_Instance = null;
+        }
+    }
+
+    private void Update()
+    {
+        while (m_SfxQueue.Count > 0)
+        {
+            SfxRequest request = m_SfxQueue.Dequeue();
+            TryPlayQueuedSfx(request);
         }
     }
 
@@ -79,14 +95,25 @@ public class AudioMng : MonoBehaviour
             return;
         }
 
-        AudioClip clip = Resources.Load<AudioClip>(name);
-        if (clip == null)
+        m_SfxQueue.Enqueue(new SfxRequest(name, volumeScale));
+    }
+
+    private void TryPlayQueuedSfx(SfxRequest request)
+    {
+        if (IsSfxCoolingDown(request.Name))
         {
-            Debug.LogWarning($"SFX not found in Resources: {name}", this);
             return;
         }
 
-        PlayClip(clip, volumeScale);
+        AudioClip clip = Resources.Load<AudioClip>(request.Name);
+        if (clip == null)
+        {
+            Debug.LogWarning($"SFX not found in Resources: {request.Name}", this);
+            return;
+        }
+
+        m_SfxLastPlayTimes[request.Name] = Time.time;
+        PlayClip(clip, request.VolumeScale);
     }
 
     public void PlayFootstep()
@@ -127,5 +154,82 @@ public class AudioMng : MonoBehaviour
         }
 
         m_AudioSource.playOnAwake = false;
+    }
+
+    private bool IsSfxCoolingDown(string name)
+    {
+        if (!m_SfxCooldowns.TryGetValue(name, out float cooldownSeconds) || cooldownSeconds <= 0f)
+        {
+            return false;
+        }
+
+        return m_SfxLastPlayTimes.TryGetValue(name, out float lastPlayTime)
+            && Time.time - lastPlayTime < cooldownSeconds;
+    }
+
+    private void LoadSfxConfig()
+    {
+        m_SfxCooldowns.Clear();
+
+        TextAsset config = Resources.Load<TextAsset>(SfxConfigPath);
+        if (config == null)
+        {
+            Debug.LogWarning("SFX config not found in Resources: sfx_config.csv", this);
+            return;
+        }
+
+        string[] lines = config.text.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries);
+        foreach (string rawLine in lines)
+        {
+            string line = rawLine.Trim();
+            if (string.IsNullOrEmpty(line) || line[0] == '#')
+            {
+                continue;
+            }
+
+            string[] columns = line.Split(',');
+            if (columns.Length < 2)
+            {
+                Debug.LogWarning($"Invalid SFX config row: {line}", this);
+                continue;
+            }
+
+            string name = columns[0].Trim().Trim('\uFEFF');
+            if (string.Equals(name, "name", StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            if (string.IsNullOrEmpty(name))
+            {
+                continue;
+            }
+
+            if (!float.TryParse(columns[1].Trim(), NumberStyles.Float, CultureInfo.InvariantCulture, out float cooldownSeconds))
+            {
+                Debug.LogWarning($"Invalid SFX cooldown value: {line}", this);
+                continue;
+            }
+
+            if (cooldownSeconds <= 0f)
+            {
+                continue;
+            }
+
+            m_SfxCooldowns[name] = cooldownSeconds;
+            Debug.Log($"Loaded SFX cooldown config: {name} = {cooldownSeconds}s");
+        }
+    }
+
+    private readonly struct SfxRequest
+    {
+        public readonly string Name;
+        public readonly float VolumeScale;
+
+        public SfxRequest(string name, float volumeScale)
+        {
+            Name = name;
+            VolumeScale = volumeScale;
+        }
     }
 }
