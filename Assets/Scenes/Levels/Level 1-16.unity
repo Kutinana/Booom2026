@@ -10718,10 +10718,12 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   cellOffset: {x: 0.5, y: 0.5, z: 0}
+  AlignToGrid: 1
   pushableFrom: 3
   collisionMask:
     serializedVersion: 2
     m_Bits: 4294967295
+  ApplyGravity: 1
   TestDirection: 0
 --- !u!95 &990239400
 Animator:
@@ -13085,10 +13087,12 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   cellOffset: {x: 0.5, y: 0.5, z: 0}
+  AlignToGrid: 1
   pushableFrom: 3
   collisionMask:
     serializedVersion: 2
     m_Bits: 4294967295
+  ApplyGravity: 1
   TestDirection: 0
 --- !u!95 &1224769218
 Animator:
@@ -13704,10 +13708,12 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   cellOffset: {x: 0.5, y: 0.5, z: 0}
+  AlignToGrid: 1
   pushableFrom: 13
   collisionMask:
     serializedVersion: 2
     m_Bits: 4294967295
+  ApplyGravity: 1
   TestDirection: 0
   OuterQuadCollider: {fileID: 1030242292}
   InnerQuadCollider: {fileID: 1261429945}
@@ -14664,10 +14670,12 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   cellOffset: {x: 0.5, y: 0.5, z: 0}
+  AlignToGrid: 1
   pushableFrom: 3
   collisionMask:
     serializedVersion: 2
     m_Bits: 4294967295
+  ApplyGravity: 1
   TestDirection: 0
 --- !u!95 &1561281681
 Animator:
@@ -14865,10 +14873,12 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   cellOffset: {x: 0.5, y: 0.5, z: 0}
+  AlignToGrid: 1
   pushableFrom: 3
   collisionMask:
     serializedVersion: 2
     m_Bits: 4294967295
+  ApplyGravity: 1
   TestDirection: 0
 --- !u!61 &1579278815
 BoxCollider2D:
@@ -16208,6 +16218,7 @@ MonoBehaviour:
   animator: {fileID: 1822326675}
   idleTriggerTime: 3
   idleRandomInterval: {x: 3, y: 6}
+  landTriggerMaxVerticalVelocity: 0.001
 --- !u!95 &1822326675
 Animator:
   serializedVersion: 5
@@ -16639,10 +16650,12 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   cellOffset: {x: 0.5, y: 0.5, z: 0}
+  AlignToGrid: 1
   pushableFrom: 3
   collisionMask:
     serializedVersion: 2
     m_Bits: 4294967295
+  ApplyGravity: 1
   TestDirection: 0
 --- !u!95 &2022043820
 Animator:
