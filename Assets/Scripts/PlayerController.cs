@@ -1,3 +1,5 @@
+using System;
+using System.Collections;
 using System.Collections.Generic;
 using QFramework;
 using UnityEngine;
@@ -183,6 +185,8 @@ public partial class PlayerController : MonoBehaviour, ISceneMovableItem, IPoint
 
     private void OnDestroy()
     {
+        PersistWorldPlayerPositionIfLeavingWorld();
+
         pressurePlateStateUnRegister?.UnRegister();
         pressurePlateStateUnRegister = null;
 
@@ -204,6 +208,16 @@ public partial class PlayerController : MonoBehaviour, ISceneMovableItem, IPoint
         grid = FindSceneGrid();
         fixedZ = transform.position.z;
 
+        if (string.Equals(gameObject.scene.name, GameManager.StartContentSceneName, StringComparison.Ordinal))
+        {
+            Save bootSave = new Save().DeSerialize<Save>();
+            if (bootSave.WorldPlayerLastPosition != null)
+            {
+                StartCoroutine(RestoreWorldPlayerPositionDeferred());
+                return;
+            }
+        }
+
         if (grid == null)
         {
             return;
@@ -213,6 +227,76 @@ public partial class PlayerController : MonoBehaviour, ISceneMovableItem, IPoint
         Vector3 snapped = grid.CellToWorld(cell) + Vector3.Scale(grid.cellSize, cellOffset);
         snapped.z = fixedZ;
         MoveTo(snapped);
+    }
+
+    private IEnumerator RestoreWorldPlayerPositionDeferred()
+    {
+        yield return null;
+
+        if (grid == null)
+        {
+            grid = FindSceneGrid();
+        }
+
+        TryRestoreWorldPlayerSavedPosition();
+    }
+
+    private void OnApplicationQuit()
+    {
+        PersistWorldPlayerPositionIfLeavingWorld();
+    }
+
+    private bool TryRestoreWorldPlayerSavedPosition()
+    {
+        if (!string.Equals(gameObject.scene.name, GameManager.StartContentSceneName, StringComparison.Ordinal))
+        {
+            return false;
+        }
+
+        Save save = new Save().DeSerialize<Save>();
+        if (save.WorldPlayerLastPosition == null)
+        {
+            return false;
+        }
+
+        SaveVector3 sv = save.WorldPlayerLastPosition;
+        Vector3 raw = new Vector3(sv.x, sv.y, sv.z);
+        fixedZ = raw.z;
+
+        if (grid == null)
+        {
+            MoveTo(raw);
+            return true;
+        }
+
+        Vector3Int cell = grid.WorldToCell(raw);
+        Vector3 snapped = grid.CellToWorld(cell) + Vector3.Scale(grid.cellSize, cellOffset);
+        snapped.z = fixedZ;
+        MoveTo(snapped);
+        return true;
+    }
+
+    private void PersistWorldPlayerPositionIfLeavingWorld()
+    {
+        // 场景卸载时 OnDestroy 里 Scene.isLoaded 往往已是 false，不能用它作为条件，否则会永远不存盘。
+        string sceneName = gameObject.scene.name;
+        if (string.IsNullOrEmpty(sceneName) ||
+            !string.Equals(sceneName, GameManager.StartContentSceneName, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        if (ServiceBase.TryGet(out PlayerService playerService) &&
+            playerService.Player == this &&
+            playerService.IsDying)
+        {
+            return;
+        }
+
+        Save save = new Save().DeSerialize<Save>();
+        Vector3 p = transform.position;
+        save.WorldPlayerLastPosition = new SaveVector3 { x = p.x, y = p.y, z = p.z };
+        save.Serialize();
     }
 
     private void Update()

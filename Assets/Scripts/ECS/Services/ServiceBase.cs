@@ -125,6 +125,21 @@ public readonly struct BoxFallStateEvent
     }
 }
 
+/// <summary>
+/// <see cref="PhysicalBoxService"/> 在箱子完成「水平方向与 Grid 列对齐」后派发（整格推动、对齐释放过渡、落地后 X 对齐等）。
+/// </summary>
+public readonly struct StandardBoxHorizontalGridAlignedEvent
+{
+    public readonly StandardBox Box;
+    public readonly Vector3 Position;
+
+    public StandardBoxHorizontalGridAlignedEvent(StandardBox box, Vector3 position)
+    {
+        Box = box;
+        Position = position;
+    }
+}
+
 public interface IPlayerRelativePositionTarget
 {
     Bounds Bounds { get; }

@@ -1,6 +1,10 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using Kuchinashi.SceneFlow;
+using Kuchinashi.Utils.Progressable;
+using QFramework;
+using TMPro;
 using UnityEngine;
 
 /// <summary>
@@ -30,6 +34,9 @@ public class LevelBoxController : MonoBehaviour
     [SerializeField, Min(0.01f)]
     private float interactionRadius = 2f;
 
+    [SerializeField] private ProgressableGroup progressableGroup;
+    [SerializeField] private TMP_Text levelNameText;
+
     /// <summary>本帧玩家可用的唯一焦点盒子（范围内、在玩家朝向一侧、距离最近）。</summary>
     public static LevelBoxController CurrentFocus { get; private set; }
 
@@ -52,6 +59,9 @@ public class LevelBoxController : MonoBehaviour
 
     private ParticleSystem[] incompleteChildParticles;
 
+    private IUnRegister m_GridAlignedListenerToken;
+    private bool m_LevelNameFocusShown;
+
     private void Awake()
     {
         spriteRenderer = GetComponent<SpriteRenderer>();
@@ -62,11 +72,16 @@ public class LevelBoxController : MonoBehaviour
         }
 
         incompleteChildParticles = GetComponentsInChildren<ParticleSystem>(true);
+
+        progressableGroup = GetComponentInChildren<ProgressableGroup>(true);
+        levelNameText = GetComponentInChildren<TMP_Text>(true);
+        levelNameText.text = levelSceneName;
     }
 
     private void Start()
     {
         ApplyStandardBoxInitialStateFromSaveAndConfig();
+        StartCoroutine(RestoreCompletedLevelBoxWorldPositionNextFrame());
     }
 
     private void OnEnable()
@@ -77,10 +92,15 @@ public class LevelBoxController : MonoBehaviour
         }
 
         CaptureBaselineMaterialIfNeeded();
+        m_GridAlignedListenerToken = TypeEventSystem.Global.Register<StandardBoxHorizontalGridAlignedEvent>(
+            OnStandardBoxHorizontalGridAligned);
     }
 
     private void OnDisable()
     {
+        m_GridAlignedListenerToken?.UnRegister();
+        m_GridAlignedListenerToken = null;
+
         RestoreBaselineMaterial();
         baselineCaptured = false;
         baselineSharedMaterial = null;
@@ -90,6 +110,8 @@ public class LevelBoxController : MonoBehaviour
         {
             CurrentFocus = null;
         }
+
+        m_LevelNameFocusShown = false;
     }
 
     private void LateUpdate()
@@ -110,6 +132,7 @@ public class LevelBoxController : MonoBehaviour
         }
 
         ApplyFocusHighlightMaterial();
+        ShowLevelName();
     }
 
     private void TickGlobalFocusAndInteract()
@@ -307,6 +330,30 @@ public class LevelBoxController : MonoBehaviour
         }
     }
 
+    private void ShowLevelName()
+    {
+        if (progressableGroup == null)
+        {
+            return;
+        }
+
+        bool focused = CurrentFocus == this;
+        if (focused == m_LevelNameFocusShown)
+        {
+            return;
+        }
+
+        m_LevelNameFocusShown = focused;
+        if (focused)
+        {
+            progressableGroup.LinearTransition(0.2f);
+        }
+        else
+        {
+            progressableGroup.InverseLinearTransition(0.2f);
+        }
+    }
+
     private void ApplyStandardBoxInitialStateFromSaveAndConfig()
     {
         if (standardBox == null)
@@ -358,8 +405,64 @@ public class LevelBoxController : MonoBehaviour
         standardBox.MoveTo(raised);
     }
 
-    private static bool IsLevelCompletedForSceneName(string sceneName)
+    private IEnumerator RestoreCompletedLevelBoxWorldPositionNextFrame()
     {
+        yield return null;
+
+        if (standardBox == null)
+        {
+            yield break;
+        }
+
+        string targetScene = string.IsNullOrWhiteSpace(levelSceneName) ? string.Empty : levelSceneName.Trim();
+        if (!TryGetLevelIndexForSceneName(targetScene, out int levelIndex))
+        {
+            yield break;
+        }
+
+        Save save = new Save().DeSerialize<Save>();
+        if (save.FinishedLevels == null || !save.FinishedLevels.Contains(levelIndex))
+        {
+            yield break;
+        }
+
+        if (save.CompletedLevelBoxWorldPositions == null ||
+            !save.CompletedLevelBoxWorldPositions.TryGetValue(levelIndex, out SaveVector3 sv))
+        {
+            yield break;
+        }
+
+        standardBox.MoveTo(new Vector3(sv.x, sv.y, sv.z));
+    }
+
+    private void OnStandardBoxHorizontalGridAligned(StandardBoxHorizontalGridAlignedEvent e)
+    {
+        if (standardBox == null || e.Box != standardBox)
+        {
+            return;
+        }
+
+        string targetScene = string.IsNullOrWhiteSpace(levelSceneName) ? string.Empty : levelSceneName.Trim();
+        if (!TryGetLevelIndexForSceneName(targetScene, out int levelIndex))
+        {
+            return;
+        }
+
+        Save save = new Save().DeSerialize<Save>();
+        if (save.FinishedLevels == null || !save.FinishedLevels.Contains(levelIndex))
+        {
+            return;
+        }
+
+        save.CompletedLevelBoxWorldPositions ??= new Dictionary<int, SaveVector3>();
+        Vector3 p = e.Position;
+        save.CompletedLevelBoxWorldPositions[levelIndex] = new SaveVector3 { x = p.x, y = p.y, z = p.z };
+        save.Serialize();
+    }
+
+    private static bool TryGetLevelIndexForSceneName(string sceneName, out int levelIndex)
+    {
+        levelIndex = 0;
         if (string.IsNullOrEmpty(sceneName))
         {
             return false;
@@ -371,7 +474,6 @@ public class LevelBoxController : MonoBehaviour
             return false;
         }
 
-        LevelData matched = null;
         for (int i = 0; i < config.Levels.Count; i++)
         {
             LevelData row = config.Levels[i];
@@ -382,18 +484,23 @@ public class LevelBoxController : MonoBehaviour
 
             if (string.Equals(row.ScenePath.Trim(), sceneName, StringComparison.Ordinal))
             {
-                matched = row;
-                break;
+                levelIndex = row.Index;
+                return true;
             }
         }
 
-        if (matched == null)
+        return false;
+    }
+
+    private static bool IsLevelCompletedForSceneName(string sceneName)
+    {
+        if (!TryGetLevelIndexForSceneName(sceneName, out int index))
         {
             return false;
         }
 
         Save save = new Save().DeSerialize<Save>();
-        return save.FinishedLevels != null && save.FinishedLevels.Contains(matched.Index);
+        return save.FinishedLevels != null && save.FinishedLevels.Contains(index);
     }
 
     private void SetIncompleteChildParticlesActive(bool active)

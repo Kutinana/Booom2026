@@ -172,6 +172,11 @@ public class PhysicalBoxService : ServiceBase<StandardBox>
         TryHandlePlayerImpact(box, from, to, dt: Time.fixedDeltaTime);
         box.MoveTo(to);
         RefreshSceneMovableBaselineForStandardBox(box);
+        if (grid != null && box.AlignToGrid)
+        {
+            NotifyStandardBoxHorizontalGridSettled(box);
+        }
+
         SendEvent(new BoxPhysicalPushEvent(box, direction, true, false, from, to));
         return true;
     }
@@ -1034,6 +1039,7 @@ public class PhysicalBoxService : ServiceBase<StandardBox>
         {
             // 误差极小，直接 snap，不必走 release transition。
             box.MoveTo(new Vector3(alignedX, currentPos.y, currentPos.z));
+            NotifyStandardBoxHorizontalGridSettled(box);
             return;
         }
 
@@ -1261,6 +1267,7 @@ public class PhysicalBoxService : ServiceBase<StandardBox>
                 currentPos = snap;
                 // 避免 SceneMovableInteractionService 在下一帧把 snap 当成一帧内极高速位移而误判砸死。
                 RefreshSceneMovableBaselineForStandardBox(box);
+                NotifyStandardBoxHorizontalGridSettled(box);
             }
 
             state = new LinearPushState
@@ -1639,6 +1646,17 @@ public class PhysicalBoxService : ServiceBase<StandardBox>
         box.MoveTo(target);
         linearPushes.Remove(box);
         RefreshSceneMovableBaselineForStandardBox(box);
+        NotifyStandardBoxHorizontalGridSettled(box);
+    }
+
+    private void NotifyStandardBoxHorizontalGridSettled(StandardBox box)
+    {
+        if (box == null)
+        {
+            return;
+        }
+
+        SendEvent(new StandardBoxHorizontalGridAlignedEvent(box, box.transform.position));
     }
 
     private struct LinearPushState
