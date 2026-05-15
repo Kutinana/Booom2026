@@ -33,4 +33,14 @@ public partial class PlayerController
     {
         animator.Play(animationName);
     }
+
+    public void PlaySound(string soundName)
+    {
+        AudioMng.Instance.PlaySfx(soundName, 1f);
+    }
+
+    public void PlayFootstepSound()
+    {
+        AudioMng.Instance.PlayFootstep();
+    }
 }
