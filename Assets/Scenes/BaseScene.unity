@@ -1869,10 +1869,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e2928c49b2254404b90fceea0ae3b2b3, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  Player: {fileID: 0}
   m_FootstepClips:
   - {fileID: 8300000, guid: 3b0089d6fe3aba04e92dbd65be737cf0, type: 3}
   - {fileID: 8300000, guid: e3ca1641781fdb1479ee1ba62fb9a471, type: 3}
-  m_FootstepVolumeScale: 0.3
+  m_FootstepVolumeScale: 0.2
 --- !u!4 &2040163390
 Transform:
   m_ObjectHideFlags: 0
