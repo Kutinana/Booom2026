@@ -1223,14 +1223,18 @@ public partial class PlayerController : MonoBehaviour, ISceneMovableItem, IPoint
     }
     public void ClampMotion()
     {
-        baseVelocity.y = 0f;
-        velocity.y = 0f;
         jumping = false;
         coyoteTimeLeft = 0f;
 
+        ClampVelocityVectorWithCCD(baseVelocity, out Vector2 clampedBaseVelocity);
+        baseVelocity = clampedBaseVelocity;
+
+        ClampVelocityVectorWithCCD(velocity, out Vector2 clampedVelocity);
+        velocity = clampedVelocity;
+
         if (hasRetainedVelocity && Mathf.Abs(retainedVelocityAxis.y) > 0f)
         {
-            ClearRetainedVelocity();
+            ClampRetainedVelocityWithCCD();
         }
     }
     /// <summary>
@@ -1346,6 +1350,123 @@ public partial class PlayerController : MonoBehaviour, ISceneMovableItem, IPoint
         {
             ClearRetainedVelocity();
         }
+    }
+
+    private void ClampRetainedVelocityWithCCD()
+    {
+        if (!hasRetainedVelocity)
+        {
+            return;
+        }
+
+        Vector2 retainedVel = GetRetainedVelocity();
+        if (retainedVel == Vector2.zero)
+        {
+            ClearRetainedVelocity();
+            return;
+        }
+
+        float intendedDistance = retainedVel.magnitude * Time.fixedDeltaTime;
+        Vector2 direction = retainedVel.normalized;
+
+        if (CastRetainedVelocity(direction, intendedDistance, out float hitDistance))
+        {
+            float safeDistance = Mathf.Max(0f, hitDistance - skinWidth);
+            retainedVelocitySpeed = safeDistance / Time.fixedDeltaTime;
+
+            if (retainedVelocitySpeed <= retainedVelocityStopSpeed)
+            {
+                ClearRetainedVelocity();
+            }
+        }
+    }
+
+    private void ClampVelocityVectorWithCCD(Vector2 velocity, out Vector2 clampedVelocity)
+    {
+        clampedVelocity = velocity;
+
+        if (velocity == Vector2.zero)
+        {
+            return;
+        }
+
+        float intendedDistance = velocity.magnitude * Time.fixedDeltaTime;
+        Vector2 direction = velocity.normalized;
+
+        if (CastRetainedVelocity(direction, intendedDistance, out float hitDistance))
+        {
+            float safeDistance = Mathf.Max(0f, hitDistance - skinWidth);
+            float safeSpeed = safeDistance / Time.fixedDeltaTime;
+            clampedVelocity = direction * safeSpeed;
+        }
+    }
+
+    private bool CastRetainedVelocity(Vector2 direction, float distance, out float hitDistance)
+    {
+        hitDistance = float.PositiveInfinity;
+        Bounds bounds = GetBounds();
+
+        if (bounds.size == Vector3.zero || distance <= 0f)
+        {
+            return false;
+        }
+
+        Vector2 origin;
+        if (Mathf.Abs(direction.x) > 0f)
+        {
+            origin = new Vector2(direction.x > 0f ? bounds.max.x : bounds.min.x, transform.position.y);
+        }
+        else
+        {
+            origin = new Vector2(transform.position.x, direction.y > 0f ? bounds.max.y : bounds.min.y);
+        }
+
+        bool hitAny = false;
+        float bestDistance = float.PositiveInfinity;
+
+        if (m_Collider2D != null)
+        {
+            int hitCount = Physics2D.RaycastNonAlloc(origin, direction, hits2D, distance, collisionMask);
+            for (int i = 0; i < hitCount; i++)
+            {
+                RaycastHit2D hit2D = hits2D[i];
+                GameObject platform = GetPlatformObject(hit2D.collider);
+                if (hit2D.collider != null &&
+                    !hit2D.collider.isTrigger &&
+                    hit2D.collider != m_Collider2D &&
+                    !IsWalkableTopSideContact(bounds, hit2D.collider.bounds, direction) &&
+                    ShouldCollideWithPlatform(platform, hit2D.point.y, bounds, hit2D.normal, direction) &&
+                    IsBlockingAxisNormal(hit2D.normal, direction) &&
+                    hit2D.distance < bestDistance)
+                {
+                    bestDistance = hit2D.distance;
+                    hitAny = true;
+                }
+            }
+        }
+
+        if (m_Collider3D != null)
+        {
+            int hitCount = Physics.RaycastNonAlloc(origin, direction, hits3D, distance, collisionMask, QueryTriggerInteraction.Ignore);
+            for (int i = 0; i < hitCount; i++)
+            {
+                RaycastHit hit3D = hits3D[i];
+                GameObject platform = GetPlatformObject(hit3D.collider);
+                if (hit3D.collider != null &&
+                    hit3D.collider != m_Collider3D &&
+                    !IsWalkableTopSideContact(bounds, hit3D.collider.bounds, direction) &&
+                    ShouldCollideWithPlatform(platform, hit3D.point.y, bounds, hit3D.normal, direction) &&
+                    IsBlockingAxisNormal(hit3D.normal, direction) &&
+                    hit3D.distance < bestDistance)
+                {
+                    bestDistance = hit3D.distance;
+                    hitAny = true;
+                }
+            }
+        }
+
+        hitDistance = bestDistance;
+        return hitAny;
     }
 
     private void ClearRetainedVelocity()
