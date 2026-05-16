@@ -1871,6 +1871,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   Player: {fileID: 0}
+  BGM: {fileID: 2040163391}
   m_FootstepClips:
   - {fileID: 8300000, guid: 3b0089d6fe3aba04e92dbd65be737cf0, type: 3}
   - {fileID: 8300000, guid: e3ca1641781fdb1479ee1ba62fb9a471, type: 3}

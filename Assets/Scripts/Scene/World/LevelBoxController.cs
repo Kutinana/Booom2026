@@ -17,6 +17,8 @@ using UnityEngine;
 public class LevelBoxController : MonoBehaviour
 {
     private const float ForwardHalfPlaneEpsilon = 0.02f;
+    private const string WorldOneSceneName = "World 1";
+    private const string LevelOneSixSceneName = "Level 1-6";
 
     [SerializeField] private string levelSceneName;
 
@@ -419,6 +421,7 @@ public class LevelBoxController : MonoBehaviour
             SetIncompleteChildParticlesActive(false);
             standardBox.ApplyGravity = true;
             standardBox.AlignToGrid = true;
+            TryPlayLevelOneSixCompletedBoxCg(targetScene);
             return;
         }
 
@@ -550,6 +553,31 @@ public class LevelBoxController : MonoBehaviour
 
         Save save = new Save().DeSerialize<Save>();
         return save.FinishedLevels != null && save.FinishedLevels.Contains(index);
+    }
+
+    private void TryPlayLevelOneSixCompletedBoxCg(string targetScene)
+    {
+        if (!string.Equals(gameObject.scene.name, WorldOneSceneName, StringComparison.Ordinal) ||
+            !string.Equals(targetScene, LevelOneSixSceneName, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        Save save = new Save().DeSerialize<Save>();
+        if (save.HasCGPlayed)
+        {
+            return;
+        }
+
+        save.HasCGPlayed = true;
+        save.Serialize();
+        PlayLevelOneSixCompletedBoxCgTest();
+    }
+
+    private void PlayLevelOneSixCompletedBoxCgTest()
+    {
+        Debug.Log("[LevelBox] Test CG placeholder for Level 1-6 completed box.", this);
+        TypeEventSystem.Global.Send<PlayW1TEvent>();
     }
 
     private void SetIncompleteChildParticlesActive(bool active)

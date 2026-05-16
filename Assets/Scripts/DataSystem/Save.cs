@@ -14,6 +14,8 @@ public class Save : ReadableAndWriteableData
 
     /// <summary>离开 <see cref="GameManager.StartContentSceneName"/> 时记录的玩家位置；下次进入该世界时由 <see cref="PlayerController"/> 恢复。</summary>
     public SaveVector3 WorldPlayerLastPosition;
+
+    public bool HasCGPlayed;
 }
 
 [System.Serializable]

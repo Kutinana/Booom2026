@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Globalization;
 using QFramework;
@@ -8,6 +9,7 @@ public class AudioMng : MonoBehaviour
 {
 
     public Transform Player;
+    public AudioSource BGM;
     private const int FootstepClipCount = 2;
     private const string SfxConfigPath = "sfx_config";
 
@@ -17,6 +19,7 @@ public class AudioMng : MonoBehaviour
     [SerializeField, Min(0f)] private float m_FootstepVolumeScale = 1f;
 
     private AudioSource m_AudioSource;
+    private Coroutine m_BgmFadeCoroutine;
     private int m_FootstepIndex;
     private readonly Queue<SfxRequest> m_SfxQueue = new Queue<SfxRequest>();
     private readonly Dictionary<string, float> m_SfxLastPlayTimes = new Dictionary<string, float>();
@@ -99,6 +102,74 @@ public class AudioMng : MonoBehaviour
 
         m_SfxQueue.Enqueue(new SfxRequest(name, volumeScale));
     }
+
+    public void FadeInBGM(float duration = 1f)
+    {
+        FadeBGMVolume(0.45f, duration);
+    }
+
+    public void FadeOutBGM(float duration = 1f)
+    {
+        FadeBGMVolume(0f, duration);
+    }
+
+    public void FadeBGMVolume(float targetVolume, float duration = 1f)
+    {
+        if (BGM == null)
+        {
+            Debug.LogWarning("BGM AudioSource is not assigned.", this);
+            return;
+        }
+
+        targetVolume = Mathf.Clamp01(targetVolume);
+
+        if (m_BgmFadeCoroutine != null)
+        {
+            StopCoroutine(m_BgmFadeCoroutine);
+        }
+
+        if (duration <= 0f)
+        {
+            BGM.volume = targetVolume;
+            m_BgmFadeCoroutine = null;
+            return;
+        }
+
+        m_BgmFadeCoroutine = StartCoroutine(FadeBGMVolumeRoutine(targetVolume, duration));
+    }
+
+    private IEnumerator FadeBGMVolumeRoutine(float targetVolume, float duration)
+    {
+        if (BGM == null)
+        {
+            m_BgmFadeCoroutine = null;
+            yield break;
+        }
+
+        float startVolume = BGM.volume;
+        float elapsed = 0f;
+
+        while (elapsed < duration)
+        {
+            if (BGM == null)
+            {
+                m_BgmFadeCoroutine = null;
+                yield break;
+            }
+
+            elapsed += Time.deltaTime;
+            BGM.volume = Mathf.Lerp(startVolume, targetVolume, elapsed / duration);
+            yield return null;
+        }
+
+        if (BGM != null)
+        {
+            BGM.volume = targetVolume;
+        }
+
+        m_BgmFadeCoroutine = null;
+    }
+
     public void PlaySfxWithDecay(string name, float volumeScale, Vector3 pos, float distScale)
     {
         float sqrDist = (Player.position - pos).sqrMagnitude;
@@ -158,12 +229,7 @@ public class AudioMng : MonoBehaviour
             return;
         }
 
-        m_AudioSource = GetComponent<AudioSource>();
-        if (m_AudioSource == null)
-        {
-            m_AudioSource = gameObject.AddComponent<AudioSource>();
-        }
-
+        m_AudioSource = gameObject.AddComponent<AudioSource>();
         m_AudioSource.playOnAwake = false;
     }
 
