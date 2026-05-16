@@ -256,7 +256,7 @@ public class DialogueSystem : MonoBehaviour
     {
         if (!awaitingOptionPick)
             return;
-        AudioMng.Instance.PlaySfx("Select", 0.02f);
+        AudioMng.Instance.PlaySfx("Select", 0.2f);
         SetAwaitingOptionPick(false);
         ClearOptionsUI();
         PlayNextLine();
