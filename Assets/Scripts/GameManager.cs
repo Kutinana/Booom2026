@@ -7,9 +7,11 @@ public class GameManager : MonoSingleton<GameManager>
 {
     public const string StartContentSceneName = "World 1";
     public const string World2ContentSceneName = "World 2";
+    public const string MenuSceneName = "StartScene";
 
     private const string LevelScenePrefix = "Level ";
     private const string Level1_6SceneName = "Level 1-6";
+    private const string Level2_6SceneName = "Level 2-6";
 
     [SerializeField] private GameConfig m_GameConfig;
 
@@ -72,14 +74,25 @@ public class GameManager : MonoSingleton<GameManager>
     }
 
     /// <summary>
-    /// 通关后应进入的世界场景；在 <see cref="ResolveWorldSceneForLevel"/> 基础上含特例（如 <c>Level 1-6</c> → <see cref="World2ContentSceneName"/>）。
+    /// 通关后应进入的内容场景；在 <see cref="ResolveWorldSceneForLevel"/> 基础上含特例：
+    /// <c>Level 1-6</c> → <see cref="World2ContentSceneName"/>，<c>Level 2-6</c> → <see cref="MenuSceneName"/>。
     /// </summary>
     public static string ResolveWorldSceneAfterLevelComplete(string levelSceneName)
     {
-        if (!string.IsNullOrWhiteSpace(levelSceneName)
-            && string.Equals(levelSceneName.Trim(), Level1_6SceneName, StringComparison.Ordinal))
+        if (string.IsNullOrWhiteSpace(levelSceneName))
+        {
+            return ResolveWorldSceneForLevel(levelSceneName);
+        }
+
+        string trimmed = levelSceneName.Trim();
+        if (string.Equals(trimmed, Level1_6SceneName, StringComparison.Ordinal))
         {
             return World2ContentSceneName;
+        }
+
+        if (string.Equals(trimmed, Level2_6SceneName, StringComparison.Ordinal))
+        {
+            return MenuSceneName;
         }
 
         return ResolveWorldSceneForLevel(levelSceneName);

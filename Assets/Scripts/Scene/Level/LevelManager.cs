@@ -9,7 +9,7 @@ using UnityEngine.Events;
 
 /// <summary>
 /// 挂在关卡内容场景中，集中处理本关生命周期与 <see cref="TypeEventSystem.Global"/> 等监听。
-/// 内置默认目标：同场景内收集满 <see cref="starsRequired"/> 颗 <see cref="CollectiveStar"/> 后触发一次事件；默认再播放玩家 Happy、等待 <see cref="delayBeforeReturnToStartSeconds"/> 秒后切回对应世界场景（见 <see cref="GameManager.ResolveWorldSceneAfterLevelComplete"/>，含 <c>Level 1-6</c> 通关进 World 2 等特例）。
+/// 内置默认目标：同场景内收集满 <see cref="starsRequired"/> 颗 <see cref="CollectiveStar"/> 后触发一次事件；默认再播放玩家 Happy、等待 <see cref="delayBeforeReturnToStartSeconds"/> 秒后切回对应内容场景（见 <see cref="GameManager.ResolveWorldSceneAfterLevelComplete"/>，含 <c>Level 1-6</c> → World 2、<c>Level 2-6</c> → StartScene 等特例）。
 /// 用法：本类挂在关卡根物体上（建议每关仅一个）；复杂逻辑可继承并重写虚方法，或在 Inspector 绑定 <see cref="UnityEvent"/>。
 /// </summary>
 [DisallowMultipleComponent]
@@ -192,7 +192,7 @@ public class LevelManager : MonoBehaviour
         string target = GameManager.ResolveWorldSceneAfterLevelComplete(gameObject.scene.name);
         if (string.IsNullOrWhiteSpace(target))
         {
-            Debug.LogWarning("[LevelManager] 通关后目标世界场景名为空。", this);
+            Debug.LogWarning("[LevelManager] 通关后目标场景名为空。", this);
             return;
         }
 
