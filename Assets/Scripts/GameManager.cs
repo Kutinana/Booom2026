@@ -85,10 +85,10 @@ public class GameManager : MonoSingleton<GameManager>
         }
 
         string trimmed = levelSceneName.Trim();
-        if (string.Equals(trimmed, Level1_6SceneName, StringComparison.Ordinal))
-        {
-            return World2ContentSceneName;
-        }
+        // if (string.Equals(trimmed, Level1_6SceneName, StringComparison.Ordinal))
+        // {
+        //     return StartContentSceneName;
+        // }
 
         if (string.Equals(trimmed, Level2_6SceneName, StringComparison.Ordinal))
         {
