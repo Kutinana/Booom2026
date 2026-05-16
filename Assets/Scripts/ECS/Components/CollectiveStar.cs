@@ -24,15 +24,17 @@ public class CollectiveStar : MonoBehaviour
     private Collider pickupCollider3D;
     private Collider2D pickupCollider2D;
     private Coroutine collectRoutine;
-
+    private SpriteRenderer spriteRenderer;
     private void Awake()
     {
+        spriteRenderer = GetComponent<SpriteRenderer>();
         pickupCollider3D = GetComponent<Collider>();
         pickupCollider2D = GetComponent<Collider2D>();
         if (animator == null)
         {
             animator = GetComponentInChildren<Animator>();
         }
+
     }
 
     private void OnTriggerEnter2D(Collider2D other)
@@ -86,14 +88,15 @@ public class CollectiveStar : MonoBehaviour
                 waitSeconds = state.length;
             }
         }
-
+        
         yield return new WaitForSeconds(waitSeconds);
-
+        
         // Destroy 会立刻停掉 Animator；若动画正在写材质 alpha 等，停写的那一帧会回到 Renderer 上的默认值，容易闪一帧。
         SetSubtreeRenderersEnabled(transform, false);
 
         if (destroyAfterCollect)
         {
+            spriteRenderer.enabled = false;
             Destroy(gameObject);
         }
         else
