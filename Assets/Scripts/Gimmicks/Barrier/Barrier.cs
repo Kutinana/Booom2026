@@ -320,7 +320,7 @@ public class Barrier : MonoBehaviour
             return;
         }
         AudioMng.Instance.PlaySfxWithDecay("BarrierOff",
-            1f,
+            0.8f,
             transform.position,
             0.25f);
         if (animationCoroutine != null)
