@@ -3,8 +3,8 @@ using UnityEngine;
 using UnityEngine.EventSystems;
 
 /// <summary>
-/// 点击角色（外层世界）：依赖 EventSystem + 相机上的 Physics2DRaycaster / PhysicsRaycaster。
-/// Portal 内嵌画面请另挂 <see cref="PlayerPortalScreenTap"/>。
+/// 点击角色：若同物体上 <see cref="PlayerPortalScreenTap"/> 已配置则由其统一处理（内外层），
+/// 否则依赖 EventSystem + 相机上的 Physics2DRaycaster。
 /// </summary>
 public partial class PlayerController
 {
@@ -22,7 +22,16 @@ public partial class PlayerController
         OnTapped?.Invoke();
     }
 
-    void IPointerClickHandler.OnPointerClick(PointerEventData eventData) => TriggerTapAnimation();
+    void IPointerClickHandler.OnPointerClick(PointerEventData eventData)
+    {
+        if (GetComponent<PlayerPortalScreenTap>() is { isActiveAndEnabled: true } tap &&
+            tap.HandlesScreenTapForConfiguredPortal)
+        {
+            return;
+        }
+
+        TriggerTapAnimation();
+    }
 
     public void FakeJump()
     {
