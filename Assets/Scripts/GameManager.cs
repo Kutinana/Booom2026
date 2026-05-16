@@ -1,3 +1,4 @@
+using System;
 using Kuchinashi.SceneFlow;
 using QFramework;
 using UnityEngine;
@@ -5,6 +6,9 @@ using UnityEngine;
 public class GameManager : MonoSingleton<GameManager>
 {
     public const string StartContentSceneName = "World 1";
+    public const string World2ContentSceneName = "World 2";
+
+    private const string LevelScenePrefix = "Level ";
 
     [SerializeField] private GameConfig m_GameConfig;
 
@@ -45,7 +49,7 @@ public class GameManager : MonoSingleton<GameManager>
         }
 
         var content = flow.CurrentContentSceneName;
-        if (content == StartContentSceneName)
+        if (IsWorldHubScene(content))
         {
             TypeEventSystem.Global.Send(new TryQuitGameRequestedEvent());
             return;
@@ -56,6 +60,70 @@ public class GameManager : MonoSingleton<GameManager>
             return;
         }
 
-        flow.TryRequestSwitchContent(StartContentSceneName);
+        string targetWorld = ResolveWorldSceneForLevel(content);
+        flow.TryRequestSwitchContent(targetWorld);
+    }
+
+    public static bool IsWorldHubScene(string contentSceneName)
+    {
+        return contentSceneName == StartContentSceneName
+            || contentSceneName == World2ContentSceneName;
+    }
+
+    /// <summary>
+    /// 按关卡场景名 <c>Level 1-X</c> / <c>Level 2-X</c>（X 为正整数）解析对应世界场景；不匹配时回退 <see cref="StartContentSceneName"/>。
+    /// </summary>
+    public static string ResolveWorldSceneForLevel(string levelSceneName)
+    {
+        if (string.IsNullOrWhiteSpace(levelSceneName))
+        {
+            return StartContentSceneName;
+        }
+
+        levelSceneName = levelSceneName.Trim();
+        if (!levelSceneName.StartsWith(LevelScenePrefix, StringComparison.Ordinal))
+        {
+            return StartContentSceneName;
+        }
+
+        string afterPrefix = levelSceneName.Substring(LevelScenePrefix.Length);
+        int dashIndex = afterPrefix.IndexOf('-');
+        if (dashIndex <= 0 || dashIndex >= afterPrefix.Length - 1)
+        {
+            return StartContentSceneName;
+        }
+
+        ReadOnlySpan<char> worldPart = afterPrefix.AsSpan(0, dashIndex);
+        ReadOnlySpan<char> levelPart = afterPrefix.AsSpan(dashIndex + 1);
+        if (worldPart.Length != 1 || (worldPart[0] != '1' && worldPart[0] != '2'))
+        {
+            return StartContentSceneName;
+        }
+
+        if (!IsPositiveIntegerSpan(levelPart))
+        {
+            return StartContentSceneName;
+        }
+
+        return worldPart[0] == '2' ? World2ContentSceneName : StartContentSceneName;
+    }
+
+    private static bool IsPositiveIntegerSpan(ReadOnlySpan<char> value)
+    {
+        if (value.IsEmpty)
+        {
+            return false;
+        }
+
+        for (int i = 0; i < value.Length; i++)
+        {
+            char c = value[i];
+            if (c < '0' || c > '9')
+            {
+                return false;
+            }
+        }
+
+        return true;
     }
 }
