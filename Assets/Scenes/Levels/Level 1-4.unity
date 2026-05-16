@@ -11594,7 +11594,7 @@ MonoBehaviour:
   - Direction: 3
     Entrance: {fileID: 448511902}
   paddingX: 0.05
-  paddingY: 0.05
+  paddingY: 0.1
   outerEdgeBlockerTouchTolerance: 0.04
 --- !u!61 &1284175442
 BoxCollider2D:
