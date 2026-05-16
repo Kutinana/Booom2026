@@ -9,7 +9,7 @@ using UnityEngine.Events;
 
 /// <summary>
 /// 挂在关卡内容场景中，集中处理本关生命周期与 <see cref="TypeEventSystem.Global"/> 等监听。
-/// 内置默认目标：同场景内收集满 <see cref="starsRequired"/> 颗 <see cref="CollectiveStar"/> 后触发一次事件；默认再播放玩家 Happy、等待 <see cref="delayBeforeReturnToStartSeconds"/> 秒后切场景——教程关（Levels 中 Index 0）进 <see cref="GameManager.StartContentSceneName"/>，其余关进 <see cref="startSceneName"/>（均可配置）。
+/// 内置默认目标：同场景内收集满 <see cref="starsRequired"/> 颗 <see cref="CollectiveStar"/> 后触发一次事件；默认再播放玩家 Happy、等待 <see cref="delayBeforeReturnToStartSeconds"/> 秒后切回对应世界场景（与 ESC 相同，见 <see cref="GameManager.ResolveWorldSceneForLevel"/>）。
 /// 用法：本类挂在关卡根物体上（建议每关仅一个）；复杂逻辑可继承并重写虚方法，或在 Inspector 绑定 <see cref="UnityEvent"/>。
 /// </summary>
 [DisallowMultipleComponent]
@@ -185,15 +185,14 @@ public class LevelManager : MonoBehaviour
     }
 
     /// <summary>
-    /// 教程关（<see cref="LevelData.Index"/> 为 0）集齐星星后进 <see cref="GameManager.StartContentSceneName"/>；
-    /// 其余关卡仍进 <see cref="startSceneName"/>（如 StartScene）。
+    /// 按当前关卡场景名解析世界场景（<c>Level 1-X</c> → World 1，<c>Level 2-X</c> → World 2），与 <see cref="GameManager"/> ESC 逻辑一致。
     /// </summary>
     private void TryRequestSwitchToStartScene()
     {
-        string target = GameManager.StartContentSceneName;
+        string target = GameManager.ResolveWorldSceneForLevel(gameObject.scene.name);
         if (string.IsNullOrWhiteSpace(target))
         {
-            Debug.LogWarning("[LevelManager] 通关后目标场景名为空（请配置 startSceneName）。", this);
+            Debug.LogWarning("[LevelManager] 通关后目标世界场景名为空。", this);
             return;
         }
 

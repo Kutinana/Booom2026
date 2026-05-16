@@ -46922,9 +46922,9 @@ Camera:
   m_NormalizedViewPortRect:
     serializedVersion: 2
     x: 0
-    y: 0
-    width: 1
-    height: 1
+    y: 0.5092592
+    width: 0.19114584
+    height: 0.19114584
   near clip plane: 0.3
   far clip plane: 1000
   field of view: 8
@@ -63497,7 +63497,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 8afce069d19849549819682a04ce20cd, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  levelSceneName: Level2-6
+  levelSceneName: Level 2-6
   incompleteFloatAmplitude: 0.035
   incompleteFloatFrequencyHz: 0.9
   edgeGlowMaterial: {fileID: 2100000, guid: 6e660abb9f4a9a645a1f9d6ce9caac86, type: 2}
