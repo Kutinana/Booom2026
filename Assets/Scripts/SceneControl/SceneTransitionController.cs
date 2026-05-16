@@ -10,12 +10,14 @@ public class SceneTransitionController : SceneTransitionViewBehaviour
 
     public override IEnumerator EnterCover()
     {
+        AudioMng.Instance.PlaySfx("SceneSwitchShrink", 0.8f);
         yield return progressable.LinearTransition(0.5f, delay: 0f);
         yield return new WaitForEndOfFrame();
     }
 
     public override IEnumerator ExitCover()
     {
+        AudioMng.Instance.PlaySfx("SceneSwitchExpand", 0.8f);
         yield return progressable.InverseLinearTransition(0.5f, delay: 0f);
     }
 }

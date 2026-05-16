@@ -1872,7 +1872,7 @@ MonoBehaviour:
   m_FootstepClips:
   - {fileID: 8300000, guid: 3b0089d6fe3aba04e92dbd65be737cf0, type: 3}
   - {fileID: 8300000, guid: e3ca1641781fdb1479ee1ba62fb9a471, type: 3}
-  m_FootstepVolumeScale: 0.7
+  m_FootstepVolumeScale: 0.3
 --- !u!4 &2040163390
 Transform:
   m_ObjectHideFlags: 0

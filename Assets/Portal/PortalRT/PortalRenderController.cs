@@ -8,8 +8,7 @@ using UnityEngine.Rendering.Universal;
 [ExecuteAlways]
 public class PortalRenderController : MonoBehaviour
 {
-    [SerializeField]
-    private PortalRenderFeature.Settings settings = new PortalRenderFeature.Settings();
+    public PortalRenderFeature.Settings settings = new PortalRenderFeature.Settings();
 
     private PortalRenderFeature portalFeature;
     private PortalPass portalPass;
