@@ -570,6 +570,7 @@ public class WorldBox : StandardBox
         }
 
         MovePlayer(entrance.position);
+        playerController?.ClampMotion();
         return true;
     }
 
@@ -593,6 +594,7 @@ public class WorldBox : StandardBox
 
     private void MovePlayer(Vector3 position)
     {
+        position -= playerController.CenterOffset;
         if (playerBody2D != null)
         {
             playerBody2D.position = (Vector2)position;

@@ -30,7 +30,8 @@ public partial class PlayerController : MonoBehaviour, ISceneMovableItem, IPoint
 
     [Header("Grid")]
     [SerializeField] private Vector3 cellOffset = new Vector3(0.5f, 0.5f, 0f);
-
+    [Header("Center")]
+    public Vector3 CenterOffset;
     [Header("Movement")]
     [SerializeField] private float moveSpeed = 4f;
     [SerializeField, Min(0.01f)] private float jumpGridHeight = 2.5f;

@@ -106,12 +106,14 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   animator: {fileID: 8803086393143604714}
   cellOffset: {x: 0.5, y: 0.5, z: 0}
+  CenterOffset: {x: 0, y: -0.3, z: 0}
   moveSpeed: 2.3
   jumpGridHeight: 2.3
   gravity: 20
   maxFallSpeed: 15
   retainedVelocityDrag: 18
   retainedVelocityStopSpeed: 0.05
+  coyoteTime: 0.08
   collisionMask:
     serializedVersion: 2
     m_Bits: 4294967295
