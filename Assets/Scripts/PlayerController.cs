@@ -1221,7 +1221,18 @@ public partial class PlayerController : MonoBehaviour, ISceneMovableItem, IPoint
         jumping = false;
         coyoteTimeLeft = 0f;
     }
+    public void ClampMotion()
+    {
+        baseVelocity.y = 0f;
+        velocity.y = 0f;
+        jumping = false;
+        coyoteTimeLeft = 0f;
 
+        if (hasRetainedVelocity && Mathf.Abs(retainedVelocityAxis.y) > 0f)
+        {
+            ClearRetainedVelocity();
+        }
+    }
     /// <summary>
     /// 由外部系统（如 <see cref="PhysicalBoxService"/> 释放过渡）施加一个绝对位移，会保持 fixedZ 并同步刚体位置。
     /// </summary>

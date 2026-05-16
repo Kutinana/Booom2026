@@ -245,6 +245,7 @@ public class WorldBox : StandardBox
         }
 
         MovePlayer(position);
+        playerController?.ClampMotion();
     }
 
     private bool TryGetInnerTargetPosition(BoxPushDirection direction, Bounds outerBounds, Bounds innerBounds, Bounds playerBounds, out Vector3 position)
