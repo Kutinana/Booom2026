@@ -40,7 +40,7 @@ public partial class PlayerController
     }
     public void PlaySoundL(string soundName)
     {
-        AudioMng.Instance.PlaySfx(soundName, 0.8f);
+        AudioMng.Instance.PlaySfx(soundName, 0.5f);
     }
 
     public void PlayFootstepSound()

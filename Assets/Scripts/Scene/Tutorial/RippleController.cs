@@ -27,6 +27,7 @@ public class RippleController : MonoBehaviour
         while (true)
         {
             progressable.Progress = 0f;
+            AudioMng.Instance.PlaySfx("Confuse", 0.8f);
             yield return progressable.LinearTransition(rippleSpeed, delay: 0f);
 
             yield return new WaitForSeconds(rippleInterval);

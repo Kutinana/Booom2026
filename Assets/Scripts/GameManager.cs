@@ -30,7 +30,12 @@ public class GameManager : MonoSingleton<GameManager>
 
         if (Input.GetKeyDown(KeyCode.R))
         {
-            flow.TryRequestReloadCurrentContent();
+            string reloadContentSceneName = flow.CurrentContentSceneName;
+            if (flow.TryRequestReloadCurrentContent())
+            {
+                LevelBoxController.ResetSavedWorldPositionsForLoadedScene(reloadContentSceneName);
+            }
+
             return;
         }
 

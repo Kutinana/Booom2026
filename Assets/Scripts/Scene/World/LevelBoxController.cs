@@ -49,6 +49,55 @@ public class LevelBoxController : MonoBehaviour
     /// <summary>本盒子配置的目标关卡场景名。</summary>
     public string LevelSceneName => levelSceneName;
 
+    public static void ResetSavedWorldPositionsForLoadedScene(string sceneName)
+    {
+        if (string.IsNullOrWhiteSpace(sceneName))
+        {
+            return;
+        }
+
+        HashSet<int> levelIndices = new HashSet<int>();
+        string trimmedSceneName = sceneName.Trim();
+        for (int i = 0; i < s_Instances.Count; i++)
+        {
+            LevelBoxController box = s_Instances[i];
+            if (box == null || box.gameObject.scene.name != trimmedSceneName)
+            {
+                continue;
+            }
+
+            string targetScene = string.IsNullOrWhiteSpace(box.levelSceneName) ? string.Empty : box.levelSceneName.Trim();
+            if (!TryGetLevelIndexForSceneName(targetScene, out int levelIndex))
+            {
+                continue;
+            }
+
+            levelIndices.Add(levelIndex);
+        }
+
+        if (levelIndices.Count == 0)
+        {
+            return;
+        }
+
+        Save save = new Save().DeSerialize<Save>();
+        if (save.CompletedLevelBoxWorldPositions == null)
+        {
+            return;
+        }
+
+        bool changed = false;
+        foreach (int levelIndex in levelIndices)
+        {
+            changed |= save.CompletedLevelBoxWorldPositions.Remove(levelIndex);
+        }
+
+        if (changed)
+        {
+            save.Serialize();
+        }
+    }
+
     private SpriteRenderer spriteRenderer;
     private Material baselineSharedMaterial;
     private bool baselineCaptured;

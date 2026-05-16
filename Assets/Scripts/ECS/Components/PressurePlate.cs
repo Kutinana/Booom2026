@@ -82,6 +82,7 @@ public class PressurePlate : MonoBehaviour, IPlayerRelativePositionTarget
 
         if (IsPressed)
         {
+            if(!wasPressed) AudioMng.Instance.PlaySfx("Pressure", 0.2f);
             OnPressed?.Invoke();
         }
         else

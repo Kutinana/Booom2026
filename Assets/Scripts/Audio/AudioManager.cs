@@ -6,6 +6,8 @@ using UnityEngine;
 
 public class AudioMng : MonoBehaviour
 {
+
+    public Transform Player;
     private const int FootstepClipCount = 2;
     private const string SfxConfigPath = "sfx_config";
 
@@ -96,6 +98,15 @@ public class AudioMng : MonoBehaviour
         }
 
         m_SfxQueue.Enqueue(new SfxRequest(name, volumeScale));
+    }
+    public void PlaySfxWithDecay(string name, float volumeScale, Vector3 pos, float distScale)
+    {
+        float sqrDist = (Player.position - pos).sqrMagnitude;
+        float sqrScale = distScale * distScale;
+        float decayedVolume = sqrDist > sqrScale ? volumeScale  / (sqrDist * sqrScale) : volumeScale;
+        decayedVolume = Mathf.Clamp(decayedVolume, 0, volumeScale);
+        PlaySfx(name, decayedVolume);
+        Debug.Log($"Play {name} volume {decayedVolume}");
     }
 
     private void TryPlayQueuedSfx(SfxRequest request)

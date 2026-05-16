@@ -205,6 +205,7 @@ public partial class PlayerController : MonoBehaviour, ISceneMovableItem, IPoint
 
     private void Start()
     {
+        AudioMng.Instance.Player = transform;
         grid = FindSceneGrid();
         fixedZ = transform.position.z;
 
