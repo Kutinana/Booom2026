@@ -245,6 +245,7 @@ public class WorldBox : StandardBox
         }
 
         MovePlayer(position);
+        TypeEventSystem.Global.Send<OnOuterToInnerEvent>();
         playerController?.ClampMotion();
     }
 
@@ -570,6 +571,7 @@ public class WorldBox : StandardBox
         }
 
         MovePlayer(entrance.position);
+        TypeEventSystem.Global.Send<OnInnerToOuterEvent>();
         playerController?.ClampMotion();
         return true;
     }
