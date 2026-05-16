@@ -273,11 +273,11 @@ public class WorldBox : StandardBox
                 break;
             case BoxPushDirection.Down:
                 position.x = RemapClamped(playerBounds.center.x, outerBounds.min.x, outerBounds.max.x, innerInsideMinX, innerInsideMaxX);
-                position.y = innerBounds.min.y - extents.y;
+                position.y = innerBounds.min.y - extents.y - paddingY;
                 break;
             case BoxPushDirection.Up:
                 position.x = RemapClamped(playerBounds.center.x, outerBounds.min.x, outerBounds.max.x, innerInsideMinX, innerInsideMaxX);
-                position.y = innerBounds.max.y + extents.y;
+                position.y = innerBounds.max.y + extents.y + paddingY;
                 break;
         }
 
