@@ -127,7 +127,16 @@ public class PlayerService : ServiceBase
         SceneFlowController flow = SceneFlowController.Instance;
         if (flow != null && flow.IsConfigured && !flow.IsTransitioning)
         {
-            flow.TryRequestReloadCurrentContent();
+            string currentScene = flow.CurrentContentSceneName;
+            if (flow.TryRequestReloadCurrentContent())
+            {
+                // 如果在世界地图中死亡，为了打破可能的出生死亡循环，
+                // 重载时应像按 R 一样重置位置（回到默认点）。
+                if (GameManager.IsWorldHubScene(currentScene))
+                {
+                    PlayerController.ClearSavedWorldPositionAndPreventSaveThisReload();
+                }
+            }
         }
     }
 

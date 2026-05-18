@@ -210,7 +210,7 @@ public partial class PlayerController : MonoBehaviour, ISceneMovableItem, IPoint
         grid = FindSceneGrid();
         fixedZ = transform.position.z;
 
-        if (string.Equals(gameObject.scene.name, GameManager.StartContentSceneName, StringComparison.Ordinal))
+        if (GameManager.IsWorldHubScene(gameObject.scene.name))
         {
             Save bootSave = new Save().DeSerialize<Save>();
             if (bootSave.WorldPlayerLastPosition != null)
@@ -250,7 +250,7 @@ public partial class PlayerController : MonoBehaviour, ISceneMovableItem, IPoint
 
     private bool TryRestoreWorldPlayerSavedPosition()
     {
-        if (!string.Equals(gameObject.scene.name, GameManager.StartContentSceneName, StringComparison.Ordinal))
+        if (!GameManager.IsWorldHubScene(gameObject.scene.name))
         {
             return false;
         }
@@ -301,8 +301,7 @@ public partial class PlayerController : MonoBehaviour, ISceneMovableItem, IPoint
 
         // 场景卸载时 OnDestroy 里 Scene.isLoaded 往往已是 false，不能用它作为条件，否则会永远不存盘。
         string sceneName = gameObject.scene.name;
-        if (string.IsNullOrEmpty(sceneName) ||
-            !string.Equals(sceneName, GameManager.StartContentSceneName, StringComparison.Ordinal))
+        if (string.IsNullOrEmpty(sceneName) || !GameManager.IsWorldHubScene(sceneName))
         {
             return;
         }
