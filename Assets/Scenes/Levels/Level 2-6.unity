@@ -12401,7 +12401,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   cellOffset: {x: 0.5, y: 0.5, z: 0}
   AlignToGrid: 1
-  pushableFrom: 1
+  pushableFrom: 0
   collisionMask:
     serializedVersion: 2
     m_Bits: 4294967295
@@ -12412,10 +12412,6 @@ MonoBehaviour:
   OuterEntrances:
   - Direction: 0
     Entrance: {fileID: 1857928788}
-  - Direction: 1
-    Entrance: {fileID: 799451004}
-  - Direction: 2
-    Entrance: {fileID: 215454610}
   - Direction: 3
     Entrance: {fileID: 448511902}
   paddingX: 0.05

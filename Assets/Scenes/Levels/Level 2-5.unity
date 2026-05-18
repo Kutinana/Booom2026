@@ -15024,12 +15024,6 @@ MonoBehaviour:
   OuterEntrances:
   - Direction: 0
     Entrance: {fileID: 1857928788}
-  - Direction: 1
-    Entrance: {fileID: 799451004}
-  - Direction: 2
-    Entrance: {fileID: 215454610}
-  - Direction: 3
-    Entrance: {fileID: 448511902}
   paddingX: 0.03
   paddingY: 0.03
   outerEdgeBlockerTouchTolerance: 0.04
