@@ -278,8 +278,27 @@ public partial class PlayerController : MonoBehaviour, ISceneMovableItem, IPoint
         return true;
     }
 
+    private static bool s_PreventSaveWorldPositionThisReload;
+
+    public static void ClearSavedWorldPositionAndPreventSaveThisReload()
+    {
+        s_PreventSaveWorldPositionThisReload = true;
+        Save save = new Save().DeSerialize<Save>();
+        if (save.WorldPlayerLastPosition != null)
+        {
+            save.WorldPlayerLastPosition = null;
+            save.Serialize();
+        }
+    }
+
     private void PersistWorldPlayerPositionIfLeavingWorld()
     {
+        if (s_PreventSaveWorldPositionThisReload)
+        {
+            s_PreventSaveWorldPositionThisReload = false;
+            return;
+        }
+
         // 场景卸载时 OnDestroy 里 Scene.isLoaded 往往已是 false，不能用它作为条件，否则会永远不存盘。
         string sceneName = gameObject.scene.name;
         if (string.IsNullOrEmpty(sceneName) ||

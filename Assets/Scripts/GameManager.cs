@@ -41,6 +41,10 @@ public class GameManager : MonoSingleton<GameManager>
             if (flow.TryRequestReloadCurrentContent())
             {
                 LevelBoxController.ResetSavedWorldPositionsForLoadedScene(reloadContentSceneName);
+                if (IsWorldHubScene(reloadContentSceneName))
+                {
+                    PlayerController.ClearSavedWorldPositionAndPreventSaveThisReload();
+                }
             }
 
             return;
