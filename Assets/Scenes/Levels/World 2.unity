@@ -46921,10 +46921,10 @@ Camera:
   m_LensShift: {x: 0, y: 0}
   m_NormalizedViewPortRect:
     serializedVersion: 2
-    x: 0.10390625
-    y: 0
-    width: 0.49930558
-    height: 0.49930558
+    x: 0
+    y: 0.71574074
+    width: 0.3703125
+    height: 0.37031248
   near clip plane: 0.3
   far clip plane: 1000
   field of view: 8
@@ -90366,7 +90366,7 @@ MonoBehaviour:
     m_RotationOrder: 4
   TargetRectTransform: {fileID: 2021971886}
   StartPosition: {x: 0, y: 0}
-  EndPosition: {x: 0, y: 0.36}
+  EndPosition: {x: -0.57, y: 0}
 --- !u!114 &2021971890
 MonoBehaviour:
   m_ObjectHideFlags: 0
