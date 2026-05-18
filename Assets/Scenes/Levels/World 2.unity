@@ -342,7 +342,7 @@ MonoBehaviour:
   incompleteFloatAmplitude: 0.035
   incompleteFloatFrequencyHz: 0.9
   edgeGlowMaterial: {fileID: 2100000, guid: 6e660abb9f4a9a645a1f9d6ce9caac86, type: 2}
-  interactionRadius: 2
+  interactionRadius: 1.5
   progressableGroup: {fileID: 0}
   levelNameText: {fileID: 0}
 --- !u!4 &48388376 stripped
@@ -2333,7 +2333,7 @@ MonoBehaviour:
   incompleteFloatAmplitude: 0.035
   incompleteFloatFrequencyHz: 0.9
   edgeGlowMaterial: {fileID: 2100000, guid: 6e660abb9f4a9a645a1f9d6ce9caac86, type: 2}
-  interactionRadius: 2
+  interactionRadius: 1.5
   progressableGroup: {fileID: 0}
   levelNameText: {fileID: 0}
 --- !u!1 &283273840
@@ -46922,9 +46922,9 @@ Camera:
   m_NormalizedViewPortRect:
     serializedVersion: 2
     x: 0
-    y: 0.71574074
-    width: 0.3703125
-    height: 0.37031248
+    y: 0.7648148
+    width: 0.27291667
+    height: 0.27291667
   near clip plane: 0.3
   far clip plane: 1000
   field of view: 8
@@ -63523,7 +63523,7 @@ MonoBehaviour:
   incompleteFloatAmplitude: 0.035
   incompleteFloatFrequencyHz: 0.9
   edgeGlowMaterial: {fileID: 2100000, guid: 6e660abb9f4a9a645a1f9d6ce9caac86, type: 2}
-  interactionRadius: 2
+  interactionRadius: 1.5
   progressableGroup: {fileID: 0}
   levelNameText: {fileID: 0}
 --- !u!61 &1208435953
@@ -63911,7 +63911,7 @@ MonoBehaviour:
   incompleteFloatAmplitude: 0.035
   incompleteFloatFrequencyHz: 0.9
   edgeGlowMaterial: {fileID: 2100000, guid: 6e660abb9f4a9a645a1f9d6ce9caac86, type: 2}
-  interactionRadius: 2
+  interactionRadius: 1.5
   progressableGroup: {fileID: 0}
   levelNameText: {fileID: 0}
 --- !u!1 &1228185040
@@ -65932,7 +65932,7 @@ MonoBehaviour:
   incompleteFloatAmplitude: 0.035
   incompleteFloatFrequencyHz: 0.9
   edgeGlowMaterial: {fileID: 2100000, guid: 6e660abb9f4a9a645a1f9d6ce9caac86, type: 2}
-  interactionRadius: 2
+  interactionRadius: 1.5
   progressableGroup: {fileID: 0}
   levelNameText: {fileID: 0}
 --- !u!95 &1415818184
@@ -72587,7 +72587,7 @@ MonoBehaviour:
   incompleteFloatAmplitude: 0.035
   incompleteFloatFrequencyHz: 0.9
   edgeGlowMaterial: {fileID: 2100000, guid: 6e660abb9f4a9a645a1f9d6ce9caac86, type: 2}
-  interactionRadius: 2
+  interactionRadius: 1.5
   progressableGroup: {fileID: 0}
   levelNameText: {fileID: 0}
 --- !u!1001 &1581939360
