@@ -9,13 +9,30 @@ public class ThanksForPlaying : MonoBehaviour
     public Progressable progressable;
     public Button button;
 
+    void Awake()
+    {
+        Save save = new Save().DeSerialize<Save>();
+        if (save.HasThanksPlayed)
+        {
+            gameObject.SetActive(false);
+            return;
+        }
+
+        // 第一次显示，标记为已播放
+        save.HasThanksPlayed = true;
+        save.Serialize();
+    }
+
     // Start is called before the first frame update
     void Start()
     {
-        button.onClick.AddListener(() =>
+        if (button != null)
         {
-            progressable.InverseLinearTransition(0.2f);
-        });
+            button.onClick.AddListener(() =>
+            {
+                progressable.InverseLinearTransition(0.2f);
+            });
+        }
     }
 
     // Update is called once per frame

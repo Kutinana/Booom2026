@@ -83,7 +83,11 @@ public class LevelSelectorController : MonoBehaviour
             return;
         }
 
-        if (!host.TryJumpToScene(sceneName))
+        if (host.TryJumpToScene(sceneName))
+        {
+            GameManager.SetLastHubScene(gameObject.scene.name);
+        }
+        else
         {
             Debug.LogWarning($"[LevelSelector] 跳转「{sceneName}」失败（可能未加入 Build、与 Shell 同名或正在过渡中）。");
         }

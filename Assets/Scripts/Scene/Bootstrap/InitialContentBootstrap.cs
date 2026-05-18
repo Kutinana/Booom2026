@@ -72,6 +72,12 @@ public class InitialContentBootstrap : MonoBehaviour
 
     private static string ResolveTargetSceneName(GameConfig _gameConfig, Save _save)
     {
+        // 如果已经通关（触发过致谢），启动时直接进 StartScene
+        if (_save != null && _save.HasThanksPlayed)
+        {
+            return GameManager.MenuSceneName;
+        }
+
         bool finishedEmpty = _save == null ||
                              _save.FinishedLevels == null ||
                              _save.FinishedLevels.Count == 0;

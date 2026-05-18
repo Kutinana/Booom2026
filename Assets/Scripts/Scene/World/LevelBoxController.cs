@@ -295,9 +295,9 @@ public class LevelBoxController : MonoBehaviour
 
             if (flow.TryRequestSwitchContent(target, false))
             {
+                GameManager.SetLastHubScene(gameObject.scene.name);
                 return;
             }
-
             Debug.LogWarning($"[LevelBox] SceneFlow 未切换到「{target}」（可能已在目标场景、名称非法或管线拒绝）。", this);
             return;
         }

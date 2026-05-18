@@ -74,45 +74,42 @@ public class GameManager : MonoSingleton<GameManager>
     public static bool IsWorldHubScene(string contentSceneName)
     {
         return contentSceneName == StartContentSceneName
-            || contentSceneName == World2ContentSceneName;
+            || contentSceneName == World2ContentSceneName
+            || contentSceneName == MenuSceneName;
     }
 
     /// <summary>
-    /// 通关后应进入的内容场景；在 <see cref="ResolveWorldSceneForLevel"/> 基础上含特例：
-    /// <c>Level 1-6</c> → <see cref="World2ContentSceneName"/>，<c>Level 2-6</c> → <see cref="MenuSceneName"/>。
+    /// 记录当前 Hub 场景到存档。
     /// </summary>
-    public static string ResolveWorldSceneAfterLevelComplete(string levelSceneName)
+    public static void SetLastHubScene(string hubSceneName)
     {
-        if (string.IsNullOrWhiteSpace(levelSceneName))
-        {
-            return ResolveWorldSceneForLevel(levelSceneName);
-        }
-
-        string trimmed = levelSceneName.Trim();
-        // if (string.Equals(trimmed, Level1_6SceneName, StringComparison.Ordinal))
-        // {
-        //     return StartContentSceneName;
-        // }
-
-        if (string.Equals(trimmed, Level2_6SceneName, StringComparison.Ordinal))
-        {
-            return MenuSceneName;
-        }
-
-        return ResolveWorldSceneForLevel(levelSceneName);
+        if (string.IsNullOrEmpty(hubSceneName)) return;
+        Save save = new Save().DeSerialize<Save>();
+        save.LastHubScene = hubSceneName;
+        save.Serialize();
     }
 
     /// <summary>
-    /// 按关卡场景名 <c>Level 1-X</c> / <c>Level 2-X</c>（X 为正整数）解析对应世界场景；不匹配时回退 <see cref="StartContentSceneName"/>。
+    /// 正常中途退出（ESC）应进入的内容场景。
+    /// 优先从存档读取 LastHubScene。
     /// </summary>
     public static string ResolveWorldSceneForLevel(string levelSceneName)
     {
+        Save save = new Save().DeSerialize<Save>();
+        if (!string.IsNullOrEmpty(save.LastHubScene))
+        {
+            return save.LastHubScene;
+        }
+
+        // Fallback: 如果没有 LastHubScene 记录，则使用基于场景名的默认映射
         if (string.IsNullOrWhiteSpace(levelSceneName))
         {
             return StartContentSceneName;
         }
 
         levelSceneName = levelSceneName.Trim();
+        if (levelSceneName == "Level-Tutorial") return StartContentSceneName;
+
         if (!levelSceneName.StartsWith(LevelScenePrefix, StringComparison.Ordinal))
         {
             return StartContentSceneName;
@@ -126,18 +123,48 @@ public class GameManager : MonoSingleton<GameManager>
         }
 
         ReadOnlySpan<char> worldPart = afterPrefix.AsSpan(0, dashIndex);
-        ReadOnlySpan<char> levelPart = afterPrefix.AsSpan(dashIndex + 1);
-        if (worldPart.Length != 1 || (worldPart[0] != '1' && worldPart[0] != '2'))
+        if (worldPart.Length == 1)
         {
-            return StartContentSceneName;
+            if (worldPart[0] == '1') return StartContentSceneName;
+            if (worldPart[0] == '2') return World2ContentSceneName;
         }
 
-        if (!IsPositiveIntegerSpan(levelPart))
+        return StartContentSceneName;
+    }
+
+    /// <summary>
+    /// 通关后应进入的内容场景；在 <see cref="ResolveWorldSceneForLevel"/> 基础上含特例：
+    /// <c>Level 1-6</c> → <see cref="World2ContentSceneName"/>，<c>Level 2-6</c> → <see cref="MenuSceneName"/>。
+    /// </summary>
+    public static string ResolveWorldSceneAfterLevelComplete(string levelSceneName)
+    {
+        Save save = new Save().DeSerialize<Save>();
+        
+        // 如果是从主菜单（StartScene）进入的关卡，通关后也强制回主菜单（用户需求：StartScene 入口始终回 StartScene）
+        if (!string.IsNullOrEmpty(save.LastHubScene) && save.LastHubScene == MenuSceneName)
         {
-            return StartContentSceneName;
+            return MenuSceneName;
         }
 
-        return worldPart[0] == '2' ? World2ContentSceneName : StartContentSceneName;
+        if (string.IsNullOrWhiteSpace(levelSceneName))
+        {
+            return ResolveWorldSceneForLevel(levelSceneName);
+        }
+
+        string trimmed = levelSceneName.Trim();
+        // 特例：2-6 通关回主菜单（大结局）
+        if (string.Equals(trimmed, Level2_6SceneName, StringComparison.Ordinal))
+        {
+            return MenuSceneName;
+        }
+
+        // 特例：1-6 通关进 World 2（仅限从世界地图进入时触发进度跳转）
+        if (trimmed == Level1_6SceneName)
+        {
+            return World2ContentSceneName;
+        }
+
+        return ResolveWorldSceneForLevel(levelSceneName);
     }
 
     private static bool IsPositiveIntegerSpan(ReadOnlySpan<char> value)
