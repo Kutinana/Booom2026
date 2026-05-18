@@ -72,28 +72,55 @@ public class InitialContentBootstrap : MonoBehaviour
 
     private static string ResolveTargetSceneName(GameConfig _gameConfig, Save _save)
     {
-        // 如果已经通关（触发过致谢），启动时直接进 StartScene
-        if (_save != null && _save.HasThanksPlayed)
+        if (_save == null) return null;
+
+        // 1. 如果已经通关（触发过致谢），启动时直接进 StartScene
+        if (_save.HasThanksPlayed)
         {
             return GameManager.MenuSceneName;
         }
 
-        bool finishedEmpty = _save == null ||
-                             _save.FinishedLevels == null ||
-                             _save.FinishedLevels.Count == 0;
-
-        if (finishedEmpty)
+        // 2. 检查 1-6 是否已完成
+        int levelOneSixIndex = -1;
+        if (_gameConfig.Levels != null)
         {
-            return FindSceneNameByIndex(_gameConfig.Levels, _level => _level.Index, _level => _level.ScenePath);
+            foreach (var level in _gameConfig.Levels)
+            {
+                if (level != null && !string.IsNullOrEmpty(level.ScenePath) && 
+                    SceneNameFromPath(level.ScenePath) == "Level 1-6")
+                {
+                    levelOneSixIndex = level.Index;
+                    break;
+                }
+            }
         }
 
-        return FindSceneNameByIndex(_gameConfig.Worlds, _world => _world.Index, _world => _world.ScenePath);
+        bool hasFinishedOneSix = levelOneSixIndex >= 0 && 
+                                 _save.FinishedLevels != null && 
+                                 _save.FinishedLevels.Contains(levelOneSixIndex);
+
+        if (hasFinishedOneSix)
+        {
+            // 已完成 1-6 则跳转到 World 2 (Index 为 1)
+            string world2 = FindSceneNameByIndex(_gameConfig.Worlds, w => w.Index, w => w.ScenePath, 1);
+            if (!string.IsNullOrEmpty(world2)) return world2;
+        }
+
+        // 3. 基础逻辑：新玩家进初始关卡，回流玩家进世界 1
+        bool finishedEmpty = _save.FinishedLevels == null || _save.FinishedLevels.Count == 0;
+        if (finishedEmpty)
+        {
+            return FindSceneNameByIndex(_gameConfig.Levels, _level => _level.Index, _level => _level.ScenePath, 0);
+        }
+
+        return FindSceneNameByIndex(_gameConfig.Worlds, _world => _world.Index, _world => _world.ScenePath, 0);
     }
 
     private static string FindSceneNameByIndex<T>(
         System.Collections.Generic.IReadOnlyList<T> _items,
         Func<T, int> _getIndex,
-        Func<T, string> _getScenePath) where T : class
+        Func<T, string> _getScenePath,
+        int _targetIndex = 0) where T : class
     {
         if (_items == null)
         {
@@ -108,7 +135,7 @@ public class InitialContentBootstrap : MonoBehaviour
                 continue;
             }
 
-            if (_getIndex(item) == 0)
+            if (_getIndex(item) == _targetIndex)
             {
                 return SceneNameFromPath(_getScenePath(item));
             }
