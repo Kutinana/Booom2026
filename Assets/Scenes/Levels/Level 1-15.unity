@@ -10809,10 +10809,12 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   cellOffset: {x: 0.5, y: 0.5, z: 0}
+  AlignToGrid: 1
   pushableFrom: 3
   collisionMask:
     serializedVersion: 2
     m_Bits: 4294967295
+  ApplyGravity: 1
   TestDirection: 0
 --- !u!95 &814686678
 Animator:
@@ -13652,10 +13654,12 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   cellOffset: {x: 0.5, y: 0.5, z: 0}
+  AlignToGrid: 1
   pushableFrom: 3
   collisionMask:
     serializedVersion: 2
     m_Bits: 4294967295
+  ApplyGravity: 1
   TestDirection: 0
 --- !u!95 &1198975012
 Animator:
@@ -14091,10 +14095,12 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   cellOffset: {x: 0.5, y: 0.5, z: 0}
+  AlignToGrid: 1
   pushableFrom: 1
   collisionMask:
     serializedVersion: 2
     m_Bits: 4294967295
+  ApplyGravity: 1
   TestDirection: 0
   OuterQuadCollider: {fileID: 1030242292}
   InnerQuadCollider: {fileID: 1261429945}
@@ -14103,10 +14109,6 @@ MonoBehaviour:
     Entrance: {fileID: 1857928788}
   - Direction: 1
     Entrance: {fileID: 799451004}
-  - Direction: 2
-    Entrance: {fileID: 215454610}
-  - Direction: 3
-    Entrance: {fileID: 448511902}
   paddingX: 0.05
   paddingY: 0.05
   outerEdgeBlockerTouchTolerance: 0.04
@@ -15428,10 +15430,12 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   cellOffset: {x: 0.5, y: 0.5, z: 0}
+  AlignToGrid: 1
   pushableFrom: 3
   collisionMask:
     serializedVersion: 2
     m_Bits: 4294967295
+  ApplyGravity: 1
   TestDirection: 0
 --- !u!61 &1579278815
 BoxCollider2D:
@@ -16552,6 +16556,7 @@ MonoBehaviour:
   animator: {fileID: 1822326675}
   idleTriggerTime: 3
   idleRandomInterval: {x: 3, y: 6}
+  landTriggerMaxVerticalVelocity: 0.001
 --- !u!95 &1822326675
 Animator:
   serializedVersion: 5
