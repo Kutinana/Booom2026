@@ -12,8 +12,8 @@ public class Save : ReadableAndWriteableData
     /// <summary>已完成关卡在 World 中对应 <see cref="LevelBoxController"/> 的世界坐标（键为 <see cref="LevelData.Index"/>）。</summary>
     public Dictionary<int, SaveVector3> CompletedLevelBoxWorldPositions;
 
-    /// <summary>离开 <see cref="GameManager.StartContentSceneName"/> 时记录的玩家位置；下次进入该世界时由 <see cref="PlayerController"/> 恢复。</summary>
-    public SaveVector3 WorldPlayerLastPosition;
+    /// <summary>离开 <see cref="GameManager.IsWorldHubScene"/> 时记录的玩家位置（键为 World Index）；下次进入该世界时由 <see cref="PlayerController"/> 恢复。</summary>
+    public Dictionary<int, SaveVector3> WorldPlayerLastPositions;
 
     /// <summary>记录进入关卡前的上一个 Hub 场景名（用于决定返回 StartScene 还是 WorldScene）。</summary>
     public string LastHubScene;

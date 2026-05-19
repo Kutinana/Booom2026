@@ -43,7 +43,7 @@ public class GameManager : MonoSingleton<GameManager>
                 LevelBoxController.ResetSavedWorldPositionsForLoadedScene(reloadContentSceneName);
                 if (IsWorldHubScene(reloadContentSceneName))
                 {
-                    PlayerController.ClearSavedWorldPositionAndPreventSaveThisReload();
+                    PlayerController.ClearSavedWorldPositionAndPreventSaveThisReload(reloadContentSceneName);
                 }
             }
 

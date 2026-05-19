@@ -160,6 +160,8 @@ public partial class PlayerController : MonoBehaviour, ISceneMovableItem, IPoint
     private readonly Collider2D[] overlapHits2D = new Collider2D[16];
     private readonly Collider[] overlapHits3D = new Collider[16];
 
+    private int m_CurrentWorldIndex = -1;
+
     private void Awake()
     {
         body3D = GetComponent<Rigidbody>();
@@ -182,6 +184,26 @@ public partial class PlayerController : MonoBehaviour, ISceneMovableItem, IPoint
             body2D.gravityScale = 0f;
             body2D.bodyType = RigidbodyType2D.Kinematic;
         }
+    }
+
+    private WorldData FindWorldData(string sceneName)
+    {
+        if (GameConfig.Current == null || GameConfig.Current.Worlds == null) return null;
+
+        foreach (var w in GameConfig.Current.Worlds)
+        {
+            if (w == null) continue;
+
+            if (string.Equals(w.Name, sceneName, StringComparison.OrdinalIgnoreCase)) return w;
+
+            if (!string.IsNullOrEmpty(w.ScenePath))
+            {
+                string nameFromPath = System.IO.Path.GetFileNameWithoutExtension(w.ScenePath);
+                if (string.Equals(nameFromPath, sceneName, StringComparison.OrdinalIgnoreCase)) return w;
+            }
+        }
+
+        return null;
     }
 
     private void OnDestroy()
@@ -210,13 +232,19 @@ public partial class PlayerController : MonoBehaviour, ISceneMovableItem, IPoint
         grid = FindSceneGrid();
         fixedZ = transform.position.z;
 
-        if (GameManager.IsWorldHubScene(gameObject.scene.name))
+        string sceneName = gameObject.scene.name;
+        if (GameManager.IsWorldHubScene(sceneName))
         {
-            Save bootSave = new Save().DeSerialize<Save>();
-            if (bootSave.WorldPlayerLastPosition != null)
+            var world = FindWorldData(sceneName);
+            if (world != null)
             {
-                StartCoroutine(RestoreWorldPlayerPositionDeferred());
-                return;
+                m_CurrentWorldIndex = world.Index;
+                Save bootSave = new Save().DeSerialize<Save>();
+                if (bootSave.WorldPlayerLastPositions != null && bootSave.WorldPlayerLastPositions.ContainsKey(m_CurrentWorldIndex))
+                {
+                    StartCoroutine(RestoreWorldPlayerPositionDeferred());
+                    return;
+                }
             }
         }
 
@@ -250,18 +278,29 @@ public partial class PlayerController : MonoBehaviour, ISceneMovableItem, IPoint
 
     private bool TryRestoreWorldPlayerSavedPosition()
     {
-        if (!GameManager.IsWorldHubScene(gameObject.scene.name))
+        string sceneName = gameObject.scene.name;
+        if (!GameManager.IsWorldHubScene(sceneName))
         {
             return false;
         }
 
         Save save = new Save().DeSerialize<Save>();
-        if (save.WorldPlayerLastPosition == null)
+        if (save.WorldPlayerLastPositions == null)
         {
             return false;
         }
 
-        SaveVector3 sv = save.WorldPlayerLastPosition;
+        if (m_CurrentWorldIndex == -1)
+        {
+            var world = FindWorldData(sceneName);
+            if (world != null) m_CurrentWorldIndex = world.Index;
+        }
+
+        if (m_CurrentWorldIndex == -1 || !save.WorldPlayerLastPositions.TryGetValue(m_CurrentWorldIndex, out SaveVector3 sv))
+        {
+            return false;
+        }
+
         Vector3 raw = new Vector3(sv.x, sv.y, sv.z);
         fixedZ = raw.z;
 
@@ -280,13 +319,30 @@ public partial class PlayerController : MonoBehaviour, ISceneMovableItem, IPoint
 
     private static bool s_PreventSaveWorldPositionThisReload;
 
-    public static void ClearSavedWorldPositionAndPreventSaveThisReload()
+    public static void ClearSavedWorldPositionAndPreventSaveThisReload(string sceneName)
     {
         s_PreventSaveWorldPositionThisReload = true;
-        Save save = new Save().DeSerialize<Save>();
-        if (save.WorldPlayerLastPosition != null)
+
+        if (GameConfig.Current == null || GameConfig.Current.Worlds == null) return;
+        
+        // 由于是静态方法，无法直接访问 m_CurrentWorldIndex，仍需实时查找（按 R 时通常 GameConfig.Current 是有效的）
+        WorldData world = null;
+        foreach (var w in GameConfig.Current.Worlds)
         {
-            save.WorldPlayerLastPosition = null;
+            if (w == null) continue;
+            if (string.Equals(w.Name, sceneName, StringComparison.OrdinalIgnoreCase)) { world = w; break; }
+            if (!string.IsNullOrEmpty(w.ScenePath))
+            {
+                string nameFromPath = System.IO.Path.GetFileNameWithoutExtension(w.ScenePath);
+                if (string.Equals(nameFromPath, sceneName, StringComparison.OrdinalIgnoreCase)) { world = w; break; }
+            }
+        }
+        
+        if (world == null) return;
+
+        Save save = new Save().DeSerialize<Save>();
+        if (save.WorldPlayerLastPositions != null && save.WorldPlayerLastPositions.Remove(world.Index))
+        {
             save.Serialize();
         }
     }
@@ -313,9 +369,21 @@ public partial class PlayerController : MonoBehaviour, ISceneMovableItem, IPoint
             return;
         }
 
+        // 优先使用缓存的 index，避免 OnApplicationQuit 时 GameConfig.Current 已销毁导致查找失败
+        int targetIndex = m_CurrentWorldIndex;
+        if (targetIndex == -1)
+        {
+            var world = FindWorldData(sceneName);
+            if (world != null) targetIndex = world.Index;
+        }
+
+        if (targetIndex == -1) return;
+
         Save save = new Save().DeSerialize<Save>();
+        if (save.WorldPlayerLastPositions == null) save.WorldPlayerLastPositions = new Dictionary<int, SaveVector3>();
+
         Vector3 p = transform.position;
-        save.WorldPlayerLastPosition = new SaveVector3 { x = p.x, y = p.y, z = p.z };
+        save.WorldPlayerLastPositions[targetIndex] = new SaveVector3 { x = p.x, y = p.y, z = p.z };
         save.Serialize();
     }
 

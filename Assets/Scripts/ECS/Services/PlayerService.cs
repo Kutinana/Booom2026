@@ -134,7 +134,7 @@ public class PlayerService : ServiceBase
                 // 重载时应像按 R 一样重置位置（回到默认点）。
                 if (GameManager.IsWorldHubScene(currentScene))
                 {
-                    PlayerController.ClearSavedWorldPositionAndPreventSaveThisReload();
+                    PlayerController.ClearSavedWorldPositionAndPreventSaveThisReload(currentScene);
                 }
             }
         }
