@@ -46921,10 +46921,10 @@ Camera:
   m_LensShift: {x: 0, y: 0}
   m_NormalizedViewPortRect:
     serializedVersion: 2
-    x: 0.228125
+    x: 0.15507813
     y: 0
-    width: 0.31041667
-    height: 0.31041667
+    width: 0.45416665
+    height: 0.45416668
   near clip plane: 0.3
   far clip plane: 1000
   field of view: 8
@@ -47021,7 +47021,7 @@ MonoBehaviour:
     material: {fileID: 2100000, guid: ab2c9b6c3ba20d4409c1b84125ac4fa2, type: 2}
     transform: {fileID: 1261429943}
     outerTransform: {fileID: 1030242289}
-    maxDepth: 2
+    maxDepth: 3
 --- !u!114 &524263887
 MonoBehaviour:
   m_ObjectHideFlags: 0
