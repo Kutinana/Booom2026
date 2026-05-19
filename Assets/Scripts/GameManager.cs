@@ -139,7 +139,7 @@ public class GameManager : MonoSingleton<GameManager>
     public static string ResolveWorldSceneAfterLevelComplete(string levelSceneName)
     {
         Save save = new Save().DeSerialize<Save>();
-        
+
         // 如果是从主菜单（StartScene）进入的关卡，通关后也强制回主菜单（用户需求：StartScene 入口始终回 StartScene）
         if (!string.IsNullOrEmpty(save.LastHubScene) && save.LastHubScene == MenuSceneName)
         {
@@ -158,10 +158,18 @@ public class GameManager : MonoSingleton<GameManager>
             return MenuSceneName;
         }
 
-        // 特例：1-6 通关进 World 2（仅限从世界地图进入时触发进度跳转）
+        // 特例：如已播放转场动画，则1-6 通关进 World 2；否则去World1走转场动画切换流程
         if (trimmed == Level1_6SceneName)
         {
-            return World2ContentSceneName;
+            if (save.HasCGPlayed == true)
+            {
+                return World2ContentSceneName;
+            }
+            else
+            {
+                return StartContentSceneName;
+            }
+
         }
 
         return ResolveWorldSceneForLevel(levelSceneName);
