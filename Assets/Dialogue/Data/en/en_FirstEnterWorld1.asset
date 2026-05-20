@@ -1,0 +1,36 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: be9ae3e917553264f81b42cdb9e1a49a, type: 3}
+  m_Name: en_FirstEnterWorld1
+  m_EditorClassIdentifier: 
+  lines:
+  - text: Hello, human.
+    options:
+    - Hello, octopus.
+    - Oh, you can talk.
+  - text: Because of <anim:wave><color=red>Gnosis</color></anim>.
+    options:
+    - Gnosis?
+  - text: The spot.
+    options:
+    - The spot is Gnosis?
+  - text: Anyway, need more.
+    options:
+    - Greedy little octopus...
+    - What's that box ahead?
+  - text: The world holding <anim:wave><color=red>Gnosis</color></anim>. It's <anim:wave><color=red>emanating</color></anim>.
+    options:
+    - Let's get going then.
+  - text: But, I don't know how to get in...
+    options:
+    - In times like this,
+    - everyone press E.

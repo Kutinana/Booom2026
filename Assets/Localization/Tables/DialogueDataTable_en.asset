@@ -1,0 +1,39 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 97269afb30aa84742ae3f3342603618a, type: 3}
+  m_Name: DialogueDataTable_en
+  m_EditorClassIdentifier: 
+  m_LocaleId:
+    m_Code: en
+  m_SharedData: {fileID: 11400000, guid: beece94a4208d7742a90e6e200fd4d51, type: 2}
+  m_Metadata:
+    m_Items: []
+  m_TableData:
+  - m_Id: 64029327360
+    m_Localized: d52eb19ca9751f74fbdb9be906a09e0f
+    m_Metadata:
+      m_Items: []
+  - m_Id: 5917314777088
+    m_Localized: c1b1d8eb4b8dacd418a7c8cd99ffaf50
+    m_Metadata:
+      m_Items: []
+  - m_Id: 12793624526848
+    m_Localized: d0f1805406e840d4db22bd8ffc063cc1
+    m_Metadata:
+      m_Items: []
+  - m_Id: 12795818147840
+    m_Localized: 7918be7c372a577428538abb3e865c6a
+    m_Metadata:
+      m_Items: []
+  references:
+    version: 2
+    RefIds: []

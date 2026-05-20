@@ -148,7 +148,11 @@ MonoBehaviour:
   optionGap: 60
   optionAreaPadding: 25
   dialogueAnimPlayer: {fileID: 0}
+  dialogueDataTable:
+    m_TableCollectionName: DialogueDataTable
+    m_TableCollectionNameGuidString: beece94a4208d7742a90e6e200fd4d51
   editorTestData: {fileID: 0}
+  editorTestEntryKey: Tutorial
 --- !u!1 &3679061781877646714
 GameObject:
   m_ObjectHideFlags: 0

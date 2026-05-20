@@ -8,6 +8,8 @@ using UnityEngine;
 public sealed class DialogueOnceUserConfigTrigger : MonoBehaviour
 {
     [SerializeField] private DialogueSequencePlayer sequencePlayer;
+    [Tooltip("DialogueDataTable 条目 Key；非空时优先于 dialogueData。")]
+    [SerializeField] private string dialogueTableEntryKey;
     [SerializeField] private DialogueData dialogueData;
     [Tooltip("UserConfig 中用于「已播过」的 bool 键。")]
     [SerializeField] private string userConfigKey = "FirstEnterWorld1DialogueShown";
@@ -31,9 +33,12 @@ public sealed class DialogueOnceUserConfigTrigger : MonoBehaviour
             }
         }
 
-        if (dialogueData == null)
+        bool useTable = !string.IsNullOrEmpty(dialogueTableEntryKey);
+        if (!useTable && dialogueData == null)
         {
-            Debug.LogError("[DialogueOnceUserConfigTrigger] 未指定 DialogueData。", this);
+            Debug.LogError(
+                "[DialogueOnceUserConfigTrigger] 请指定 dialogueTableEntryKey 或 dialogueData。",
+                this);
             return;
         }
 
@@ -64,7 +69,12 @@ public sealed class DialogueOnceUserConfigTrigger : MonoBehaviour
     {
         sequencePlayer.SessionEnded += OnSessionEnded;
         subscribed = true;
-        if (!sequencePlayer.Play(dialogueData))
+        bool useTable = !string.IsNullOrEmpty(dialogueTableEntryKey);
+        bool started = useTable
+            ? sequencePlayer.Play(dialogueTableEntryKey)
+            : sequencePlayer.Play(dialogueData);
+
+        if (!started)
         {
             sequencePlayer.SessionEnded -= OnSessionEnded;
             subscribed = false;

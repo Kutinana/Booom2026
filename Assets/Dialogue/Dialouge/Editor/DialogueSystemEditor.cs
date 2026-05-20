@@ -14,11 +14,17 @@ public class DialogueSystemEditor : Editor
         EditorGUILayout.Space();
         EditorGUILayout.LabelField("调试播放", EditorStyles.boldLabel);
 
-        using (new EditorGUI.DisabledScope(!Application.isPlaying || system.editorTestData == null))
+        bool hasDirectData = system.editorTestData != null;
+        bool hasTableKey = !string.IsNullOrEmpty(system.editorTestEntryKey);
+
+        using (new EditorGUI.DisabledScope(!Application.isPlaying || (!hasDirectData && !hasTableKey)))
         {
-            if (GUILayout.Button("播放选中的 DialogueData"))
+            if (GUILayout.Button("播放测试对话（表 Key 优先）"))
             {
-                system.StartDialogue(system.editorTestData);
+                if (hasTableKey)
+                    system.StartDialogue(system.editorTestEntryKey);
+                else
+                    system.StartDialogue(system.editorTestData);
             }
         }
 
@@ -26,9 +32,11 @@ public class DialogueSystemEditor : Editor
         {
             EditorGUILayout.HelpBox("仅在 Play Mode 下可用。", MessageType.Info);
         }
-        else if (system.editorTestData == null)
+        else if (!hasDirectData && !hasTableKey)
         {
-            EditorGUILayout.HelpBox("请先在上方 \"Editor 测试\" 中指定一个 DialogueData。", MessageType.Warning);
+            EditorGUILayout.HelpBox(
+                "请指定 editorTestEntryKey（DialogueDataTable 条目）或 editorTestData。",
+                MessageType.Warning);
         }
     }
 }

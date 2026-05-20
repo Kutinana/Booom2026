@@ -4,6 +4,10 @@ using System.Collections.Generic;
 using Kuchinashi.Utils.Progressable;
 using TMPro;
 using UnityEngine;
+using UnityEngine.Localization;
+using UnityEngine.Localization.Settings;
+using UnityEngine.Localization.Tables;
+using UnityEngine.ResourceManagement.AsyncOperations;
 using UnityEngine.UI;
 
 public class DialogueSystem : MonoBehaviour
@@ -47,10 +51,17 @@ public class DialogueSystem : MonoBehaviour
     [Tooltip("在句首或句中写 <anim=状态名>，本行开始展示前会调用 SwitchAnimationTo；可为空。")]
     [SerializeField] private PlayerController dialogueAnimPlayer;
 
+    [Header("Localization")]
+    [SerializeField] private TableReference dialogueDataTable;
+    const string DefaultDialogueTableName = "DialogueDataTable";
+
     [Header("Editor Test")]
     public DialogueData editorTestData;
+    [Tooltip("Play Mode 下通过 DialogueDataTable 测试播放；优先于 editorTestData。")]
+    public string editorTestEntryKey = "Tutorial";
 
     private DialogueLine activeLine;
+    private Coroutine loadLocalizedDialogueCoroutine;
     private bool awaitingOptionPick;
     private bool activeLineHasOptions;
 
@@ -89,9 +100,84 @@ public class DialogueSystem : MonoBehaviour
             EndALine();
     }
 
-    // 开始对话
+    /// <summary>
+    /// 按 <see cref="DialogueDataTable"/> 中的条目 Key 加载当前语言的 <see cref="DialogueData"/> 并播放。
+    /// 可供 UnityEvent（字符串参数）或 Timeline 调用。
+    /// </summary>
+    public void StartDialogue(string entryKey)
+    {
+        if (string.IsNullOrEmpty(entryKey))
+        {
+            Debug.LogError("DialogueSystem: 对话表条目 Key 为空。", this);
+            return;
+        }
+
+        TableEntryReference entry = entryKey;
+        StartDialogue(entry);
+    }
+
+    /// <summary>使用表内条目引用（与 Inspector 下拉一致）开始对话。</summary>
+    public void StartDialogue(TableEntryReference entry)
+    {
+        if (entry.KeyId == 0 && string.IsNullOrEmpty(entry.Key))
+        {
+            Debug.LogError("DialogueSystem: TableEntryReference 无效。", this);
+            return;
+        }
+
+        EnsureDialogueTableReference();
+        this.EnsureCoroutineStopped(ref loadLocalizedDialogueCoroutine);
+        loadLocalizedDialogueCoroutine = StartCoroutine(LoadAndStartDialogueRoutine(entry));
+    }
+
+    IEnumerator LoadAndStartDialogueRoutine(TableEntryReference entry)
+    {
+        if (!LocalizationSettings.InitializationOperation.IsDone)
+            yield return LocalizationSettings.InitializationOperation;
+
+        var handle = LocalizationSettings.AssetDatabase.GetLocalizedAssetAsync<DialogueData>(
+            dialogueDataTable, entry);
+
+        yield return handle;
+
+        string entryLabel = !string.IsNullOrEmpty(entry.Key) ? entry.Key : entry.KeyId.ToString();
+
+        if (handle.Status != AsyncOperationStatus.Succeeded || handle.Result == null)
+        {
+            Debug.LogError(
+                $"DialogueSystem: 无法从 DialogueDataTable 加载「{entryLabel}」(status={handle.Status})。",
+                this);
+            if (handle.IsValid())
+                handle.Release();
+            yield break;
+        }
+
+        var data = handle.Result;
+        if (handle.IsValid())
+            handle.Release();
+
+        StartDialogue(data);
+    }
+
+    void EnsureDialogueTableReference()
+    {
+        if (!string.IsNullOrEmpty(dialogueDataTable.TableCollectionName))
+            return;
+        if (dialogueDataTable.TableCollectionNameGuid != System.Guid.Empty)
+            return;
+
+        dialogueDataTable = DefaultDialogueTableName;
+    }
+
+    // 开始对话（直接传入资源，不经过本地化表）
     public void StartDialogue(DialogueData data)
     {
+        if (data == null)
+        {
+            Debug.LogError("DialogueSystem: DialogueData 为空。", this);
+            return;
+        }
+
         progressable.LinearTransition(0.1f);
         dialogueQueue.Clear();
         ClearOptionsUI();

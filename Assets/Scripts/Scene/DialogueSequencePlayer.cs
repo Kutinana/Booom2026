@@ -23,6 +23,30 @@ public sealed class DialogueSequencePlayer : MonoBehaviour
 
     public bool IsSessionActive => sessionActive;
 
+    /// <summary>通过 <see cref="DialogueDataTable"/> 条目 Key 开始对话；若已有本会话在播则忽略。</summary>
+    public bool Play(string dialogueTableEntryKey)
+    {
+        if (string.IsNullOrEmpty(dialogueTableEntryKey))
+        {
+            Debug.LogWarning("[DialogueSequencePlayer] 对话表条目 Key 为空。", this);
+            return false;
+        }
+
+        if (!EnsureDialogueSystem())
+            return false;
+
+        if (sessionActive)
+        {
+            Debug.LogWarning("[DialogueSequencePlayer] 已有对话会话进行中，忽略重复 Play。", this);
+            return false;
+        }
+
+        BeginSession();
+        dialogueSystem.OnDialogueEnded += OnHostedDialogueEnded;
+        dialogueSystem.StartDialogue(dialogueTableEntryKey);
+        return true;
+    }
+
     /// <summary>开始一段对话；若已有本会话在播则忽略。成功开始则返回 true。</summary>
     public bool Play(DialogueData data)
     {
@@ -32,15 +56,8 @@ public sealed class DialogueSequencePlayer : MonoBehaviour
             return false;
         }
 
-        if (dialogueSystem == null)
-        {
-            dialogueSystem = FindFirstObjectByType<DialogueSystem>();
-            if (dialogueSystem == null)
-            {
-                Debug.LogError("[DialogueSequencePlayer] 未指定且找不到 DialogueSystem。", this);
-                return false;
-            }
-        }
+        if (!EnsureDialogueSystem())
+            return false;
 
         if (sessionActive)
         {
@@ -48,6 +65,29 @@ public sealed class DialogueSequencePlayer : MonoBehaviour
             return false;
         }
 
+        BeginSession();
+        dialogueSystem.OnDialogueEnded += OnHostedDialogueEnded;
+        dialogueSystem.StartDialogue(data);
+        return true;
+    }
+
+    bool EnsureDialogueSystem()
+    {
+        if (dialogueSystem != null)
+            return true;
+
+        dialogueSystem = FindFirstObjectByType<DialogueSystem>();
+        if (dialogueSystem == null)
+        {
+            Debug.LogError("[DialogueSequencePlayer] 未指定且找不到 DialogueSystem。", this);
+            return false;
+        }
+
+        return true;
+    }
+
+    void BeginSession()
+    {
         sessionActive = true;
         movementLockedThisSession = false;
         blackEdgesUsedThisSession = false;
@@ -67,10 +107,6 @@ public sealed class DialogueSequencePlayer : MonoBehaviour
             blackEdges.LinearTransition(blackEdgeFadeSeconds);
             blackEdgesUsedThisSession = true;
         }
-
-        dialogueSystem.OnDialogueEnded += OnHostedDialogueEnded;
-        dialogueSystem.StartDialogue(data);
-        return true;
     }
 
     void OnDisable()

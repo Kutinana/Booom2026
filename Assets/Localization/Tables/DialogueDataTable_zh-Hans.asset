@@ -1,0 +1,39 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 97269afb30aa84742ae3f3342603618a, type: 3}
+  m_Name: DialogueDataTable_zh-Hans
+  m_EditorClassIdentifier: 
+  m_LocaleId:
+    m_Code: zh-Hans
+  m_SharedData: {fileID: 11400000, guid: beece94a4208d7742a90e6e200fd4d51, type: 2}
+  m_Metadata:
+    m_Items: []
+  m_TableData:
+  - m_Id: 64029327360
+    m_Localized: 86668d4b8be1d784cb118486f0c8e8df
+    m_Metadata:
+      m_Items: []
+  - m_Id: 5917314777088
+    m_Localized: 6c716505de14468438f9f969e8743050
+    m_Metadata:
+      m_Items: []
+  - m_Id: 12793624526848
+    m_Localized: 8b3c49e26b3599d43a48ed79631f759b
+    m_Metadata:
+      m_Items: []
+  - m_Id: 12795818147840
+    m_Localized: 61020cb83d86a1d4480bdd36e2dda306
+    m_Metadata:
+      m_Items: []
+  references:
+    version: 2
+    RefIds: []

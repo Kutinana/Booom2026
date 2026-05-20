@@ -1,0 +1,36 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: be9ae3e917553264f81b42cdb9e1a49a, type: 3}
+  m_Name: ja_FirstEnterWorld1
+  m_EditorClassIdentifier: 
+  lines:
+  - text: "\u4F60\u597D\uFF0C\u4EBA\u3002"
+    options:
+    - "\u4F60\u597D\uFF0C\u7AE0\u9C7C\u3002"
+    - "\u5594\u4F60\u4F1A\u8BF4\u8BDD\u4E86"
+  - text: "\u56E0\u4E3A<anim:wave><color=red>\u7075\u77E5</color></anim>\u3002"
+    options:
+    - "\u7075\u77E5\uFF1F"
+  - text: "\u662F\u5149\u70B9\u3002"
+    options:
+    - "\u5149\u70B9\u662F\u7075\u77E5\u2026\u2026\uFF1F"
+  - text: "\u603B\u4E4B\uFF0C\u8981\u66F4\u591A\u3002"
+    options:
+    - "\u8D2A\u5A6A\u7684\u7AE0\u9C7C\u554A\u2026\u2026"
+    - "\u524D\u9762\u7684\u76D2\u5B50\u662F\uFF1F"
+  - text: "\u5B58\u6709<anim:wave><color=red>\u7075\u77E5</color></anim>\u7684\u4E16\u754C\uFF0C\u5728<anim:wave><color=red>\u6D41\u6EA2</color></anim>\u3002"
+    options:
+    - "\u90A3\u5C31\u8D70\u5427"
+  - text: "\u53EF\u662F\uFF0C\u4E0D\u77E5\u9053\u600E\u4E48\u8FDB\u53BB\u2026\u2026"
+    options:
+    - "\u8FD9\u79CD\u65F6\u5019\u5927\u5BB6\u90FD\u662F"
+    - "\u5BF9\u51C6\u5B83\u6309E\u5C31\u597D\u4E86"

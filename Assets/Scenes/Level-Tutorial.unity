@@ -9291,13 +9291,13 @@ MonoBehaviour:
         - m_Target: {fileID: 1363794728}
           m_TargetAssemblyTypeName: DialogueSystem, Assembly-CSharp
           m_MethodName: StartDialogue
-          m_Mode: 2
+          m_Mode: 5
           m_Arguments:
-            m_ObjectArgument: {fileID: 11400000, guid: 86668d4b8be1d784cb118486f0c8e8df, type: 2}
-            m_ObjectArgumentAssemblyTypeName: DialogueData, Assembly-CSharp
+            m_ObjectArgument: {fileID: 0}
+            m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
             m_IntArgument: 0
             m_FloatArgument: 0
-            m_StringArgument: 
+            m_StringArgument: Tutorial
             m_BoolArgument: 0
           m_CallState: 2
     - m_PersistentCalls:
@@ -9319,13 +9319,13 @@ MonoBehaviour:
         - m_Target: {fileID: 1363794728}
           m_TargetAssemblyTypeName: DialogueSystem, Assembly-CSharp
           m_MethodName: StartDialogue
-          m_Mode: 2
+          m_Mode: 5
           m_Arguments:
-            m_ObjectArgument: {fileID: 11400000, guid: 6c716505de14468438f9f969e8743050, type: 2}
-            m_ObjectArgumentAssemblyTypeName: DialogueData, Assembly-CSharp
+            m_ObjectArgument: {fileID: 0}
+            m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
             m_IntArgument: 0
             m_FloatArgument: 0
-            m_StringArgument: 
+            m_StringArgument: AfterTutorial
             m_BoolArgument: 0
           m_CallState: 2
     - m_PersistentCalls:
