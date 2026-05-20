@@ -19,6 +19,10 @@ MonoBehaviour:
     m_Key: str_PressRHint
     m_Metadata:
       m_Items: []
+  - m_Id: 6099146244096
+    m_Key: str_Locale
+    m_Metadata:
+      m_Items: []
   m_Metadata:
     m_Items: []
   m_KeyGenerator:

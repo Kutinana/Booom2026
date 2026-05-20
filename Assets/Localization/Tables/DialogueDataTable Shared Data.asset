@@ -51,17 +51,21 @@ MonoBehaviour:
           m_TableCodes:
           - zh-Hans
           - en
+          - ja
         - m_KeyId: 5917314777088
           m_TableCodes:
           - zh-Hans
           - en
+          - ja
         - m_KeyId: 12793624526848
           m_TableCodes:
           - en
           - zh-Hans
+          - ja
         - m_KeyId: 12795818147840
           m_TableCodes:
           - zh-Hans
           - en
+          - ja
         m_TypeString: DialogueData, Assembly-CSharp, Version=0.0.0.0, Culture=neutral,
           PublicKeyToken=null

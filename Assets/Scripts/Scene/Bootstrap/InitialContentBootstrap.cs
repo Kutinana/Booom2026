@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.IO;
 using Kuchinashi.SceneFlow;
 using UnityEngine;
@@ -23,39 +24,44 @@ public class InitialContentBootstrap : MonoBehaviour
 
     #region Unity Lifecycle
 
-    private void Start()
+    private IEnumerator Start()
     {
+        while (LanguageSelectorController.IsAwaitingFirstLaunchSelection)
+            yield return null;
+
         GameConfig gameConfig = GameConfig.Current;
         if (gameConfig == null)
         {
+#if UNITY_EDITOR
             Debug.LogError("[InitialContentBootstrap] GameConfig.Current 为空，请确认 GameManager 已挂载并指定 GameConfig。", this);
-            return;
+#endif
+            yield break;
         }
 
         var host = m_SceneFlowHost != null ? m_SceneFlowHost : FindFirstObjectByType<SceneFlowHost>();
         if (host == null)
         {
             Debug.LogError("[InitialContentBootstrap] 未找到 SceneFlowHost。", this);
-            return;
+            yield break;
         }
 
         if (!host.TryGetComponent(out SceneFlowController controller))
         {
             Debug.LogError("[InitialContentBootstrap] SceneFlowHost 上缺少 SceneFlowController。", host);
-            return;
+            yield break;
         }
 
         if (!controller.IsConfigured)
         {
             Debug.LogError("[InitialContentBootstrap] SceneFlowController 尚未 Configure。", this);
-            return;
+            yield break;
         }
 
         string targetSceneName = ResolveTargetSceneName(gameConfig, new Save().DeSerialize<Save>());
         if (string.IsNullOrEmpty(targetSceneName))
         {
             Debug.LogError("[InitialContentBootstrap] 无法解析目标内容场景名（请检查 GameConfig 与 ScenePath）。", this);
-            return;
+            yield break;
         }
 
         if (!controller.TryLoadInitialContentAdditiveDirect(targetSceneName, false))
