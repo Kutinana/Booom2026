@@ -42,7 +42,9 @@ public class LevelSelectorController : MonoBehaviour
 
         if (buttonsParent == null || buttonTemplate == null)
         {
+#if UNITY_EDITOR
             Debug.LogWarning("[LevelSelector] 请指定 Buttons Parent 与 Button Template。");
+#endif
             return;
         }
 
@@ -67,7 +69,9 @@ public class LevelSelectorController : MonoBehaviour
             }
             else
             {
+#if UNITY_EDITOR
                 Debug.LogWarning($"[LevelSelector] 模板上未找到 Button，场景「{sceneName}」的实例将无法点击。");
+#endif
             }
 
             spawnedInstances.Add(instance);
@@ -79,7 +83,9 @@ public class LevelSelectorController : MonoBehaviour
         var host = sceneFlowHost != null ? sceneFlowHost : FindFirstObjectByType<SceneFlowHost>();
         if (host == null)
         {
+#if UNITY_EDITOR
             Debug.LogError("[LevelSelector] 未找到 SceneFlowHost，无法切换场景。请在 Shell 上配置 SceneFlowHost 或在本组件上指定引用。");
+#endif
             return;
         }
 
@@ -89,7 +95,9 @@ public class LevelSelectorController : MonoBehaviour
         }
         else
         {
+#if UNITY_EDITOR
             Debug.LogWarning($"[LevelSelector] 跳转「{sceneName}」失败（可能未加入 Build、与 Shell 同名或正在过渡中）。");
+#endif
         }
     }
 

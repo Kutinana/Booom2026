@@ -28,7 +28,9 @@ public sealed class DialogueOnceUserConfigTrigger : MonoBehaviour
             sequencePlayer = FindFirstObjectByType<DialogueSequencePlayer>();
             if (sequencePlayer == null)
             {
+#if UNITY_EDITOR
                 Debug.LogError("[DialogueOnceUserConfigTrigger] 未指定 DialogueSequencePlayer。", this);
+#endif
                 return;
             }
         }
@@ -36,9 +38,11 @@ public sealed class DialogueOnceUserConfigTrigger : MonoBehaviour
         bool useTable = !string.IsNullOrEmpty(dialogueTableEntryKey);
         if (!useTable && dialogueData == null)
         {
+#if UNITY_EDITOR
             Debug.LogError(
                 "[DialogueOnceUserConfigTrigger] 请指定 dialogueTableEntryKey 或 dialogueData。",
                 this);
+#endif
             return;
         }
 

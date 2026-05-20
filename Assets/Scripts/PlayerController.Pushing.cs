@@ -120,9 +120,11 @@ public partial class PlayerController
 
             if (debugWorldBoxInnerExitEdge)
             {
+#if UNITY_EDITOR
                 Debug.Log(
                     $"[Player] WorldBox exit edge: rawInnerBlocked={rawInnerBlocked} innerBlocked={innerBlocked} hadInnerBlock={worldBoxExitHadInnerBlock} box={box.name} dir={direction}",
                     this);
+#endif
             }
 
             if (innerBlocked)
@@ -288,6 +290,7 @@ public partial class PlayerController
 
         activePushBox = null;
         activePushCanPush = false;
+        RefreshCachedMovementStateFlags();
         worldBoxExitHadInnerBlock = false;
         worldBoxExitPendingPressureLogicalUnblock = false;
         worldBoxPressureLatchHadPlayerOnAnyPlate = false;

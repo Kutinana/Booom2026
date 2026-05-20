@@ -144,12 +144,16 @@ public class CollectiveStar : MonoBehaviour
 
         if (pickupCollider3D != null && !pickupCollider3D.isTrigger)
         {
+#if UNITY_EDITOR
             Debug.LogWarning($"CollectiveStar '{name}': 3D Collider 建议勾选 Is Trigger，否则 OnTriggerEnter 不会触发。", this);
+#endif
         }
 
         if (pickupCollider2D != null && !pickupCollider2D.isTrigger)
         {
+#if UNITY_EDITOR
             Debug.LogWarning($"CollectiveStar '{name}': 2D Collider 建议勾选 Is Trigger。", this);
+#endif
         }
     }
 #endif

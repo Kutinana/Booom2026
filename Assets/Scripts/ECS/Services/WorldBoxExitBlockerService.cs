@@ -19,8 +19,8 @@ public class WorldBoxExitBlockerService : ServiceBase
     #region Debug Fields
 
     [Header("Debug")]
-    [SerializeField] private bool logInnerTargetOverlapHits = true;
-    [SerializeField] private bool drawInnerTargetOverlapGizmos = true;
+    [SerializeField] private bool logInnerTargetOverlapHits = false;
+    [SerializeField] private bool drawInnerTargetOverlapGizmos = false;
     [SerializeField, Min(0f)] private float innerTargetOverlapGizmoDuration = 1f;
 
     private readonly Dictionary<WorldBox, DebugOverlapQuery2D> debugOverlapQueries2D = new Dictionary<WorldBox, DebugOverlapQuery2D>();
@@ -413,9 +413,11 @@ public class WorldBoxExitBlockerService : ServiceBase
             return;
         }
 
+#if UNITY_EDITOR
         Debug.Log(
             $"[WorldBoxExitBlocker] Target scan {physicsType}: worldBox={GetObjectPath(worldBox != null ? worldBox.transform : null)}, hitCount={hitCount}, center={queryBounds.center}, size={queryBounds.size}, mask={blockingMask.value}",
             this);
+#endif
     }
 
     private void LogTargetHit(string physicsType, WorldBox worldBox, Collider2D hit, bool accepted, string rejectReason)
@@ -427,13 +429,17 @@ public class WorldBoxExitBlockerService : ServiceBase
 
         if (hit == null)
         {
+#if UNITY_EDITOR
             Debug.Log($"[WorldBoxExitBlocker] Target hit {physicsType}: null, status=ignore: {rejectReason}", this);
+#endif
             return;
         }
 
+#if UNITY_EDITOR
         Debug.Log(
             $"[WorldBoxExitBlocker] Target hit {physicsType}: status={FormatHitStatus(accepted, rejectReason)}, worldBox={GetObjectPath(worldBox != null ? worldBox.transform : null)}, collider={GetObjectPath(hit.transform)}, tag={hit.tag}, layer={GetLayerLabel(hit.gameObject.layer)}, enabled={hit.enabled}, isTrigger={hit.isTrigger}, boundsCenter={hit.bounds.center}, boundsSize={hit.bounds.size}",
             hit);
+#endif
     }
 
     private void LogTargetHit(string physicsType, WorldBox worldBox, Collider hit, bool accepted, string rejectReason)
@@ -445,13 +451,17 @@ public class WorldBoxExitBlockerService : ServiceBase
 
         if (hit == null)
         {
+#if UNITY_EDITOR
             Debug.Log($"[WorldBoxExitBlocker] Target hit {physicsType}: null, status=ignore: {rejectReason}", this);
+#endif
             return;
         }
 
+#if UNITY_EDITOR
         Debug.Log(
             $"[WorldBoxExitBlocker] Target hit {physicsType}: status={FormatHitStatus(accepted, rejectReason)}, worldBox={GetObjectPath(worldBox != null ? worldBox.transform : null)}, collider={GetObjectPath(hit.transform)}, tag={hit.tag}, layer={GetLayerLabel(hit.gameObject.layer)}, enabled={hit.enabled}, isTrigger={hit.isTrigger}, boundsCenter={hit.bounds.center}, boundsSize={hit.bounds.size}",
             hit);
+#endif
     }
 
     private void RecordDebugOverlapQuery2D(

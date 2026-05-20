@@ -75,29 +75,13 @@ public partial class PlayerController : MonoBehaviour, ISceneMovableItem, IPoint
     /// <summary>
     /// 玩家是否处于"推动"状态（驱动阶段或被释放过渡拖动阶段）。用于动画切换。
     /// </summary>
-    public bool IsPushing
-    {
-        get
-        {
-            if (activePushBox != null && activePushCanPush)
-            {
-                return true;
-            }
-
-            if (ServiceBase.TryGet(out PhysicalBoxService svc) && svc.IsPusherInRelease(gameObject))
-            {
-                return true;
-            }
-
-            return false;
-        }
-    }
+    public bool IsPushing => m_CachedIsPushing;
 
     /// <summary>
     /// 玩家是否处于"被砸死"过渡：动画/物理层据此完全冻结玩家位置并切换到 crashed 动画。
     /// 由 <see cref="PlayerService"/> 维护，新玩家注册时清零。
     /// </summary>
-    public bool IsDying => ServiceBase.TryGet(out PlayerService ps) && ps.IsDying && ps.Player == this;
+    public bool IsDying => m_CachedIsDying;
 
     /// <summary>
     /// 为 <c>true</c> 时不读取键盘产生的移动、跳跃与平台下落输入；重力与已有速度仍正常结算。
@@ -118,7 +102,11 @@ public partial class PlayerController : MonoBehaviour, ISceneMovableItem, IPoint
     private StandardBox downBox;
 
     private IUnRegister pressurePlateStateUnRegister;
-    
+    private PlayerService m_PlayerService;
+    private PhysicalBoxService m_PhysicalBoxService;
+    private bool m_CachedIsPushing;
+    private bool m_CachedIsDying;
+
     private readonly Queue<Transform> bfsQueue = new Queue<Transform>(32);
     private readonly RaycastHit2D[] hits2D = new RaycastHit2D[8];
     private readonly RaycastHit[] hits3D = new RaycastHit[8];
@@ -132,9 +120,14 @@ public partial class PlayerController : MonoBehaviour, ISceneMovableItem, IPoint
         m_Collider3D = GetComponent<Collider>();
         m_Collider2D = GetComponent<Collider2D>();
         sceneMovableBoundsProvider = new ColliderSceneMovableBoundsProvider(gameObject, transform, m_Collider3D, m_Collider2D);
-        ServiceBase.Get<PlayerService>()?.Register(this);
+        ServiceBase.TryGet(out m_PlayerService);
+        ServiceBase.TryGet(out m_PhysicalBoxService);
+        m_PlayerService ??= ServiceBase.Get<PlayerService>();
+        m_PlayerService?.Register(this);
+        m_PhysicalBoxService ??= ServiceBase.Get<PhysicalBoxService>();
         ServiceBase.Get<SceneMovableInteractionService>()?.Register(this);
         pressurePlateStateUnRegister = TypeEventSystem.Global.Register<PressurePlateStateEvent>(OnPressurePlateState);
+        RefreshCachedMovementStateFlags();
 
         if (body3D != null)
         {
@@ -228,6 +221,8 @@ public partial class PlayerController : MonoBehaviour, ISceneMovableItem, IPoint
 
     private void Update()
     {
+        RefreshCachedMovementStateFlags();
+
         if (MovementInputDisabled || IsMovementBlockedByAppearIntro())
         {
             moveInput = Vector2.zero;
@@ -260,6 +255,8 @@ public partial class PlayerController : MonoBehaviour, ISceneMovableItem, IPoint
 
     private void FixedUpdate()
     {
+        RefreshCachedMovementStateFlags();
+
         if (IsDying)
         {
             return;
@@ -322,6 +319,21 @@ public partial class PlayerController : MonoBehaviour, ISceneMovableItem, IPoint
         MoveByAndResolve(new Vector3(0f, delta.y, 0f));
         RefreshContacts();
         HandleWorldBoxUpPush(delta.y);
+        RefreshCachedMovementStateFlags();
+    }
+
+    private void RefreshCachedMovementStateFlags()
+    {
+        m_CachedIsDying = m_PlayerService != null && m_PlayerService.IsDying && m_PlayerService.Player == this;
+
+        if (activePushBox != null && activePushCanPush)
+        {
+            m_CachedIsPushing = true;
+            return;
+        }
+
+        m_CachedIsPushing =
+            m_PhysicalBoxService != null && m_PhysicalBoxService.IsPusherInRelease(gameObject);
     }
 
     private void MoveTo(Vector3 position)

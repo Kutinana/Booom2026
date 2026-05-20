@@ -22,6 +22,8 @@ public class SceneMovableInteractionService : ServiceBase
     private bool hasPreviousPlayerBounds;
     private PlayerBoundsProvider playerBoundsProvider;
     private QuadTree quadTree;
+    private QuadTree currentBoundsQuadTree;
+    private int currentBoundsQuadTreeFrame = -1;
 
     public void Register(ISceneMovableItem item)
     {
@@ -31,6 +33,7 @@ public class SceneMovableInteractionService : ServiceBase
         }
 
         items.Add(item);
+        InvalidateCurrentBoundsQuadTree();
         SendEvent(new SceneMovableItemsChangedEvent());
     }
 
@@ -44,6 +47,7 @@ public class SceneMovableInteractionService : ServiceBase
         items.Remove(item);
         previousItemBounds.Remove(item);
         nextImpactTimes.Remove(item);
+        InvalidateCurrentBoundsQuadTree();
         SendEvent(new SceneMovableItemsChangedEvent());
     }
 
@@ -60,8 +64,13 @@ public class SceneMovableInteractionService : ServiceBase
             return 0;
         }
 
-        QuadTree queryTree = BuildCurrentBoundsQuadTree(queryBounds);
-        queryTree.Query(queryBounds, results);
+        EnsureCurrentBoundsQuadTree();
+        if (currentBoundsQuadTree == null)
+        {
+            return 0;
+        }
+
+        currentBoundsQuadTree.Query(queryBounds, results);
         return results.Count;
     }
 
@@ -110,6 +119,7 @@ public class SceneMovableInteractionService : ServiceBase
         bool sceneMovableBoundsChanged = CollectSceneMovableSnapshot();
         if (sceneMovableBoundsChanged)
         {
+            InvalidateCurrentBoundsQuadTree();
             SendEvent(new SceneMovableItemsChangedEvent());
         }
 
@@ -303,9 +313,25 @@ public class SceneMovableInteractionService : ServiceBase
         }
     }
 
-    private QuadTree BuildCurrentBoundsQuadTree(Bounds seedBounds)
+    private void InvalidateCurrentBoundsQuadTree()
     {
-        Bounds rootBounds = seedBounds;
+        currentBoundsQuadTreeFrame = -1;
+        currentBoundsQuadTree = null;
+    }
+
+    private void EnsureCurrentBoundsQuadTree()
+    {
+        int frame = Time.frameCount;
+        if (currentBoundsQuadTreeFrame == frame)
+        {
+            return;
+        }
+
+        currentBoundsQuadTreeFrame = frame;
+        currentBoundsQuadTree = null;
+
+        Bounds rootBounds = default;
+        bool hasRoot = false;
         foreach (ISceneMovableItem item in items)
         {
             if (!IsValid(item))
@@ -319,11 +345,24 @@ public class SceneMovableInteractionService : ServiceBase
                 continue;
             }
 
-            rootBounds.Encapsulate(itemBounds);
+            if (!hasRoot)
+            {
+                rootBounds = itemBounds;
+                hasRoot = true;
+            }
+            else
+            {
+                rootBounds.Encapsulate(itemBounds);
+            }
+        }
+
+        if (!hasRoot)
+        {
+            return;
         }
 
         rootBounds.Expand(1f);
-        QuadTree tree = new QuadTree(rootBounds, quadTreeCapacity, quadTreeMaxDepth);
+        currentBoundsQuadTree = new QuadTree(rootBounds, quadTreeCapacity, quadTreeMaxDepth);
         foreach (ISceneMovableItem item in items)
         {
             if (!IsValid(item))
@@ -334,11 +373,9 @@ public class SceneMovableInteractionService : ServiceBase
             Bounds itemBounds = item.BoundsProvider.Bounds;
             if (itemBounds.size != Vector3.zero)
             {
-                tree.Insert(item, itemBounds);
+                currentBoundsQuadTree.Insert(item, itemBounds);
             }
         }
-
-        return tree;
     }
 
     private Bounds GetTreeBounds(ISceneMovableItem item)

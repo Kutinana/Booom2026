@@ -17,6 +17,35 @@ public class PlayerService : ServiceBase
     public PlayerController Player { get; private set; }
     public bool HasPlayer => Player != null;
 
+    /// <summary>与 <see cref="PlayerAnimationController"/> 朝向判定一致的子级 <see cref="SpriteRenderer"/>。</summary>
+    public SpriteRenderer PlayerSpriteRenderer { get; private set; }
+
+    public Collider2D PlayerCollider2D { get; private set; }
+    public Collider PlayerCollider3D { get; private set; }
+
+    public bool TryGetPlayerWorldBounds(out Bounds bounds)
+    {
+        bounds = default;
+        if (Player == null)
+        {
+            return false;
+        }
+
+        if (PlayerCollider2D != null)
+        {
+            bounds = PlayerCollider2D.bounds;
+            return bounds.size != Vector3.zero;
+        }
+
+        if (PlayerCollider3D != null)
+        {
+            bounds = PlayerCollider3D.bounds;
+            return bounds.size != Vector3.zero;
+        }
+
+        return false;
+    }
+
     /// <summary>
     /// 玩家正处于死亡过渡中（已收到 PlayerDeathEvent，正在等待场景 reload）。
     /// 期间禁用玩家输入，并供物理/碰撞模块跳过后续 impact 检测，避免重复触发。
@@ -58,10 +87,16 @@ public class PlayerService : ServiceBase
 
         if (Player != null && Player != player)
         {
+#if UNITY_EDITOR
             Debug.LogWarning($"Replacing registered player '{Player.name}' with '{player.name}'.", player);
+#endif
         }
 
         Player = player;
+        GameObject playerObject = player.gameObject;
+        PlayerSpriteRenderer = player.GetComponentInChildren<SpriteRenderer>(true);
+        PlayerCollider2D = playerObject.GetComponent<Collider2D>();
+        PlayerCollider3D = playerObject.GetComponent<Collider>();
 
         // 场景 reload 后新 player 注册：清掉 dying 状态与悬挂的延迟 reload 协程；
         // 否则下一关一开始就被锁住输入，或者旧定时器到点触发了一次多余的 reload。
@@ -78,6 +113,9 @@ public class PlayerService : ServiceBase
         if (Player == player)
         {
             Player = null;
+            PlayerSpriteRenderer = null;
+            PlayerCollider2D = null;
+            PlayerCollider3D = null;
         }
     }
 
@@ -96,7 +134,9 @@ public class PlayerService : ServiceBase
 
         IsDying = true;
         Player.MovementInputDisabled = true;
+#if UNITY_EDITOR
         Debug.Log($"[PlayerService] Player died: {e.Reason} (source: {(e.Source != null ? e.Source.name : "null")})");
+#endif
 
         if (pendingReload != null)
         {

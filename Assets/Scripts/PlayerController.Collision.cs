@@ -408,7 +408,9 @@ public partial class PlayerController
             {
                 if (found != null)
                 {
+#if UNITY_EDITOR
                     Debug.LogWarning("Multiple Grid components found in the player's scene. Using the first one.", this);
+#endif
                     return found;
                 }
 

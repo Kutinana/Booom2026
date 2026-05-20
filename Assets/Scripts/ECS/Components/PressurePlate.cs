@@ -90,8 +90,10 @@ public class PressurePlate : MonoBehaviour, IPlayerRelativePositionTarget
             OnReleased?.Invoke();
         }
 
+#if UNITY_EDITOR
         Debug.Log(
             $"Pressure Plate '{name}' is now {(IsPressed ? "Pressed" : "Released")}"
         );
+#endif
     }
 }

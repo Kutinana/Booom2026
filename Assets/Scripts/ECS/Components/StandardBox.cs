@@ -266,7 +266,9 @@ public class StandardBox : MonoBehaviour, ISceneMovableItem
     [ContextMenu("Test")]
     public void Test()
     {
+#if UNITY_EDITOR
         Debug.Log(TryPush(TestDirection));
+#endif
     }
 
     public virtual void SetPushableFrom(BoxPushDirectionMask newMask)

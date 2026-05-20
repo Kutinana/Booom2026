@@ -52,7 +52,7 @@ public class PressurePlateService : ServiceBase<PressurePlate>
             pushedBox is WorldBox)
         {
             worldBoxHorizontalPush = true;
-            hasPlayerBounds = TryGetPlayerColliderWorldBounds(playerService.Player.gameObject, out playerBounds);
+            hasPlayerBounds = playerService.TryGetPlayerWorldBounds(out playerBounds);
         }
 
         if (!worldBoxHorizontalPush)
@@ -158,31 +158,6 @@ public class PressurePlateService : ServiceBase<PressurePlate>
                 plateSnapshot.Add(pressurePlate);
             }
         }
-    }
-
-    private static bool TryGetPlayerColliderWorldBounds(GameObject playerObject, out Bounds bounds)
-    {
-        bounds = default;
-        if (playerObject == null)
-        {
-            return false;
-        }
-
-        Collider2D collider2D = playerObject.GetComponent<Collider2D>();
-        if (collider2D != null)
-        {
-            bounds = collider2D.bounds;
-            return bounds.size != Vector3.zero;
-        }
-
-        Collider collider3D = playerObject.GetComponent<Collider>();
-        if (collider3D != null)
-        {
-            bounds = collider3D.bounds;
-            return bounds.size != Vector3.zero;
-        }
-
-        return false;
     }
 
     private static bool IntersectsXY(Bounds a, Bounds b)

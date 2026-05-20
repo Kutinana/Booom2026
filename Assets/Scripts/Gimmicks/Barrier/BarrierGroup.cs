@@ -23,7 +23,9 @@ public class BarrierGroup : MonoBehaviour
     {
         if (Barriers == null || Barriers.Count == 0)
         {
+#if UNITY_EDITOR
             Debug.LogWarning($"BarrierGroup '{name}' has no barriers assigned.");
+#endif
         }
     }
 

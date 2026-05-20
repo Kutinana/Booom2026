@@ -119,7 +119,9 @@ public class LevelBoxController : MonoBehaviour
         standardBox = GetComponent<StandardBox>();
         if (standardBox == null)
         {
+#if UNITY_EDITOR
             Debug.LogError("[LevelBox] 需要与本物体同挂的 StandardBox。", this);
+#endif
         }
 
         incompleteChildParticles = GetComponentsInChildren<ParticleSystem>(true);
@@ -254,6 +256,13 @@ public class LevelBoxController : MonoBehaviour
     /// </summary>
     private static Vector2 GetPlayerHorizontalFacing(PlayerController player)
     {
+        if (ServiceBase.TryGet(out PlayerService playerService) &&
+            playerService.Player == player &&
+            playerService.PlayerSpriteRenderer != null)
+        {
+            return playerService.PlayerSpriteRenderer.flipX ? Vector2.left : Vector2.right;
+        }
+
         SpriteRenderer sr = player.GetComponentInChildren<SpriteRenderer>(true);
         if (sr != null)
         {
@@ -279,7 +288,9 @@ public class LevelBoxController : MonoBehaviour
     {
         if (string.IsNullOrWhiteSpace(levelSceneName))
         {
+#if UNITY_EDITOR
             Debug.LogWarning("[LevelBox] levelSceneName 为空，无法切换场景。", this);
+#endif
             return;
         }
 
@@ -298,7 +309,9 @@ public class LevelBoxController : MonoBehaviour
                 GameManager.SetLastHubScene(gameObject.scene.name);
                 return;
             }
+#if UNITY_EDITOR
             Debug.LogWarning($"[LevelBox] SceneFlow 未切换到「{target}」（可能已在目标场景、名称非法或管线拒绝）。", this);
+#endif
             return;
         }
 
@@ -308,7 +321,9 @@ public class LevelBoxController : MonoBehaviour
             return;
         }
 
+#if UNITY_EDITOR
         Debug.LogWarning("[LevelBox] 未找到可用的 SceneFlowController / SceneFlowHost，或切换被拒绝。", this);
+#endif
     }
 
     private void EnsureSpriteRenderer()
@@ -576,7 +591,9 @@ public class LevelBoxController : MonoBehaviour
 
     private void PlayLevelOneSixCompletedBoxCgTest()
     {
+#if UNITY_EDITOR
         Debug.Log("[LevelBox] Test CG placeholder for Level 1-6 completed box.", this);
+#endif
         TypeEventSystem.Global.Send<PlayW1TEvent>();
     }
 

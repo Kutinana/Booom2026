@@ -24,6 +24,7 @@ public class AudioMng : MonoBehaviour
     private readonly Queue<SfxRequest> m_SfxQueue = new Queue<SfxRequest>();
     private readonly Dictionary<string, float> m_SfxLastPlayTimes = new Dictionary<string, float>();
     private readonly Dictionary<string, float> m_SfxCooldowns = new Dictionary<string, float>();
+    private readonly Dictionary<string, AudioClip> m_SfxClipCache = new Dictionary<string, AudioClip>();
 
     public static AudioMng Instance
     {
@@ -117,7 +118,9 @@ public class AudioMng : MonoBehaviour
     {
         if (BGM == null)
         {
+#if UNITY_EDITOR
             Debug.LogWarning("BGM AudioSource is not assigned.", this);
+#endif
             return;
         }
 
@@ -177,7 +180,9 @@ public class AudioMng : MonoBehaviour
         float decayedVolume = sqrDist > sqrScale ? volumeScale  / (sqrDist * sqrScale) : volumeScale;
         decayedVolume = Mathf.Clamp(decayedVolume, 0, volumeScale);
         PlaySfx(name, decayedVolume);
+#if UNITY_EDITOR
         Debug.Log($"Play {name} volume {decayedVolume}");
+#endif
     }
 
     private void TryPlayQueuedSfx(SfxRequest request)
@@ -187,10 +192,20 @@ public class AudioMng : MonoBehaviour
             return;
         }
 
-        AudioClip clip = Resources.Load<AudioClip>(request.Name);
+        if (!m_SfxClipCache.TryGetValue(request.Name, out AudioClip clip))
+        {
+            clip = Resources.Load<AudioClip>(request.Name);
+            if (clip != null)
+            {
+                m_SfxClipCache[request.Name] = clip;
+            }
+        }
+
         if (clip == null)
         {
+#if UNITY_EDITOR
             Debug.LogWarning($"SFX not found in Resources: {request.Name}", this);
+#endif
             return;
         }
 
@@ -251,7 +266,9 @@ public class AudioMng : MonoBehaviour
         TextAsset config = Resources.Load<TextAsset>(SfxConfigPath);
         if (config == null)
         {
+#if UNITY_EDITOR
             Debug.LogWarning("SFX config not found in Resources: sfx_config.csv", this);
+#endif
             return;
         }
 
@@ -267,7 +284,9 @@ public class AudioMng : MonoBehaviour
             string[] columns = line.Split(',');
             if (columns.Length < 2)
             {
+#if UNITY_EDITOR
                 Debug.LogWarning($"Invalid SFX config row: {line}", this);
+#endif
                 continue;
             }
 
@@ -284,7 +303,9 @@ public class AudioMng : MonoBehaviour
 
             if (!float.TryParse(columns[1].Trim(), NumberStyles.Float, CultureInfo.InvariantCulture, out float cooldownSeconds))
             {
+#if UNITY_EDITOR
                 Debug.LogWarning($"Invalid SFX cooldown value: {line}", this);
+#endif
                 continue;
             }
 
@@ -294,7 +315,9 @@ public class AudioMng : MonoBehaviour
             }
 
             m_SfxCooldowns[name] = cooldownSeconds;
+#if UNITY_EDITOR
             Debug.Log($"Loaded SFX cooldown config: {name} = {cooldownSeconds}s");
+#endif
         }
     }
 

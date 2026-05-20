@@ -11,6 +11,9 @@ public class DialogueVertexAnimator {
     private readonly TMP_Text textBox;
     private readonly float textAnimationScale;
     private readonly AudioSourceGroup audioSourceGroup;
+    private readonly List<TextAnimInfo> textAnimInfoScratch = new List<TextAnimInfo>(8);
+    private readonly List<DialogueCommand> animStartCommandsScratch = new List<DialogueCommand>(8);
+    private readonly List<DialogueCommand> animEndCommandsScratch = new List<DialogueCommand>(8);
     public DialogueVertexAnimator(TMP_Text _textBox, AudioSourceGroup _audioSourceGroup) {
         textBox = _textBox;
         audioSourceGroup = _audioSourceGroup;
@@ -182,35 +185,35 @@ public class DialogueVertexAnimator {
     }
 
     private TextAnimInfo[] SeparateOutTextAnimInfo(List<DialogueCommand> commands) {
-        List<TextAnimInfo> tempResult = new List<TextAnimInfo>();
-        List<DialogueCommand> animStartCommands = new List<DialogueCommand>();
-        List<DialogueCommand> animEndCommands = new List<DialogueCommand>();
+        textAnimInfoScratch.Clear();
+        animStartCommandsScratch.Clear();
+        animEndCommandsScratch.Clear();
         for (int i = 0; i < commands.Count; i++) {
             DialogueCommand command = commands[i];
             if (command.type == DialogueCommandType.AnimStart) {
-                animStartCommands.Add(command);
+                animStartCommandsScratch.Add(command);
                 commands.RemoveAt(i);
                 i--;
             } else if (command.type == DialogueCommandType.AnimEnd) {
-                animEndCommands.Add(command);
+                animEndCommandsScratch.Add(command);
                 commands.RemoveAt(i);
                 i--;
             }
         }
-        if (animStartCommands.Count != animEndCommands.Count) {
-            Debug.LogError("Unequal number of start and end animation commands. Start Commands: " + animStartCommands.Count + " End Commands: " + animEndCommands.Count);
+        if (animStartCommandsScratch.Count != animEndCommandsScratch.Count) {
+            Debug.LogError("Unequal number of start and end animation commands. Start Commands: " + animStartCommandsScratch.Count + " End Commands: " + animEndCommandsScratch.Count);
         } else {
-            for (int i = 0; i < animStartCommands.Count; i++) {
-                DialogueCommand startCommand = animStartCommands[i];
-                DialogueCommand endCommand = animEndCommands[i];
-                tempResult.Add(new TextAnimInfo {
+            for (int i = 0; i < animStartCommandsScratch.Count; i++) {
+                DialogueCommand startCommand = animStartCommandsScratch[i];
+                DialogueCommand endCommand = animEndCommandsScratch[i];
+                textAnimInfoScratch.Add(new TextAnimInfo {
                     startIndex = startCommand.position,
                     endIndex = endCommand.position,
                     type = startCommand.textAnimValue
                 });
             }
         }
-        return tempResult.ToArray();
+        return textAnimInfoScratch.ToArray();
     }
 }
 

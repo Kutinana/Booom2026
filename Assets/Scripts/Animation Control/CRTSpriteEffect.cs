@@ -15,15 +15,11 @@ public class CRTSpriteEffect : MonoBehaviour
     public float OvershootScaleY = 1.08f;
 
     private Coroutine currentRoutine;
+    private SpriteRenderer targetSpriteRenderer;
 
-    private void Reset()
+    private void Awake()
     {
-        
-    }
-
-    public void Start()
-    {
-        
+        CacheTargetSpriteRenderer();
     }
 
     public void PlayOpen()
@@ -46,9 +42,31 @@ public class CRTSpriteEffect : MonoBehaviour
         currentRoutine = StartCoroutine(CloseRoutine());
     }
 
+    private void CacheTargetSpriteRenderer()
+    {
+        targetSpriteRenderer = null;
+        if (Target != null)
+        {
+            Target.TryGetComponent(out targetSpriteRenderer);
+        }
+    }
+
+    private void SetTargetSpriteVisible(bool visible)
+    {
+        if (targetSpriteRenderer == null)
+        {
+            CacheTargetSpriteRenderer();
+        }
+
+        if (targetSpriteRenderer != null)
+        {
+            targetSpriteRenderer.enabled = visible;
+        }
+    }
+
     IEnumerator OpenRoutine()
     {
-        Target.gameObject.GetComponent<SpriteRenderer>().enabled = true;
+        SetTargetSpriteVisible(true);
 
 
         Vector3 originalScale = Vector3.one;
@@ -114,6 +132,6 @@ public class CRTSpriteEffect : MonoBehaviour
             originalScale.z
         );
 
-        Target.gameObject.GetComponent<SpriteRenderer>().enabled = false;
+        SetTargetSpriteVisible(false);
     }
 }

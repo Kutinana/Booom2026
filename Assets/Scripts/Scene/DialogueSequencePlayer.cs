@@ -28,7 +28,9 @@ public sealed class DialogueSequencePlayer : MonoBehaviour
     {
         if (string.IsNullOrEmpty(dialogueTableEntryKey))
         {
+#if UNITY_EDITOR
             Debug.LogWarning("[DialogueSequencePlayer] 对话表条目 Key 为空。", this);
+#endif
             return false;
         }
 
@@ -37,7 +39,9 @@ public sealed class DialogueSequencePlayer : MonoBehaviour
 
         if (sessionActive)
         {
+#if UNITY_EDITOR
             Debug.LogWarning("[DialogueSequencePlayer] 已有对话会话进行中，忽略重复 Play。", this);
+#endif
             return false;
         }
 
@@ -52,7 +56,9 @@ public sealed class DialogueSequencePlayer : MonoBehaviour
     {
         if (data == null)
         {
+#if UNITY_EDITOR
             Debug.LogWarning("[DialogueSequencePlayer] DialogueData 为空。", this);
+#endif
             return false;
         }
 
@@ -61,7 +67,9 @@ public sealed class DialogueSequencePlayer : MonoBehaviour
 
         if (sessionActive)
         {
+#if UNITY_EDITOR
             Debug.LogWarning("[DialogueSequencePlayer] 已有对话会话进行中，忽略重复 Play。", this);
+#endif
             return false;
         }
 
@@ -79,7 +87,9 @@ public sealed class DialogueSequencePlayer : MonoBehaviour
         dialogueSystem = FindFirstObjectByType<DialogueSystem>();
         if (dialogueSystem == null)
         {
+#if UNITY_EDITOR
             Debug.LogError("[DialogueSequencePlayer] 未指定且找不到 DialogueSystem。", this);
+#endif
             return false;
         }
 

@@ -192,7 +192,9 @@ public class WorldBox : StandardBox
             playerController?.ApplyExternalVelocity(-context.RelativeVelocity);
         }
 
+#if UNITY_EDITOR
         Debug.Log($"Handled player impact on WorldBox. Teleported: {t}");
+#endif
         return t;
     }
 
