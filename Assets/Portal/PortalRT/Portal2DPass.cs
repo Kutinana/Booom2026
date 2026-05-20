@@ -191,6 +191,20 @@ public class Portal2DPass : ScriptableRenderPass
 
             for (int depth = 1; depth <= maxDepth; depth++)
             {
+                Matrix4x4 nextCameraWorld = portalStep * cameraWorld;
+                Vector3 portalCameraPosition = nextCameraWorld.GetColumn(3);
+                Matrix4x4 view = GetCameraViewMatrix(nextCameraWorld);
+
+                if (!IsFinite(nextCameraWorld) || !IsFinite(view))
+                {
+                    return;
+                }
+
+                if (!TryCullPortalView(context, cam, view, proj, portalCameraPosition, out CullingResults portalCullResults))
+                {
+                    return;
+                }
+
                 cmd.SetGlobalInt(StencilRefId, depth == 1 ? 1 : depth - 1);
                 cmd.SetGlobalInt(StencilReadMaskId, 255);
                 cmd.SetGlobalInt(StencilCompId, depth == 1 ? (int)CompareFunction.Always : (int)CompareFunction.Equal);
@@ -202,8 +216,6 @@ public class Portal2DPass : ScriptableRenderPass
                     0,
                     0
                 );
-                context.ExecuteCommandBuffer(cmd);
-                cmd.Clear();
 
                 cmd.SetGlobalInt(StencilRefId, depth);
                 cmd.DrawMesh(
@@ -213,28 +225,13 @@ public class Portal2DPass : ScriptableRenderPass
                     0,
                     0
                 );
-                context.ExecuteCommandBuffer(cmd);
-                cmd.Clear();
-
-                cameraWorld = portalStep * cameraWorld;
-                Vector3 portalCameraPosition = cameraWorld.GetColumn(3);
-                Matrix4x4 view = GetCameraViewMatrix(cameraWorld);
-
-                if (!IsFinite(cameraWorld) || !IsFinite(view))
-                {
-                    return;
-                }
-
-                if (!TryCullPortalView(context, cam, view, proj, portalCameraPosition, out CullingResults portalCullResults))
-                {
-                    return;
-                }
 
                 cmd.SetViewProjectionMatrices(view, proj);
                 cmd.SetGlobalVector("_WorldSpaceCameraPos", portalCameraPosition);
                 context.ExecuteCommandBuffer(cmd);
                 cmd.Clear();
 
+                cameraWorld = nextCameraWorld;
                 DrawSceneWithStencil(
                     context,
                     portalCullResults,

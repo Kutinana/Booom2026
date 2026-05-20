@@ -12,7 +12,7 @@ public class BarrierGroup : MonoBehaviour
 
     private void Awake()
     {
-       
+
         Barriers.Clear();
 
         Barrier[] foundBarriers = GetComponentsInChildren<Barrier>(true);
@@ -35,8 +35,10 @@ public class BarrierGroup : MonoBehaviour
         {
             StopCoroutine(updateBarriersCoroutine);
         }
-
-        updateBarriersCoroutine = StartCoroutine(UpdateBarriersStateSequentially(isOpen));
+        if (this.isActiveAndEnabled)
+        {
+            updateBarriersCoroutine = StartCoroutine(UpdateBarriersStateSequentially(isOpen));
+        }
     }
 
     private IEnumerator UpdateBarriersStateSequentially(bool isOpen)
