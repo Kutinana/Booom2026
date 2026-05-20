@@ -46921,10 +46921,10 @@ Camera:
   m_LensShift: {x: 0, y: 0}
   m_NormalizedViewPortRect:
     serializedVersion: 2
-    x: 0.15507813
+    x: 0
     y: 0
-    width: 0.45416665
-    height: 0.45416668
+    width: 1
+    height: 1
   near clip plane: 0.3
   far clip plane: 1000
   field of view: 8
@@ -63523,7 +63523,7 @@ MonoBehaviour:
   incompleteFloatAmplitude: 0.035
   incompleteFloatFrequencyHz: 0.9
   edgeGlowMaterial: {fileID: 2100000, guid: 6e660abb9f4a9a645a1f9d6ce9caac86, type: 2}
-  interactionRadius: 1.5
+  interactionRadius: 1.2
   progressableGroup: {fileID: 0}
   levelNameText: {fileID: 0}
 --- !u!61 &1208435953
