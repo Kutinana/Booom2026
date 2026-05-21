@@ -1,4 +1,5 @@
 using System.Collections;
+using TMPro;
 using UnityEngine;
 
 public class CRTSpriteEffect : MonoBehaviour
@@ -16,10 +17,13 @@ public class CRTSpriteEffect : MonoBehaviour
 
     private Coroutine currentRoutine;
     private SpriteRenderer targetSpriteRenderer;
+    private TMP_Text targetTmpText;
+    private Vector3 restLocalScale = Vector3.one;
 
     private void Awake()
     {
-        CacheTargetSpriteRenderer();
+        CacheTargetComponents();
+        CacheRestLocalScale();
     }
 
     public void PlayOpen()
@@ -42,36 +46,53 @@ public class CRTSpriteEffect : MonoBehaviour
         currentRoutine = StartCoroutine(CloseRoutine());
     }
 
-    private void CacheTargetSpriteRenderer()
+    private void CacheTargetComponents()
     {
         targetSpriteRenderer = null;
-        if (Target != null)
+        targetTmpText = null;
+        if (Target == null)
         {
-            Target.TryGetComponent(out targetSpriteRenderer);
+            return;
         }
+
+        Target.TryGetComponent(out targetSpriteRenderer);
+        Target.TryGetComponent(out targetTmpText);
     }
 
-    private void SetTargetSpriteVisible(bool visible)
+    private void CacheRestLocalScale()
     {
-        if (targetSpriteRenderer == null)
+        if (Target == null)
         {
-            CacheTargetSpriteRenderer();
+            return;
+        }
+
+        var scale = Target.localScale;
+        restLocalScale = new Vector3(scale.x, scale.y > 0f ? scale.y : 1f, scale.z);
+    }
+
+    private void SetTargetVisible(bool visible)
+    {
+        if (targetSpriteRenderer == null && targetTmpText == null)
+        {
+            CacheTargetComponents();
         }
 
         if (targetSpriteRenderer != null)
         {
             targetSpriteRenderer.enabled = visible;
         }
+
+        if (targetTmpText != null)
+        {
+            targetTmpText.enabled = visible;
+        }
     }
 
     IEnumerator OpenRoutine()
     {
-        SetTargetSpriteVisible(true);
+        SetTargetVisible(true);
 
-
-        Vector3 originalScale = Vector3.one;
-
-
+        var originalScale = restLocalScale;
         Target.localScale = new Vector3(originalScale.x, 0f, originalScale.z);
 
         float timer = 0f;
@@ -81,11 +102,9 @@ public class CRTSpriteEffect : MonoBehaviour
             timer += Time.deltaTime;
 
             float t = timer / OpenDuration;
-
             t = 1f - Mathf.Pow(1f - t, 3f);
 
-
-            float y = Mathf.Lerp(0f, OvershootScaleY, t);
+            float y = Mathf.Lerp(0f, OvershootScaleY * originalScale.y, t);
 
             Target.localScale = new Vector3(
                 originalScale.x,
@@ -96,13 +115,17 @@ public class CRTSpriteEffect : MonoBehaviour
             yield return null;
         }
 
-
         Target.localScale = originalScale;
+        restLocalScale = originalScale;
     }
 
     IEnumerator CloseRoutine()
     {
-        Vector3 originalScale = Target.localScale;
+        var originalScale = Target.localScale;
+        if (originalScale.y > 0f)
+        {
+            restLocalScale = originalScale;
+        }
 
         float timer = 0f;
 
@@ -111,8 +134,6 @@ public class CRTSpriteEffect : MonoBehaviour
             timer += Time.deltaTime;
 
             float t = timer / CloseDuration;
-
-     
             t = t * t;
 
             float y = Mathf.Lerp(originalScale.y, 0f, t);
@@ -132,6 +153,6 @@ public class CRTSpriteEffect : MonoBehaviour
             originalScale.z
         );
 
-        SetTargetSpriteVisible(false);
+        SetTargetVisible(false);
     }
 }
