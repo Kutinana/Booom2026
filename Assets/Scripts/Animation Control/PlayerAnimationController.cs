@@ -16,11 +16,19 @@ public class PlayerAnimationController : MonoBehaviour
     [SerializeField, Tooltip("触发 Land 时竖直速度须不大于此值（避免仍在上穿平台时误触地动画）；与 PlayerController 的 grounded 竖直判定一致思路。")]
     private float landTriggerMaxVerticalVelocity = 0.001f;
 
+    [Header("Sleep")]
+    [SerializeField] private float sleepDelay = 60f;
+
+    private float noInputTimer;
+    private bool isSleeping;
+    private bool isDowned;
+
     private float idleTimer;
     private float nextIdleTime;
     private bool wasGrounded;
     private bool wasFalling;
     private bool wasDying;
+    private bool downHeld;
 
     private void Reset()
     {
@@ -32,6 +40,34 @@ public class PlayerAnimationController : MonoBehaviour
     private void Update()
     {
         if (controller == null) return;
+
+        bool hasAnyInput =
+        Mathf.Abs(controller.MoveInput.x) > 0.01f ||
+        Mathf.Abs(controller.MoveInput.y) > 0.01f ||
+        Input.anyKey;
+
+        if (hasAnyInput)//没有任何输入超过sleepDelay时进入sleep动画
+        {
+            noInputTimer = 0f;
+
+            if (isSleeping)
+            {
+                isSleeping = false;
+                animator.SetBool("Sleeping", false);
+            }
+        }
+        else
+        {
+            noInputTimer += Time.deltaTime;
+
+            if (!isSleeping && noInputTimer >= sleepDelay)
+            {
+                isSleeping = true;
+                animator.SetBool("Sleeping", true);
+            }
+        }
+
+       
 
         bool isDying = controller.IsDying;
         if (isDying)
@@ -48,10 +84,54 @@ public class PlayerAnimationController : MonoBehaviour
         var contacts = controller.Contacts;
         var velocity = controller.Velocity;
         bool isPushing = controller.IsPushing;
-
+        UpdateDownState(contacts, velocity, isPushing);
         UpdateMovementAnimation(contacts, velocity, isPushing);
         UpdateIdleVariation(contacts, velocity, isPushing);
         UpdateFlip(velocity, isPushing);
+    }
+
+    private void UpdateDownState(PlayerController.ContactState contacts, Vector2 velocity, bool isPushing)
+    {
+        bool grounded = contacts.grounded;
+
+        bool canDown =
+            grounded &&
+            !isPushing &&
+            Mathf.Abs(controller.MoveInput.x) < 0.01f &&
+            Mathf.Abs(velocity.y) < 0.01f;
+
+        bool holdingDown =
+            controller.MoveInput.y < -0.5f;
+
+        if (holdingDown && canDown)
+        {
+            if (!downHeld)
+            {
+                animator.SetTrigger("Down");
+            }
+
+            downHeld = true;
+        }
+        else
+        {
+            if (downHeld)
+            {
+                animator.SetTrigger("Up");
+            }
+
+            downHeld = false;
+        }
+
+        animator.SetBool("DownHeld", downHeld);
+    }
+
+    private void RestDownUp()
+    {
+        animator.ResetTrigger("Down");
+        animator.ResetTrigger("Up");
+
+        animator.SetBool("DownHeld", false);
+        animator.SetBool("Sleeping", false);
     }
 
     private void UpdateMovementAnimation(PlayerController.ContactState contacts, Vector2 velocity, bool isPushing)
