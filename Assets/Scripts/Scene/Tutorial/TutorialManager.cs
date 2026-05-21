@@ -46,7 +46,11 @@ public class TutorialManager : MonoBehaviour
         {
             StartTutorial(afterTutorial);
         }
-        else if (!UserConfig.TryRead<bool>("HasAlreadyPlayedTutorial", out var c) || !c)
+        else if (UserConfig.TryRead<bool>("HasAlreadyPlayedTutorial", out var c) && c)
+        {
+            
+        }
+        else
         {
             StartTutorial(tutorial);
             TypeEventSystem.Global.Register<CollectiveStarCollectedEvent>(async e =>
@@ -92,7 +96,11 @@ public class TutorialManager : MonoBehaviour
         if (player != null)
             player.MovementInputDisabled = false;
 
-        else if (timelineDirector.playableAsset is PlayableAsset afterTutorialAsset)
+        if (timelineDirector.playableAsset == tutorial)
+        {
+            UserConfig.Write("HasAlreadyPlayedTutorial", true);
+        }
+        else if (timelineDirector.playableAsset == afterTutorial)
         {
             UserConfig.Write("HasAlreadyStartedAfterTutorial", true);
         }
