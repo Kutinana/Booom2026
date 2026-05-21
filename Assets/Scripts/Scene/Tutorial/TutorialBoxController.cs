@@ -3,7 +3,8 @@ using UnityEngine;
 
 public class TutorialBoxController : MonoBehaviour
 {
-    [SerializeField] float stuckThresholdX;
+    [SerializeField] float stuckThresholdMaxX;
+    [SerializeField] float stuckThresholdMinX;
 
     bool _sent;
     void Update()
@@ -11,7 +12,7 @@ public class TutorialBoxController : MonoBehaviour
         if (_sent)
             return;
 
-        if (transform.position.x > stuckThresholdX)
+        if (transform.position.x > stuckThresholdMaxX || transform.position.x < stuckThresholdMinX)
         {
             _sent = true;
             TypeEventSystem.Global.Send(new OnTutorialBoxStuckedEvent(gameObject));
