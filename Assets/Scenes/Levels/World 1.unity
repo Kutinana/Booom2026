@@ -6840,7 +6840,7 @@ MonoBehaviour:
   incompleteFloatAmplitude: 0.035
   incompleteFloatFrequencyHz: 0.9
   edgeGlowMaterial: {fileID: 2100000, guid: 6e660abb9f4a9a645a1f9d6ce9caac86, type: 2}
-  interactionRadius: 1.5
+  interactionRadius: 1.3
   progressableGroup: {fileID: 0}
   levelNameText: {fileID: 0}
 --- !u!1001 &294625873
@@ -51342,10 +51342,10 @@ Camera:
   m_LensShift: {x: 0, y: 0}
   m_NormalizedViewPortRect:
     serializedVersion: 2
-    x: 0.19453125
+    x: 0.20507812
     y: 0
-    width: 0.38194445
-    height: 0.38194445
+    width: 0.35972223
+    height: 0.35972223
   near clip plane: 0.3
   far clip plane: 1000
   field of view: 8
@@ -94480,7 +94480,7 @@ MonoBehaviour:
   incompleteFloatAmplitude: 0.035
   incompleteFloatFrequencyHz: 0.9
   edgeGlowMaterial: {fileID: 2100000, guid: 6e660abb9f4a9a645a1f9d6ce9caac86, type: 2}
-  interactionRadius: 1.5
+  interactionRadius: 1.3
   progressableGroup: {fileID: 0}
   levelNameText: {fileID: 0}
 --- !u!95 &1415818184
@@ -100359,7 +100359,7 @@ MonoBehaviour:
   incompleteFloatAmplitude: 0.035
   incompleteFloatFrequencyHz: 0.9
   edgeGlowMaterial: {fileID: 2100000, guid: 6e660abb9f4a9a645a1f9d6ce9caac86, type: 2}
-  interactionRadius: 1.5
+  interactionRadius: 1.3
   progressableGroup: {fileID: 0}
   levelNameText: {fileID: 0}
 --- !u!1 &1628550223
@@ -121203,6 +121203,7 @@ MonoBehaviour:
   idleTriggerTime: 3
   idleRandomInterval: {x: 3, y: 6}
   landTriggerMaxVerticalVelocity: 0.001
+  sleepDelay: 60
 --- !u!95 &1822326675
 Animator:
   serializedVersion: 5
@@ -126477,6 +126478,7 @@ MonoBehaviour:
   idleTriggerTime: 3
   idleRandomInterval: {x: 3, y: 6}
   landTriggerMaxVerticalVelocity: 0.001
+  sleepDelay: 60
 --- !u!95 &1841475417
 Animator:
   serializedVersion: 5
