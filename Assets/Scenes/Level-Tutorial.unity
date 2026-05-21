@@ -1037,13 +1037,13 @@ MonoBehaviour:
         - m_Target: {fileID: 1363794728}
           m_TargetAssemblyTypeName: DialogueSystem, Assembly-CSharp
           m_MethodName: StartDialogue
-          m_Mode: 2
+          m_Mode: 5
           m_Arguments:
-            m_ObjectArgument: {fileID: 11400000, guid: 8b3c49e26b3599d43a48ed79631f759b, type: 2}
-            m_ObjectArgumentAssemblyTypeName: DialogueData, Assembly-CSharp
+            m_ObjectArgument: {fileID: 0}
+            m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
             m_IntArgument: 0
             m_FloatArgument: 0
-            m_StringArgument: 
+            m_StringArgument: TutorialForRetry
             m_BoolArgument: 0
           m_CallState: 2
 --- !u!320 &436145074
