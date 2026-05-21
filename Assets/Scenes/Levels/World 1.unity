@@ -51427,9 +51427,9 @@ Camera:
   m_NormalizedViewPortRect:
     serializedVersion: 2
     x: 0
-    y: 0.05033557
-    width: 0.99999994
-    height: 0.9003775
+    y: 0.921273
+    width: 0.3842932
+    height: 0.34579146
   near clip plane: 0.3
   far clip plane: 1000
   field of view: 8
@@ -127851,7 +127851,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   sequencePlayer: {fileID: 1991276738}
-  dialogueData: {fileID: 11400000, guid: 61020cb83d86a1d4480bdd36e2dda306, type: 2}
+  dialogueTableEntryKey: FirstEnterWorld1
+  dialogueData: {fileID: 0}
   userConfigKey: HasPlayedFirstEnterWorld1
   onlyInActiveSceneName: World 1
   delay: 1

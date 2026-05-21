@@ -163,7 +163,7 @@ PlayerSettings:
   androidSupportedAspectRatio: 1
   androidMaxAspectRatio: 2.1
   applicationIdentifier:
-    Standalone: com.Octocat.Booom2026
+    Standalone: com.Octocat.Tako-Box
   buildNumber:
     Standalone: 0
     VisionOS: 0
