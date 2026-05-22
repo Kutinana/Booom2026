@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -30,8 +31,8 @@ public class WorldBoxExitBlockerService : ServiceBase
 
     private readonly Collider2D[] overlapHits2D = new Collider2D[32];
     private readonly Collider[] overlapHits3D = new Collider[32];
-    private readonly Dictionary<WorldBox, TemporaryWall> walls = new Dictionary<WorldBox, TemporaryWall>();
-    private readonly List<WorldBox> expiredWallOwners = new List<WorldBox>(16);
+    private readonly Dictionary<BlockerKey, TemporaryWall> walls = new Dictionary<BlockerKey, TemporaryWall>();
+    private readonly List<BlockerKey> expiredWallKeys = new List<BlockerKey>(16);
 
     public bool TryRefreshBlockerForStaticInnerHit(
         WorldBox worldBox,
@@ -39,6 +40,29 @@ public class WorldBoxExitBlockerService : ServiceBase
         Bounds outerBounds,
         Bounds innerTargetBounds,
         Bounds playerBounds,
+        LayerMask blockingMask,
+        bool use2D,
+        bool use3D)
+    {
+        return TryRefreshBlockerForStaticInnerHit(
+            worldBox,
+            worldBox,
+            direction,
+            outerBounds,
+            innerTargetBounds,
+            playerBounds,
+            blockingMask,
+            use2D,
+            use3D);
+    }
+
+    public bool TryRefreshBlockerForStaticInnerHit(
+        WorldBox worldBox,
+        UnityEngine.Object owner,
+        BoxPushDirection direction,
+        Bounds outerBounds,
+        Bounds innerTargetBounds,
+        Bounds actorBounds,
         LayerMask blockingMask,
         bool use2D,
         bool use3D)
@@ -58,13 +82,12 @@ public class WorldBoxExitBlockerService : ServiceBase
             return false;
         }
 
-        if (IsPlatformTag(blockingTag) && ShouldSkipOuterPlatformBlocker(direction, outerBounds, playerBounds))
+        if (IsPlatformTag(blockingTag) && ShouldSkipOuterPlatformBlocker(direction, outerBounds, actorBounds))
         {
             return false;
         }
 
-        Bounds wallBounds = CalculateOuterWallBounds(worldBox, direction, outerBounds, playerBounds);
-        RefreshWall(worldBox, direction, wallBounds, use2D, use3D, blockingTag);
+        RefreshWall(owner != null ? owner : worldBox, worldBox, direction, outerBounds, actorBounds, use2D, use3D, blockingTag);
         return true;
     }
 
@@ -151,18 +174,42 @@ public class WorldBoxExitBlockerService : ServiceBase
             return;
         }
 
-        RemoveWall(worldBox);
+        expiredWallKeys.Clear();
+        foreach (KeyValuePair<BlockerKey, TemporaryWall> pair in walls)
+        {
+            if (pair.Key.MatchesWorldBox(worldBox))
+            {
+                expiredWallKeys.Add(pair.Key);
+            }
+        }
+
+        for (int i = 0; i < expiredWallKeys.Count; i++)
+        {
+            RemoveWall(expiredWallKeys[i]);
+        }
+
+        expiredWallKeys.Clear();
+    }
+
+    public void Clear(WorldBox worldBox, UnityEngine.Object owner)
+    {
+        if (worldBox == null || owner == null)
+        {
+            return;
+        }
+
+        RemoveWall(new BlockerKey(worldBox, owner));
     }
 
     protected override void OnDestroy()
     {
-        foreach (KeyValuePair<WorldBox, TemporaryWall> pair in walls)
+        foreach (KeyValuePair<BlockerKey, TemporaryWall> pair in walls)
         {
             DestroyWallObject(pair.Value);
         }
 
         walls.Clear();
-        expiredWallOwners.Clear();
+        expiredWallKeys.Clear();
         debugOverlapQueries2D.Clear();
         expiredDebugOverlapOwners.Clear();
         base.OnDestroy();
@@ -170,19 +217,23 @@ public class WorldBoxExitBlockerService : ServiceBase
 
     private void LateUpdate()
     {
-        expiredWallOwners.Clear();
-        foreach (KeyValuePair<WorldBox, TemporaryWall> pair in walls)
+        expiredWallKeys.Clear();
+        foreach (KeyValuePair<BlockerKey, TemporaryWall> pair in walls)
         {
             TemporaryWall wall = pair.Value;
-            if (pair.Key == null || wall == null || wall.GameObject == null || Time.time > wall.ExpireAt)
+            if (pair.Key.WorldBox == null ||
+                pair.Key.Owner == null ||
+                wall == null ||
+                wall.GameObject == null ||
+                Time.time > wall.ExpireAt)
             {
-                expiredWallOwners.Add(pair.Key);
+                expiredWallKeys.Add(pair.Key);
             }
         }
 
-        for (int i = 0; i < expiredWallOwners.Count; i++)
+        for (int i = 0; i < expiredWallKeys.Count; i++)
         {
-            RemoveWall(expiredWallOwners[i]);
+            RemoveWall(expiredWallKeys[i]);
         }
 
         PruneDebugOverlapQueries();
@@ -441,14 +492,17 @@ public class WorldBoxExitBlockerService : ServiceBase
     }
 
     private void RefreshWall(
+        UnityEngine.Object owner,
         WorldBox worldBox,
         BoxPushDirection direction,
-        Bounds wallBounds,
+        Bounds outerBounds,
+        Bounds actorBounds,
         bool use2D,
         bool use3D,
         string blockingTag)
     {
-        TemporaryWall wall = GetOrCreateWall(worldBox, out bool created);
+        Bounds wallBounds = CalculateOuterWallBounds(worldBox, direction, outerBounds, actorBounds);
+        TemporaryWall wall = GetOrCreateWall(worldBox, owner, out bool created);
         GameObject wallObject = wall.GameObject;
         bool isPlatformBlocker = IsPlatformTag(blockingTag);
         int fallbackLayer = worldBox.gameObject.layer;
@@ -508,15 +562,16 @@ public class WorldBoxExitBlockerService : ServiceBase
         }
     }
 
-    private TemporaryWall GetOrCreateWall(WorldBox worldBox, out bool created)
+    private TemporaryWall GetOrCreateWall(WorldBox worldBox, UnityEngine.Object owner, out bool created)
     {
         created = false;
-        if (walls.TryGetValue(worldBox, out TemporaryWall wall) && wall != null && wall.GameObject != null)
+        BlockerKey key = new BlockerKey(worldBox, owner);
+        if (walls.TryGetValue(key, out TemporaryWall wall) && wall != null && wall.GameObject != null)
         {
             return wall;
         }
 
-        GameObject wallObject = new GameObject($"WorldBoxExitBlocker.{worldBox.name}");
+        GameObject wallObject = new GameObject($"WorldBoxExitBlocker.{worldBox.name}.{GetOwnerName(owner)}");
         wallObject.SetActive(false);
         Scene scene = worldBox.gameObject.scene;
         if (scene.IsValid())
@@ -525,7 +580,7 @@ public class WorldBoxExitBlockerService : ServiceBase
         }
 
         wall = new TemporaryWall(wallObject);
-        walls[worldBox] = wall;
+        walls[key] = wall;
         created = true;
         return wall;
     }
@@ -735,15 +790,15 @@ public class WorldBoxExitBlockerService : ServiceBase
 
     #endregion
 
-    private void RemoveWall(WorldBox worldBox)
+    private void RemoveWall(BlockerKey key)
     {
-        if (!walls.TryGetValue(worldBox, out TemporaryWall wall))
+        if (!walls.TryGetValue(key, out TemporaryWall wall))
         {
             return;
         }
 
         DestroyWallObject(wall);
-        walls.Remove(worldBox);
+        walls.Remove(key);
     }
 
     private void DestroyWallObject(TemporaryWall wall)
@@ -838,7 +893,7 @@ public class WorldBoxExitBlockerService : ServiceBase
             return false;
         }
 
-        foreach (KeyValuePair<WorldBox, TemporaryWall> pair in walls)
+        foreach (KeyValuePair<BlockerKey, TemporaryWall> pair in walls)
         {
             TemporaryWall wall = pair.Value;
             if (wall == null || wall.GameObject == null)
@@ -972,6 +1027,11 @@ public class WorldBoxExitBlockerService : ServiceBase
         return path;
     }
 
+    private static string GetOwnerName(UnityEngine.Object owner)
+    {
+        return owner != null ? owner.name : "Owner";
+    }
+
     #endregion
 
     private static bool TilemapHasTileInBounds(Collider2D hit, Bounds queryBounds)
@@ -1089,6 +1149,45 @@ public class WorldBoxExitBlockerService : ServiceBase
         public TemporaryWall(GameObject gameObject)
         {
             GameObject = gameObject;
+        }
+    }
+
+    private readonly struct BlockerKey : IEquatable<BlockerKey>
+    {
+        public readonly WorldBox WorldBox;
+        public readonly UnityEngine.Object Owner;
+        private readonly int worldBoxId;
+        private readonly int ownerId;
+
+        public BlockerKey(WorldBox worldBox, UnityEngine.Object owner)
+        {
+            WorldBox = worldBox;
+            Owner = owner;
+            worldBoxId = worldBox != null ? worldBox.GetInstanceID() : 0;
+            ownerId = owner != null ? owner.GetInstanceID() : 0;
+        }
+
+        public bool MatchesWorldBox(WorldBox worldBox)
+        {
+            return worldBox != null && worldBoxId == worldBox.GetInstanceID();
+        }
+
+        public bool Equals(BlockerKey other)
+        {
+            return worldBoxId == other.worldBoxId && ownerId == other.ownerId;
+        }
+
+        public override bool Equals(object obj)
+        {
+            return obj is BlockerKey other && Equals(other);
+        }
+
+        public override int GetHashCode()
+        {
+            unchecked
+            {
+                return (worldBoxId * 397) ^ ownerId;
+            }
         }
     }
 }

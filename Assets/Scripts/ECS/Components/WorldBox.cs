@@ -51,12 +51,12 @@ public class WorldBox : StandardBox
         pushAttemptUnRegister?.UnRegister();
         pushInitializeUnRegister = null;
         pushAttemptUnRegister = null;
-        ClearExitBlocker();
+        ClearAllExitBlockers();
     }
 
     protected override void OnDestroy()
     {
-        ClearExitBlocker();
+        ClearAllExitBlockers();
         base.OnDestroy();
     }
 
@@ -389,6 +389,16 @@ public class WorldBox : StandardBox
     }
 
     private void ClearExitBlocker()
+    {
+        if (exitBlockerService == null && ServiceBase.TryGet(out WorldBoxExitBlockerService service))
+        {
+            exitBlockerService = service;
+        }
+
+        exitBlockerService?.Clear(this, this);
+    }
+
+    private void ClearAllExitBlockers()
     {
         if (exitBlockerService == null && ServiceBase.TryGet(out WorldBoxExitBlockerService service))
         {
