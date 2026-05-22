@@ -118,12 +118,14 @@ public class WorldBox : StandardBox
         }
 
         ClearExitBlocker();
-        HasLastExitDirection = true;
-        LastExitDirection = direction;
-        wasPlayerInOuterBounds = false;
-        MovePlayerToInnerSide(direction, outerBounds, innerBounds, playerBounds);
-        wasPlayerOutsideInnerBounds = true;
-        hasPreviousPlayerBounds = false;
+        if (MovePlayerToInnerSide(direction, outerBounds, innerBounds, playerBounds))
+        {
+            HasLastExitDirection = true;
+            LastExitDirection = direction;
+            wasPlayerInOuterBounds = false;
+            wasPlayerOutsideInnerBounds = true;
+            hasPreviousPlayerBounds = false;
+        }
     }
 
     private bool EnsurePlayer()
@@ -171,7 +173,7 @@ public class WorldBox : StandardBox
     private void MovePusherToOuterEntranceFromBlockedPush(BoxPushDirection direction, GameObject pusher)
     {
         BoxPushDirection side = Opposite(direction);
-        TeleportPusherToOuterEntrance(pusher, side);
+        TeleportPusherToOuterEntrance(pusher, side, direction);
     }
 
     public override bool HandlePlayerImpact(SceneMovablePlayerImpactContext context)
@@ -200,7 +202,7 @@ public class WorldBox : StandardBox
 
     private bool TeleportPlayerToOuterEntrance(BoxPushDirection side)
     {
-        if (!TryMovePlayerToOuterEntrance(side))
+        if (!TryMovePlayerToOuterEntrance(side, side))
         {
             return false;
         }
@@ -209,9 +211,9 @@ public class WorldBox : StandardBox
         return true;
     }
 
-    private bool TeleportPusherToOuterEntrance(GameObject pusher, BoxPushDirection side)
+    private bool TeleportPusherToOuterEntrance(GameObject pusher, BoxPushDirection side, BoxPushDirection pushDirection)
     {
-        if (!TryMovePusherToOuterEntrance(pusher, side))
+        if (!TryMovePusherToOuterEntrance(pusher, side, pushDirection))
         {
             return false;
         }
@@ -233,7 +235,7 @@ public class WorldBox : StandardBox
     /// <summary>Teleport pusher to outer entrance opposite <paramref name="pushDirection"/> (blocked-push semantics).</summary>
     public bool TryTeleportPusherToOuterEntranceForPushInterrupt(BoxPushDirection pushDirection, GameObject pusher)
     {
-        return TeleportPusherToOuterEntrance(pusher, Opposite(pushDirection));
+        return TeleportPusherToOuterEntrance(pusher, Opposite(pushDirection), pushDirection);
     }
 
     private Bounds GetPlayerBounds()
@@ -250,16 +252,31 @@ public class WorldBox : StandardBox
     [SerializeField] private float paddingY = 0.03f;
     [SerializeField, Min(0f)] private float outerEdgeBlockerTouchTolerance = 0.04f;
 
-    private void MovePlayerToInnerSide(BoxPushDirection direction, Bounds outerBounds, Bounds innerBounds, Bounds playerBounds)
+    private bool MovePlayerToInnerSide(BoxPushDirection direction, Bounds outerBounds, Bounds innerBounds, Bounds playerBounds)
     {
         if (!TryGetInnerTargetPosition(direction, outerBounds, innerBounds, playerBounds, out Vector3 position))
         {
-            return;
+            return false;
+        }
+
+        Bounds targetBounds = playerBounds;
+        targetBounds.center = position;
+        GameObject pusher = playerTransform != null ? playerTransform.gameObject : null;
+        if (!TryClearTeleportTargetStandardBoxBlocker(
+            targetBounds,
+            direction,
+            pusher,
+            ignoredBox: null,
+            use2D: playerCollider2D != null,
+            use3D: playerCollider3D != null))
+        {
+            return false;
         }
 
         MovePlayer(position);
         TypeEventSystem.Global.Send<OnOuterToInnerEvent>();
         playerController?.ClampMotion();
+        return true;
     }
 
     private bool TryGetInnerTargetPosition(BoxPushDirection direction, Bounds outerBounds, Bounds innerBounds, Bounds playerBounds, out Vector3 position)
@@ -379,6 +396,48 @@ public class WorldBox : StandardBox
         exitBlockerService?.Clear(this);
     }
 
+    private bool TryClearTeleportTargetStandardBoxBlocker(
+        Bounds targetBounds,
+        BoxPushDirection pushDirection,
+        GameObject pusher,
+        StandardBox ignoredBox,
+        bool use2D,
+        bool use3D)
+    {
+        WorldBoxExitBlockerService service = GetExitBlockerService();
+        if (service == null)
+        {
+            return true;
+        }
+
+        if (!service.TryGetTeleportTargetStandardBoxBlocker(
+            targetBounds,
+            this,
+            ignoredBox,
+            CollisionMask,
+            use2D,
+            use3D,
+            out StandardBox blocker))
+        {
+            return true;
+        }
+
+        BoxPushAttemptEvent attempt = blocker.TryPush(pushDirection, pusher);
+        if (!attempt.CanPush)
+        {
+            return false;
+        }
+
+        return !service.TryGetTeleportTargetStandardBoxBlocker(
+            targetBounds,
+            this,
+            ignoredBox,
+            CollisionMask,
+            use2D,
+            use3D,
+            out _);
+    }
+
     /// <summary>
     /// 与 <see cref="UpdateOuterEdgeExitBlocker"/> / <see cref="TryRefreshExitBlocker"/> 使用<strong>同一套</strong>外缘方向解析：
     /// 优先 <see cref="TryGetOuterContactDirection"/>（与临时墙检测一致）；若无法解析则退回 <c>Opposite(pushDirection)</c>。
@@ -471,12 +530,16 @@ public class WorldBox : StandardBox
         }
 
         ClearExitBlocker();
+        if (!MovePlayerToInnerSide(exitFace, outerBounds, innerBounds, playerBounds))
+        {
+            return false;
+        }
+
         HasLastExitDirection = true;
         LastExitDirection = exitFace;
         wasPlayerInOuterBounds = false;
         wasPlayerOutsideInnerBounds = true;
         hasPreviousPlayerBounds = false;
-        MovePlayerToInnerSide(exitFace, outerBounds, innerBounds, playerBounds);
         return true;
     }
 
@@ -575,10 +638,24 @@ public class WorldBox : StandardBox
         return Mathf.Abs(vertical ? grid.cellSize.y : grid.cellSize.x);
     }
 
-    private bool TryMovePlayerToOuterEntrance(BoxPushDirection direction)
+    private bool TryMovePlayerToOuterEntrance(BoxPushDirection direction, BoxPushDirection pushDirection)
     {
         Transform entrance = GetOuterEntrance(direction);
         if (entrance == null)
+        {
+            return false;
+        }
+
+        Bounds targetBounds = GetPlayerBounds();
+        targetBounds.center = entrance.position;
+        GameObject pusher = playerTransform != null ? playerTransform.gameObject : null;
+        if (!TryClearTeleportTargetStandardBoxBlocker(
+            targetBounds,
+            pushDirection,
+            pusher,
+            ignoredBox: null,
+            use2D: playerCollider2D != null,
+            use3D: playerCollider3D != null))
         {
             return false;
         }
@@ -589,7 +666,7 @@ public class WorldBox : StandardBox
         return true;
     }
 
-    private bool TryMovePusherToOuterEntrance(GameObject pusher, BoxPushDirection direction)
+    private bool TryMovePusherToOuterEntrance(GameObject pusher, BoxPushDirection direction, BoxPushDirection pushDirection)
     {
         Transform entrance = GetOuterEntrance(direction);
         if (pusher == null || entrance == null)
@@ -598,6 +675,20 @@ public class WorldBox : StandardBox
         }
 
         PlayerController pusherController = pusher.GetComponent<PlayerController>();
+        Bounds targetBounds = GetPusherBounds(pusher, pusherController);
+        targetBounds.center = entrance.position;
+
+        if (!TryClearTeleportTargetStandardBoxBlocker(
+            targetBounds,
+            pushDirection,
+            pusher,
+            ignoredBox: null,
+            use2D: pusher.GetComponent<Collider2D>() != null,
+            use3D: pusher.GetComponent<Collider>() != null))
+        {
+            return false;
+        }
+
         MovePusher(pusher, pusherController, entrance.position);
         if (pusherController != null)
         {
@@ -606,6 +697,34 @@ public class WorldBox : StandardBox
         }
 
         return true;
+    }
+
+    private Bounds GetPusherBounds(GameObject pusher, PlayerController pusherController)
+    {
+        if (pusherController != null)
+        {
+            ISceneMovableBoundsProvider boundsProvider = pusherController.BoundsProvider;
+            if (boundsProvider != null && boundsProvider.IsValid)
+            {
+                return boundsProvider.Bounds;
+            }
+        }
+
+        StandardBox standardBox = pusher.GetComponent<StandardBox>();
+        if (standardBox != null)
+        {
+            var bound = standardBox.Bounds;
+            bound.Expand(-0.05f);
+            return bound;
+        }
+
+        ISceneMovableBoundsProvider externalProvider = pusher.GetComponent<ISceneMovableBoundsProvider>();
+        if (externalProvider != null && externalProvider.IsValid)
+        {
+            return externalProvider.Bounds;
+        }
+
+        return new Bounds(pusher.transform.position, Vector3.one);
     }
 
     private Transform GetOuterEntrance(BoxPushDirection direction)

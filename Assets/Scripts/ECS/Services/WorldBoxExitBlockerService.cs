@@ -105,6 +105,45 @@ public class WorldBoxExitBlockerService : ServiceBase
         return true;
     }
 
+    public bool TryGetTeleportTargetStandardBoxBlocker(
+        Bounds targetBounds,
+        WorldBox worldBox,
+        StandardBox ignoredBox,
+        LayerMask blockingMask,
+        bool use2D,
+        bool use3D,
+        out StandardBox blocker)
+    {
+        blocker = null;
+        if (targetBounds.size == Vector3.zero)
+        {
+            return false;
+        }
+
+        if (!use2D && !use3D)
+        {
+            use2D = true;
+        }
+
+        Bounds queryBounds = targetBounds;
+        queryBounds.Expand(-innerCheckPadding * 2f);
+
+        Physics.SyncTransforms();
+        Physics2D.SyncTransforms();
+
+        if (use2D && TryGetTeleportTargetStandardBoxBlocker2D(queryBounds, worldBox, ignoredBox, blockingMask, out blocker))
+        {
+            return true;
+        }
+
+        if (use3D && TryGetTeleportTargetStandardBoxBlocker3D(queryBounds, worldBox, ignoredBox, blockingMask, out blocker))
+        {
+            return true;
+        }
+
+        return false;
+    }
+
     public void Clear(WorldBox worldBox)
     {
         if (worldBox == null)
@@ -243,6 +282,103 @@ public class WorldBoxExitBlockerService : ServiceBase
         }
 
         return false;
+    }
+
+    private bool TryGetTeleportTargetStandardBoxBlocker2D(
+        Bounds queryBounds,
+        WorldBox worldBox,
+        StandardBox ignoredBox,
+        LayerMask blockingMask,
+        out StandardBox blocker)
+    {
+        blocker = null;
+        Vector2 size = new Vector2(
+            Mathf.Max(minimumColliderSize, queryBounds.size.x),
+            Mathf.Max(minimumColliderSize, queryBounds.size.y));
+
+        Bounds actualQueryBounds = Create2DOverlapQueryBounds(queryBounds, size);
+        int hitCount = Physics2D.OverlapBoxNonAlloc((Vector2)actualQueryBounds.center, size, 0f, overlapHits2D, blockingMask);
+        for (int i = 0; i < hitCount; i++)
+        {
+            Collider2D hit = overlapHits2D[i];
+            if (hit == null || !hit.enabled || hit.isTrigger)
+            {
+                continue;
+            }
+
+            StandardBox candidate = hit.GetComponentInParent<StandardBox>();
+            if (!IsTeleportTargetStandardBoxBlocker(candidate, worldBox, ignoredBox))
+            {
+                continue;
+            }
+
+            blocker = candidate;
+            return true;
+        }
+
+        return false;
+    }
+
+    private bool TryGetTeleportTargetStandardBoxBlocker3D(
+        Bounds queryBounds,
+        WorldBox worldBox,
+        StandardBox ignoredBox,
+        LayerMask blockingMask,
+        out StandardBox blocker)
+    {
+        blocker = null;
+        Vector3 halfExtents = queryBounds.extents;
+        halfExtents.x = Mathf.Max(minimumColliderSize * 0.5f, halfExtents.x);
+        halfExtents.y = Mathf.Max(minimumColliderSize * 0.5f, halfExtents.y);
+        halfExtents.z = Mathf.Max(fallbackDepth * 0.5f, halfExtents.z);
+
+        int hitCount = Physics.OverlapBoxNonAlloc(
+            queryBounds.center,
+            halfExtents,
+            overlapHits3D,
+            Quaternion.identity,
+            blockingMask,
+            QueryTriggerInteraction.Ignore);
+
+        for (int i = 0; i < hitCount; i++)
+        {
+            Collider hit = overlapHits3D[i];
+            if (hit == null || !hit.enabled)
+            {
+                continue;
+            }
+
+            StandardBox candidate = hit.GetComponentInParent<StandardBox>();
+            if (!IsTeleportTargetStandardBoxBlocker(candidate, worldBox, ignoredBox))
+            {
+                continue;
+            }
+
+            blocker = candidate;
+            return true;
+        }
+
+        return false;
+    }
+
+    private static bool IsTeleportTargetStandardBoxBlocker(StandardBox candidate, WorldBox worldBox, StandardBox ignoredBox)
+    {
+        if (candidate == null || candidate == ignoredBox || candidate is WorldBox)
+        {
+            return false;
+        }
+
+        if (!candidate.IsSceneMovableActive)
+        {
+            return false;
+        }
+
+        if (IsOwnedByWorldBox(candidate.transform, worldBox))
+        {
+            return false;
+        }
+
+        return candidate.Bounds.size != Vector3.zero;
     }
 
     private bool IsStaticBlockingCollider(Collider2D hit, WorldBox worldBox)
