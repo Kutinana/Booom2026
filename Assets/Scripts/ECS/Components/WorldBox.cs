@@ -4,6 +4,8 @@ using UnityEngine;
 [DefaultExecutionOrder(1100)]
 public class WorldBox : StandardBox
 {
+    private const int MaxTeleportTargetBlockerClearAttempts = 8;
+
     [System.Serializable]
     public struct DirectionEntrance
     {
@@ -410,22 +412,36 @@ public class WorldBox : StandardBox
             return true;
         }
 
-        if (!service.TryGetTeleportTargetStandardBoxBlocker(
-            targetBounds,
-            this,
-            ignoredBox,
-            CollisionMask,
-            use2D,
-            use3D,
-            out StandardBox blocker))
+        StandardBox[] attemptedBlockers = new StandardBox[MaxTeleportTargetBlockerClearAttempts];
+        for (int attemptIndex = 0; attemptIndex < MaxTeleportTargetBlockerClearAttempts; attemptIndex++)
         {
-            return true;
-        }
+            if (!service.TryGetTeleportTargetStandardBoxBlocker(
+                targetBounds,
+                this,
+                ignoredBox,
+                CollisionMask,
+                use2D,
+                use3D,
+                out StandardBox blocker))
+            {
+                return true;
+            }
 
-        BoxPushAttemptEvent attempt = blocker.TryPush(pushDirection, pusher);
-        if (!attempt.CanPush)
-        {
-            return false;
+            for (int previousIndex = 0; previousIndex < attemptIndex; previousIndex++)
+            {
+                if (attemptedBlockers[previousIndex] == blocker)
+                {
+                    return false;
+                }
+            }
+
+            attemptedBlockers[attemptIndex] = blocker;
+            Vector3 blockerPosition = blocker.transform.position;
+            BoxPushAttemptEvent attempt = blocker.TryPush(pushDirection, pusher);
+            if (!attempt.CanPush || !HasMovedFrom(blocker, blockerPosition))
+            {
+                return false;
+            }
         }
 
         return !service.TryGetTeleportTargetStandardBoxBlocker(
@@ -436,6 +452,11 @@ public class WorldBox : StandardBox
             use2D,
             use3D,
             out _);
+    }
+
+    private static bool HasMovedFrom(StandardBox box, Vector3 position)
+    {
+        return box != null && (box.transform.position - position).sqrMagnitude > Mathf.Epsilon;
     }
 
     /// <summary>

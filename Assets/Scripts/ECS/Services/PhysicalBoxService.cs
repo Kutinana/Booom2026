@@ -147,37 +147,77 @@ public class PhysicalBoxService : ServiceBase<StandardBox>
         Vector3 axis = direction == BoxPushDirection.Right ? Vector3.right : Vector3.left;
         float distance = GetCellDistance(box, axis);
 
-        float allowedContactDistance = distance + skinWidth;
-        if (Cast(box, axis, allowedContactDistance, out RayHit hit) && hit.Distance < allowedContactDistance - PushContactTolerance)
+        // Collect the chain before casting so adjacent boxes can move together.
+        CollectHorizontalChain(box, axis, chainGroupScratch);
+        CollectVerticalStackForChain(chainGroupScratch, stackGroupScratch);
+        bool teleportedWorldBoxPusher = false;
+        if (TryTeleportFirstBlockedWorldBoxPusherInGroup(box, direction, axis, chainGroupScratch, out StandardBox teleportedPusher))
         {
-            if (hit.Player != null)
+            if (teleportedPusher == box)
             {
-                TryHandlePlayerImpact(box, from, from + axis * distance, Time.fixedDeltaTime);
+                return false;
             }
 
+            teleportedWorldBoxPusher = true;
+            CollectHorizontalChain(box, axis, chainGroupScratch);
+            CollectVerticalStackForChain(chainGroupScratch, stackGroupScratch);
+        }
+
+        float magnitude = distance;
+        for (int i = 0; i < chainGroupScratch.Count; i++)
+        {
+            StandardBox member = chainGroupScratch[i];
+            if (Cast(member, axis, magnitude + skinWidth, out RayHit chainHit, chainGroupScratch))
+            {
+                PlayerController hitPlayer = chainHit.Player;
+                if (hitPlayer != null)
+                {
+                    TryHandlePlayerImpact(member, member.transform.position, member.transform.position + axis * magnitude, Time.fixedDeltaTime);
+                }
+
+                magnitude = Mathf.Min(magnitude, Mathf.Max(0f, chainHit.Distance - skinWidth));
+                if (magnitude <= 0f)
+                {
+                    break;
+                }
+            }
+        }
+
+        if (magnitude <= 0f)
+        {
             SendEvent(new BoxPhysicalPushEvent(box, direction, false, false, from, from));
             return false;
         }
 
-        Vector3 to = from + axis * distance;
-        Grid grid = box.Grid;
-        if (grid != null && box.AlignToGrid)
+        if (!teleportedWorldBoxPusher && TryTeleportFirstBlockedWorldBoxPusherInGroup(box, direction, axis, stackGroupScratch, out _))
         {
-            Vector3Int cell = grid.WorldToCell(to);
-            to = grid.CellToWorld(cell) + Vector3.Scale(grid.cellSize, box.CellOffset);
-            to.y = from.y;
-            to.z = from.z;
+            CollectHorizontalChain(box, axis, chainGroupScratch);
+            CollectVerticalStackForChain(chainGroupScratch, stackGroupScratch);
         }
 
-        TryHandlePlayerImpact(box, from, to, dt: Time.fixedDeltaTime);
-        box.MoveTo(to);
-        RefreshSceneMovableBaselineForStandardBox(box);
-        if (grid != null && box.AlignToGrid)
+        Vector3 target = from + axis * magnitude;
+        for (int i = 0; i < chainGroupScratch.Count; i++)
+        {
+            StandardBox member = chainGroupScratch[i];
+            if (member == null)
+            {
+                continue;
+            }
+
+            Vector3 memberFrom = member.transform.position;
+            member.MoveTo(memberFrom + axis * magnitude);
+            RefreshSceneMovableBaselineForStandardBox(member);
+        }
+
+        BuildCombinedIgnore(chainGroupScratch, stackGroupScratch);
+        ApplyStackedFollow(stackGroupScratch, axis, magnitude, Time.fixedDeltaTime, combinedIgnoreScratch);
+
+        if (box.Grid != null && box.AlignToGrid)
         {
             NotifyStandardBoxHorizontalGridSettled(box);
         }
 
-        SendEvent(new BoxPhysicalPushEvent(box, direction, true, false, from, to));
+        SendEvent(new BoxPhysicalPushEvent(box, direction, true, false, from, target));
         return true;
     }
 

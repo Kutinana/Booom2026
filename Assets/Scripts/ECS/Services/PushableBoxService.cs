@@ -3,6 +3,8 @@ using UnityEngine;
 
 public class PushableBoxService : ServiceBase<StandardBox>
 {
+    private const int MaxTeleportTargetBlockerClearAttempts = 8;
+
     private IUnRegister pushRequestUnRegister;
 
     protected override void Awake()
@@ -105,7 +107,16 @@ public class PushableBoxService : ServiceBase<StandardBox>
             bool use2D = box.Collider2D != null;
             bool use3D = box.Collider3D != null;
 
-            if (!blockerService.TryGetTeleportTargetStandardBoxBlocker(targetBounds, worldBox, ignoredBox: null, box.CollisionMask, use2D, use3D, out StandardBox blocker))
+            if (TryClearTeleportTargetStandardBoxBlockers(
+                blockerService,
+                targetBounds,
+                worldBox,
+                ignoredBox: null,
+                box.CollisionMask,
+                use2D,
+                use3D,
+                direction,
+                box.Owner))
             {
                 box.MoveTo(targetPosition);
                 if (ServiceBase.TryGet(out PhysicalBoxService physicalBoxService))
@@ -117,29 +128,71 @@ public class PushableBoxService : ServiceBase<StandardBox>
                     sceneMovable.RefreshItemImpactBaseline(box);
                 }
                 continue;
-            }
-
-            // If there's a blocking StandardBox, try to push it out of the way (same semantics as WorldBox)
-            BoxPushAttemptEvent attempt = blocker.TryPush(direction, box.Owner);
-            if (!attempt.CanPush)
-            {
-                continue;
-            }
-
-            // Re-check if the target is still blocked after attempting push
-            if (!blockerService.TryGetTeleportTargetStandardBoxBlocker(targetBounds, worldBox, ignoredBox: null, box.CollisionMask, use2D, use3D, out _))
-            {
-                box.MoveTo(targetPosition);
-                if (ServiceBase.TryGet(out PhysicalBoxService physicalBoxService))
-                {
-                    physicalBoxService.CancelLinearPush(box);
-                }
-                if (ServiceBase.TryGet(out SceneMovableInteractionService sceneMovable))
-                {
-                    sceneMovable.RefreshItemImpactBaseline(box);
-                }
             }
         }
+    }
+
+    private static bool TryClearTeleportTargetStandardBoxBlockers(
+        WorldBoxExitBlockerService blockerService,
+        Bounds targetBounds,
+        WorldBox worldBox,
+        StandardBox ignoredBox,
+        LayerMask blockingMask,
+        bool use2D,
+        bool use3D,
+        BoxPushDirection direction,
+        UnityEngine.GameObject pusher)
+    {
+        if (blockerService == null)
+        {
+            return true;
+        }
+
+        StandardBox[] attemptedBlockers = new StandardBox[MaxTeleportTargetBlockerClearAttempts];
+        for (int attemptIndex = 0; attemptIndex < MaxTeleportTargetBlockerClearAttempts; attemptIndex++)
+        {
+            if (!blockerService.TryGetTeleportTargetStandardBoxBlocker(
+                targetBounds,
+                worldBox,
+                ignoredBox,
+                blockingMask,
+                use2D,
+                use3D,
+                out StandardBox blocker))
+            {
+                return true;
+            }
+
+            for (int previousIndex = 0; previousIndex < attemptIndex; previousIndex++)
+            {
+                if (attemptedBlockers[previousIndex] == blocker)
+                {
+                    return false;
+                }
+            }
+
+            attemptedBlockers[attemptIndex] = blocker;
+            Vector3 blockerPosition = blocker.transform.position;
+            BoxPushAttemptEvent attempt = blocker.TryPush(direction, pusher);
+            if (!attempt.CanPush || !HasMovedFrom(blocker, blockerPosition))
+            {
+                return false;
+            }
+        }
+
+        return !blockerService.TryGetTeleportTargetStandardBoxBlocker(
+            targetBounds,
+            worldBox,
+            ignoredBox,
+            blockingMask,
+            use2D,
+            use3D,
+            out _);
+    }
+
+    private static bool HasMovedFrom(StandardBox box, Vector3 position)
+    {
+        return box != null && (box.transform.position - position).sqrMagnitude > Mathf.Epsilon;
     }
 
     private static bool TryGetExitDirection(Bounds outerBounds, Bounds itemBounds, out BoxPushDirection direction)
