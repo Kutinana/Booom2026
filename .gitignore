@@ -113,3 +113,4 @@ InitTestScene*.unity*
 #Portal tests
 /Assets/Portal/Test/*
 /Assets/Portal/Test.meta
+/.trae
