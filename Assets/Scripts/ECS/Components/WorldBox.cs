@@ -228,6 +228,10 @@ public class WorldBox : StandardBox
     /// <summary>Teleport pusher to outer entrance opposite <paramref name="pushDirection"/> (blocked-push semantics).</summary>
     public bool TryTeleportPusherToOuterEntranceForPushInterrupt(BoxPushDirection pushDirection, GameObject pusher)
     {
+        if ((pushableFrom & ToMask(pushDirection)) != 0)
+        {
+            return false;
+        }
         return TeleportPusherToOuterEntrance(pusher, Opposite(pushDirection), pushDirection);
     }
 
@@ -290,7 +294,7 @@ public class WorldBox : StandardBox
         {
             case BoxPushDirection.Left:
                 position.x = innerBounds.min.x - extents.x - paddingX;
-                position.y = RemapClamped(playerBounds.center.y, outerBounds.min.y, outerBounds.max.y, innerInsideMinY, innerInsideMaxY)+ paddingY;
+                position.y = RemapClamped(playerBounds.center.y, outerBounds.min.y, outerBounds.max.y, innerInsideMinY, innerInsideMaxY) + paddingY;
                 break;
             case BoxPushDirection.Right:
                 position.x = innerBounds.max.x + extents.x + paddingX;
@@ -982,6 +986,6 @@ public class WorldBox : StandardBox
         return Mathf.Lerp(outMin, outMax, Mathf.Clamp01((value - inMin) / inputRange));
     }
 
-   
+
 
 }
