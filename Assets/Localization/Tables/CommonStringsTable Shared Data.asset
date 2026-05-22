@@ -23,6 +23,18 @@ MonoBehaviour:
     m_Key: str_Locale
     m_Metadata:
       m_Items: []
+  - m_Id: 721930771628032
+    m_Key: str_QuitGameDialog
+    m_Metadata:
+      m_Items: []
+  - m_Id: 722190579400704
+    m_Key: str_Yes
+    m_Metadata:
+      m_Items: []
+  - m_Id: 722211756441600
+    m_Key: str_No
+    m_Metadata:
+      m_Items: []
   m_Metadata:
     m_Items: []
   m_KeyGenerator:

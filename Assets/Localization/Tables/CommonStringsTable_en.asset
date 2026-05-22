@@ -28,6 +28,18 @@ MonoBehaviour:
     m_Localized: English
     m_Metadata:
       m_Items: []
+  - m_Id: 721930771628032
+    m_Localized: Are you sure you want to quit the game?
+    m_Metadata:
+      m_Items: []
+  - m_Id: 722190579400704
+    m_Localized: Yes
+    m_Metadata:
+      m_Items: []
+  - m_Id: 722211756441600
+    m_Localized: No
+    m_Metadata:
+      m_Items: []
   references:
     version: 2
     RefIds: []
