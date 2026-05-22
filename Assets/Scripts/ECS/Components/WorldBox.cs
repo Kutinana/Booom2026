@@ -31,6 +31,7 @@ public class WorldBox : StandardBox
     private IUnRegister pushInitializeUnRegister;
     private IUnRegister pushAttemptUnRegister;
     private WorldBoxExitBlockerService exitBlockerService;
+    private PushableBoxService pushableBoxService;
 
     private void OnEnable()
     {
@@ -38,6 +39,8 @@ public class WorldBox : StandardBox
         pushAttemptUnRegister?.UnRegister();
         pushInitializeUnRegister = TypeEventSystem.Global.Register<BoxPushInitializeEvent>(OnPushInitialized);
         pushAttemptUnRegister = TypeEventSystem.Global.Register<BoxPushAttemptEvent>(OnPushAttempted);
+
+        pushableBoxService = GetPushableBoxService();
     }
 
     private void OnDisable()
@@ -75,19 +78,7 @@ public class WorldBox : StandardBox
         bool playerInOuterBounds = IntersectsXY(outerBounds, playerBounds);
         bool playerOverlapsInnerBounds = innerBounds.size != Vector3.zero && OverlapsXY(innerBounds, playerBounds);
 
-        // if (playerOverlapsInnerBounds && wasPlayerOutsideInnerBounds)
-        // {
-        //     BoxPushDirection t_direction = GetInnerEntryDirection(innerBounds, hasPreviousPlayerBounds ? previousPlayerBounds : playerBounds);
-        //     if (TryMovePlayerToOuterEntrance(t_direction))
-        //     {
-        //         HasLastExitDirection = true;
-        //         LastExitDirection = t_direction;
-        //         wasPlayerInOuterBounds = false;
-        //         wasPlayerOutsideInnerBounds = true;
-        //         hasPreviousPlayerBounds = false;
-        //         return;
-        //     }
-        // }
+        pushableBoxService.CheckAndTryTeleportAllPushableBoxesWithOuterBoundsToInner(outerBounds, this);
 
         if (playerInOuterBounds)
         {
@@ -384,6 +375,15 @@ public class WorldBox : StandardBox
         }
 
         return exitBlockerService;
+    }
+    private PushableBoxService GetPushableBoxService()
+    {
+        if (pushableBoxService == null)
+        {
+            pushableBoxService = ServiceBase.Get<PushableBoxService>();
+        }
+
+        return pushableBoxService;
     }
 
     private void ClearExitBlocker()

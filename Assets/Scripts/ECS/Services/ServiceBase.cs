@@ -239,7 +239,7 @@ public abstract class ServiceBase : MonoBehaviour
 
 public abstract class ServiceBase<TComponent> : ServiceBase where TComponent : Component
 {
-    private readonly HashSet<TComponent> components = new HashSet<TComponent>();
+    protected readonly HashSet<TComponent> components = new HashSet<TComponent>();
 
     public IReadOnlyCollection<TComponent> RegisteredComponents => components;
 
