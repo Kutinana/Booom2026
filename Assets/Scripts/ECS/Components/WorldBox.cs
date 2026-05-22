@@ -654,6 +654,13 @@ public class WorldBox : StandardBox
 
         Rigidbody2D body2D = pusher.GetComponent<Rigidbody2D>();
         Rigidbody body3D = pusher.GetComponent<Rigidbody>();
+        StandardBox standardBox = pusherController == null ? pusher.GetComponent<StandardBox>() : null;
+        if (standardBox != null)
+        {
+            standardBox.MoveTo(position);
+            return;
+        }
+
         Transform pusherTransform = pusher.transform;
         if (body2D != null)
         {

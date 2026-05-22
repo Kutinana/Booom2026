@@ -867,12 +867,176 @@ public class PhysicalBoxService : ServiceBase<StandardBox>
             return false;
         }
 
+        BoxPushDirection direction = positiveDirection ? BoxPushDirection.Right : BoxPushDirection.Left;
+        if (neighbor is WorldBox worldBox && !worldBox.CanPushToward(direction))
+        {
+            return false;
+        }
+
         if (HasActiveLinearPushState(neighbor))
         {
             return false;
         }
 
         return true;
+    }
+
+    private bool TryTeleportFirstBlockedWorldBoxPusherInGroup(
+        StandardBox root,
+        BoxPushDirection direction,
+        Vector3 axis,
+        List<StandardBox> group,
+        out StandardBox teleportedPusher)
+    {
+        teleportedPusher = null;
+        if (group == null)
+        {
+            return false;
+        }
+
+        for (int i = 0; i < group.Count; i++)
+        {
+            StandardBox pusherBox = group[i];
+            if (pusherBox == null || !IsRegistered(pusherBox))
+            {
+                continue;
+            }
+
+            if (!TryGetBlockedWorldBoxAhead(pusherBox, direction, axis, out WorldBox blockedWorldBox))
+            {
+                continue;
+            }
+
+            Vector3 before = pusherBox.transform.position;
+            blockedWorldBox.InitializePush(direction, pusherBox.gameObject);
+            if (!HasMovedFrom(pusherBox, before))
+            {
+                continue;
+            }
+
+            if (pusherBox == root)
+            {
+                linearPushes.Remove(root);
+            }
+
+            RefreshSceneMovableBaselineForStandardBox(pusherBox);
+            NotifyStandardBoxHorizontalGridSettled(pusherBox);
+            teleportedPusher = pusherBox;
+            return true;
+        }
+
+        return false;
+    }
+
+    private bool TryGetBlockedWorldBoxAhead(StandardBox pusherBox, BoxPushDirection direction, Vector3 axis, out WorldBox blockedWorldBox)
+    {
+        blockedWorldBox = null;
+        if (pusherBox == null)
+        {
+            return false;
+        }
+
+        Bounds pusherBounds = pusherBox.Bounds;
+        if (pusherBounds.size == Vector3.zero)
+        {
+            return false;
+        }
+
+        bool positive = axis.x > 0f;
+        float frontX = positive ? pusherBounds.max.x : pusherBounds.min.x;
+
+        Collider2D pusher2D = pusherBox.Collider2D;
+        if (pusher2D != null)
+        {
+            Vector2 stripCenter = new Vector2(frontX + (positive ? 1f : -1f) * StackContactEpsilon * 0.5f, pusherBounds.center.y);
+            Vector2 stripSize = new Vector2(StackContactEpsilon, pusherBounds.size.y + StackContactEpsilon);
+            int hitCount = Physics2D.OverlapBoxNonAlloc(stripCenter, stripSize, 0f, stackOverlapHits2D, pusherBox.CollisionMask);
+
+            for (int i = 0; i < hitCount; i++)
+            {
+                Collider2D col = stackOverlapHits2D[i];
+                if (col == null || col.isTrigger)
+                {
+                    continue;
+                }
+
+                WorldBox worldBox = col.GetComponentInParent<WorldBox>();
+                if (!IsBlockedWorldBoxPushTarget(worldBox, pusherBox, direction, positive))
+                {
+                    continue;
+                }
+
+                blockedWorldBox = worldBox;
+                return true;
+            }
+
+            return false;
+        }
+
+        Collider pusher3D = pusherBox.Collider3D;
+        if (pusher3D != null)
+        {
+            Vector3 stripCenter = new Vector3(frontX + (positive ? 1f : -1f) * StackContactEpsilon * 0.5f, pusherBounds.center.y, pusherBounds.center.z);
+            Vector3 stripHalfExtents = new Vector3(StackContactEpsilon * 0.5f, (pusherBounds.size.y + StackContactEpsilon) * 0.5f, Mathf.Max(pusherBounds.size.z, StackContactEpsilon) * 0.5f);
+            int hitCount = Physics.OverlapBoxNonAlloc(stripCenter, stripHalfExtents, stackOverlapHits3D, Quaternion.identity, pusherBox.CollisionMask, QueryTriggerInteraction.Ignore);
+
+            for (int i = 0; i < hitCount; i++)
+            {
+                Collider col = stackOverlapHits3D[i];
+                if (col == null)
+                {
+                    continue;
+                }
+
+                WorldBox worldBox = col.GetComponentInParent<WorldBox>();
+                if (!IsBlockedWorldBoxPushTarget(worldBox, pusherBox, direction, positive))
+                {
+                    continue;
+                }
+
+                blockedWorldBox = worldBox;
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private bool IsBlockedWorldBoxPushTarget(WorldBox worldBox, StandardBox pusherBox, BoxPushDirection direction, bool positiveDirection)
+    {
+        if (worldBox == null || worldBox == pusherBox || worldBox.CanPushToward(direction))
+        {
+            return false;
+        }
+
+        if (HasActiveLinearPushState(worldBox))
+        {
+            return false;
+        }
+
+        Bounds worldBounds = worldBox.Bounds;
+        Bounds pusherBounds = pusherBox.Bounds;
+        if (worldBounds.size == Vector3.zero || pusherBounds.size == Vector3.zero)
+        {
+            return false;
+        }
+
+        float pusherFront = positiveDirection ? pusherBounds.max.x : pusherBounds.min.x;
+        float worldBack = positiveDirection ? worldBounds.min.x : worldBounds.max.x;
+        float gap = (worldBack - pusherFront) * (positiveDirection ? 1f : -1f);
+        if (gap < -StackContactEpsilon || gap > StackContactEpsilon)
+        {
+            return false;
+        }
+
+        float yOverlap = Mathf.Min(worldBounds.max.y, pusherBounds.max.y) - Mathf.Max(worldBounds.min.y, pusherBounds.min.y);
+        float minHeight = Mathf.Min(worldBounds.size.y, pusherBounds.size.y);
+        return yOverlap > minHeight * StackOverlapRatio;
+    }
+
+    private static bool HasMovedFrom(StandardBox box, Vector3 before)
+    {
+        return box != null && (box.transform.position - before).sqrMagnitude > Mathf.Epsilon;
     }
 
     private void AppendStackedAbove(StandardBox below, List<StandardBox> outGroup)
@@ -1294,6 +1458,18 @@ public class PhysicalBoxService : ServiceBase<StandardBox>
         // 在 root 移动之前先固化 chain 与上方堆叠关系（box 一旦移走，紧贴判定就失效）。
         CollectHorizontalChain(box, axis, chainGroupScratch);
         CollectVerticalStackForChain(chainGroupScratch, stackGroupScratch);
+        bool teleportedWorldBoxPusher = false;
+        if (TryTeleportFirstBlockedWorldBoxPusherInGroup(box, direction, axis, chainGroupScratch, out StandardBox teleportedPusher))
+        {
+            if (teleportedPusher == box)
+            {
+                return 0f;
+            }
+
+            teleportedWorldBoxPusher = true;
+            CollectHorizontalChain(box, axis, chainGroupScratch);
+            CollectVerticalStackForChain(chainGroupScratch, stackGroupScratch);
+        }
 
         // chain 整组阻挡：对每个 chain 成员单独 cast（互相忽略），取最小可移动距离。
         // 撞墙 / 撞地形 → 整组停下；撞 player → 触发 impact 后下一帧 cast 会过滤 dying player，可继续推。
@@ -1331,6 +1507,13 @@ public class PhysicalBoxService : ServiceBase<StandardBox>
         {
             linearPushes[box] = state;
             return 0f;
+        }
+
+        if (!teleportedWorldBoxPusher &&
+            TryTeleportFirstBlockedWorldBoxPusherInGroup(box, direction, axis, stackGroupScratch, out _))
+        {
+            CollectHorizontalChain(box, axis, chainGroupScratch);
+            CollectVerticalStackForChain(chainGroupScratch, stackGroupScratch);
         }
 
         // 整 chain 同步移动 magnitude。
