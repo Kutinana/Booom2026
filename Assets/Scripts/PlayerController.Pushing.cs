@@ -263,7 +263,7 @@ public partial class PlayerController
             pressurePlateService.SnapBoxXToNearestHorizontalGridIfOverlappingAnyPlate(worldBox);
         }
 
-        worldBox.TryTeleportPusherToOuterEntranceForPushInterrupt(direction);
+        worldBox.TryTeleportPusherToOuterEntranceForPushInterrupt(direction, gameObject);
         physicalBoxService.QueueGridAlignmentRelease(worldBox);
     }
 

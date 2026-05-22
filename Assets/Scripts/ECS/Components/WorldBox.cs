@@ -150,28 +150,28 @@ public class WorldBox : StandardBox
 
     private void OnPushInitialized(BoxPushInitializeEvent e)
     {
-        if (e.Box != this || e.CanPush || !EnsurePlayer())
+        if (e.Box != this || e.CanPush)
         {
             return;
         }
 
-        MovePlayerToOuterEntranceFromBlockedPush(e.Direction);
+        MovePusherToOuterEntranceFromBlockedPush(e.Direction, e.Pusher);
     }
 
     private void OnPushAttempted(BoxPushAttemptEvent e)
     {
-        if (e.Box != this || e.CanPush || !EnsurePlayer())
+        if (e.Box != this || e.CanPush)
         {
             return;
         }
 
-        MovePlayerToOuterEntranceFromBlockedPush(e.Direction);
+        MovePusherToOuterEntranceFromBlockedPush(e.Direction, e.Pusher);
     }
 
-    private void MovePlayerToOuterEntranceFromBlockedPush(BoxPushDirection direction)
+    private void MovePusherToOuterEntranceFromBlockedPush(BoxPushDirection direction, GameObject pusher)
     {
         BoxPushDirection side = Opposite(direction);
-        TeleportPlayerToOuterEntrance(side);
+        TeleportPusherToOuterEntrance(pusher, side);
     }
 
     public override bool HandlePlayerImpact(SceneMovablePlayerImpactContext context)
@@ -205,24 +205,35 @@ public class WorldBox : StandardBox
             return false;
         }
 
+        MarkOuterEntranceTeleport(side);
+        return true;
+    }
+
+    private bool TeleportPusherToOuterEntrance(GameObject pusher, BoxPushDirection side)
+    {
+        if (!TryMovePusherToOuterEntrance(pusher, side))
+        {
+            return false;
+        }
+
+        MarkOuterEntranceTeleport(side);
+        return true;
+    }
+
+    private void MarkOuterEntranceTeleport(BoxPushDirection side)
+    {
         HasLastExitDirection = true;
         LastExitDirection = side;
         wasPlayerInOuterBounds = false;
         wasPlayerOutsideInnerBounds = true;
         hasPreviousPlayerBounds = false;
         ClearExitBlocker();
-        return true;
     }
 
     /// <summary>Teleport pusher to outer entrance opposite <paramref name="pushDirection"/> (blocked-push semantics).</summary>
-    public bool TryTeleportPusherToOuterEntranceForPushInterrupt(BoxPushDirection pushDirection)
+    public bool TryTeleportPusherToOuterEntranceForPushInterrupt(BoxPushDirection pushDirection, GameObject pusher)
     {
-        if (!EnsurePlayer())
-        {
-            return false;
-        }
-
-        return TeleportPlayerToOuterEntrance(Opposite(pushDirection));
+        return TeleportPusherToOuterEntrance(pusher, Opposite(pushDirection));
     }
 
     private Bounds GetPlayerBounds()
@@ -578,6 +589,25 @@ public class WorldBox : StandardBox
         return true;
     }
 
+    private bool TryMovePusherToOuterEntrance(GameObject pusher, BoxPushDirection direction)
+    {
+        Transform entrance = GetOuterEntrance(direction);
+        if (pusher == null || entrance == null)
+        {
+            return false;
+        }
+
+        PlayerController pusherController = pusher.GetComponent<PlayerController>();
+        MovePusher(pusher, pusherController, entrance.position);
+        if (pusherController != null)
+        {
+            TypeEventSystem.Global.Send<OnInnerToOuterEvent>();
+            pusherController.ClampMotion();
+        }
+
+        return true;
+    }
+
     private Transform GetOuterEntrance(BoxPushDirection direction)
     {
         if (OuterEntrances == null)
@@ -612,6 +642,32 @@ public class WorldBox : StandardBox
         else
         {
             playerTransform.position = position;
+        }
+    }
+
+    private static void MovePusher(GameObject pusher, PlayerController pusherController, Vector3 position)
+    {
+        if (pusherController != null)
+        {
+            position -= pusherController.CenterOffset;
+        }
+
+        Rigidbody2D body2D = pusher.GetComponent<Rigidbody2D>();
+        Rigidbody body3D = pusher.GetComponent<Rigidbody>();
+        Transform pusherTransform = pusher.transform;
+        if (body2D != null)
+        {
+            body2D.position = (Vector2)position;
+            pusherTransform.position = position;
+        }
+        else if (body3D != null)
+        {
+            body3D.position = position;
+            pusherTransform.position = position;
+        }
+        else
+        {
+            pusherTransform.position = position;
         }
     }
 
