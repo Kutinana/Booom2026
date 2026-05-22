@@ -82172,7 +82172,7 @@ MonoBehaviour:
   incompleteFloatAmplitude: 0.035
   incompleteFloatFrequencyHz: 0.9
   edgeGlowMaterial: {fileID: 2100000, guid: 6e660abb9f4a9a645a1f9d6ce9caac86, type: 2}
-  interactionRadius: 1.5
+  interactionRadius: 1.3
   progressableGroup: {fileID: 0}
   levelNameText: {fileID: 0}
 --- !u!61 &1208435953

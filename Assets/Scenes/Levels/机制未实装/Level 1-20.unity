@@ -3910,7 +3910,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   cellOffset: {x: 0.5, y: 0.5, z: 0}
   AlignToGrid: 1
-  pushableFrom: 1
+  pushableFrom: 12
   collisionMask:
     serializedVersion: 2
     m_Bits: 4294967295
@@ -3921,7 +3921,7 @@ MonoBehaviour:
   OuterEntrances:
   - Direction: 1
     Entrance: {fileID: 799451004}
-  - Direction: 3
+  - Direction: 0
     Entrance: {fileID: 1857928788}
   paddingX: 0.05
   paddingY: 0.05
@@ -4866,7 +4866,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a6cea5ec2b10f7545830f661be27ba5c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  stuckThresholdX: 4
+  stuckThresholdMaxX: 0
+  stuckThresholdMinX: 0
 --- !u!1 &1621753424
 GameObject:
   m_ObjectHideFlags: 0
@@ -5034,7 +5035,7 @@ BoxCollider2D:
     adaptiveTiling: 0
   m_AutoTiling: 0
   serializedVersion: 2
-  m_Size: {x: 0.4, y: 0.5}
+  m_Size: {x: 0.5, y: 0.5}
   m_EdgeRadius: 0
 --- !u!212 &1621753429
 SpriteRenderer:
@@ -5515,7 +5516,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a6cea5ec2b10f7545830f661be27ba5c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  stuckThresholdX: 4
+  stuckThresholdMaxX: 0
+  stuckThresholdMinX: 0
 --- !u!61 &1816380134
 BoxCollider2D:
   m_ObjectHideFlags: 0
@@ -5720,6 +5722,7 @@ MonoBehaviour:
   idleTriggerTime: 3
   idleRandomInterval: {x: 3, y: 6}
   landTriggerMaxVerticalVelocity: 0.001
+  sleepDelay: 60
 --- !u!95 &1822326675
 Animator:
   serializedVersion: 5
