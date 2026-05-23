@@ -1297,7 +1297,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a6cea5ec2b10f7545830f661be27ba5c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  stuckThresholdX: 4
+  stuckThresholdMaxX: 0
+  stuckThresholdMinX: 0
 --- !u!61 &207265496
 BoxCollider2D:
   m_ObjectHideFlags: 0
@@ -1624,7 +1625,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a6cea5ec2b10f7545830f661be27ba5c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  stuckThresholdX: 4
+  stuckThresholdMaxX: 0
+  stuckThresholdMinX: 0
 --- !u!61 &232183062
 BoxCollider2D:
   m_ObjectHideFlags: 0
@@ -2713,7 +2715,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a6cea5ec2b10f7545830f661be27ba5c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  stuckThresholdX: 4
+  stuckThresholdMaxX: 0
+  stuckThresholdMinX: 0
 --- !u!61 &382309933
 BoxCollider2D:
   m_ObjectHideFlags: 0
@@ -46211,7 +46214,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a6cea5ec2b10f7545830f661be27ba5c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  stuckThresholdX: 4
+  stuckThresholdMaxX: 0
+  stuckThresholdMinX: 0
 --- !u!61 &442666487
 BoxCollider2D:
   m_ObjectHideFlags: 0
@@ -46695,7 +46699,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a6cea5ec2b10f7545830f661be27ba5c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  stuckThresholdX: 4
+  stuckThresholdMaxX: 0
+  stuckThresholdMinX: 0
 --- !u!61 &508971721
 BoxCollider2D:
   m_ObjectHideFlags: 0
@@ -46921,10 +46926,10 @@ Camera:
   m_LensShift: {x: 0, y: 0}
   m_NormalizedViewPortRect:
     serializedVersion: 2
-    x: 0
+    x: 0.18671875
     y: 0
-    width: 1
-    height: 1
+    width: 0.31875
+    height: 0.31875
   near clip plane: 0.3
   far clip plane: 1000
   field of view: 8
@@ -47324,7 +47329,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a6cea5ec2b10f7545830f661be27ba5c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  stuckThresholdX: 4
+  stuckThresholdMaxX: 0
+  stuckThresholdMinX: 0
 --- !u!61 &564640417
 BoxCollider2D:
   m_ObjectHideFlags: 0
@@ -48923,7 +48929,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a6cea5ec2b10f7545830f661be27ba5c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  stuckThresholdX: 4
+  stuckThresholdMaxX: 0
+  stuckThresholdMinX: 0
 --- !u!61 &879552985
 BoxCollider2D:
   m_ObjectHideFlags: 0
@@ -51188,8 +51195,8 @@ Tilemap:
   - first: {x: -3, y: -12, z: 0}
     second:
       serializedVersion: 2
-      m_TileIndex: 56
-      m_TileSpriteIndex: 56
+      m_TileIndex: 75
+      m_TileSpriteIndex: 75
       m_TileMatrixIndex: 0
       m_TileColorIndex: 0
       m_TileObjectToInstantiateIndex: 65535
@@ -51198,8 +51205,8 @@ Tilemap:
   - first: {x: -2, y: -12, z: 0}
     second:
       serializedVersion: 2
-      m_TileIndex: 57
-      m_TileSpriteIndex: 57
+      m_TileIndex: 1
+      m_TileSpriteIndex: 1
       m_TileMatrixIndex: 0
       m_TileColorIndex: 0
       m_TileObjectToInstantiateIndex: 65535
@@ -51208,8 +51215,8 @@ Tilemap:
   - first: {x: -1, y: -12, z: 0}
     second:
       serializedVersion: 2
-      m_TileIndex: 52
-      m_TileSpriteIndex: 23
+      m_TileIndex: 55
+      m_TileSpriteIndex: 51
       m_TileMatrixIndex: 0
       m_TileColorIndex: 0
       m_TileObjectToInstantiateIndex: 65535
@@ -51218,8 +51225,8 @@ Tilemap:
   - first: {x: 1, y: -12, z: 0}
     second:
       serializedVersion: 2
-      m_TileIndex: 56
-      m_TileSpriteIndex: 56
+      m_TileIndex: 85
+      m_TileSpriteIndex: 85
       m_TileMatrixIndex: 0
       m_TileColorIndex: 0
       m_TileObjectToInstantiateIndex: 65535
@@ -51228,8 +51235,8 @@ Tilemap:
   - first: {x: 2, y: -12, z: 0}
     second:
       serializedVersion: 2
-      m_TileIndex: 57
-      m_TileSpriteIndex: 57
+      m_TileIndex: 1
+      m_TileSpriteIndex: 1
       m_TileMatrixIndex: 0
       m_TileColorIndex: 0
       m_TileObjectToInstantiateIndex: 65535
@@ -51238,8 +51245,8 @@ Tilemap:
   - first: {x: 3, y: -12, z: 0}
     second:
       serializedVersion: 2
-      m_TileIndex: 52
-      m_TileSpriteIndex: 23
+      m_TileIndex: 55
+      m_TileSpriteIndex: 51
       m_TileMatrixIndex: 0
       m_TileColorIndex: 0
       m_TileObjectToInstantiateIndex: 65535
@@ -51270,6 +51277,16 @@ Tilemap:
       serializedVersion: 2
       m_TileIndex: 31
       m_TileSpriteIndex: 8
+      m_TileMatrixIndex: 0
+      m_TileColorIndex: 0
+      m_TileObjectToInstantiateIndex: 65535
+      dummyAlignment: 0
+      m_AllTileFlags: 1073741825
+  - first: {x: -3, y: -11, z: 0}
+    second:
+      serializedVersion: 2
+      m_TileIndex: 21
+      m_TileSpriteIndex: 26
       m_TileMatrixIndex: 0
       m_TileColorIndex: 0
       m_TileObjectToInstantiateIndex: 65535
@@ -51899,7 +51916,7 @@ Tilemap:
   m_TileAssetArray:
   - m_RefCount: 2
     m_Data: {fileID: 11400000, guid: 8f6630be94735f94f89fe6cea805ad5a, type: 2}
-  - m_RefCount: 3
+  - m_RefCount: 5
     m_Data: {fileID: 11400000, guid: b2cb179d0a018c746a66955a97c11aaa, type: 2}
   - m_RefCount: 1
     m_Data: {fileID: 11400000, guid: 6d2e340f7d3b9f94a80ee7104e4886c6, type: 2}
@@ -51939,7 +51956,7 @@ Tilemap:
     m_Data: {fileID: 11400000, guid: 01269323face187479cdacb7ece493dd, type: 2}
   - m_RefCount: 1
     m_Data: {fileID: 11400000, guid: 5775ba55d3a63a147a55ba2762ec718c, type: 2}
-  - m_RefCount: 3
+  - m_RefCount: 4
     m_Data: {fileID: 11400000, guid: 1baeb4c775c61cb4bb74905704a15b36, type: 2}
   - m_RefCount: 1
     m_Data: {fileID: 11400000, guid: 09cf0b6e9e55d8745a6627f0b0f2923d, type: 2}
@@ -52001,17 +52018,17 @@ Tilemap:
     m_Data: {fileID: 11400000, guid: b901861e232d67e43a9ed90723898abd, type: 2}
   - m_RefCount: 2
     m_Data: {fileID: 11400000, guid: c0f8d98fea0d41945bce25d538cbbd5a, type: 2}
-  - m_RefCount: 3
+  - m_RefCount: 1
     m_Data: {fileID: 11400000, guid: 24e96b3f2b06db94e84db699c70bd603, type: 2}
   - m_RefCount: 1
     m_Data: {fileID: 11400000, guid: 5ec6f87327c2b3e40a4e9ff610813c29, type: 2}
   - m_RefCount: 1
     m_Data: {fileID: 11400000, guid: e7c61b088a06bf54c9ede47eeaf6f097, type: 2}
-  - m_RefCount: 1
-    m_Data: {fileID: 11400000, guid: ca3df23c88db49f4386b00877c21e87d, type: 2}
   - m_RefCount: 3
+    m_Data: {fileID: 11400000, guid: ca3df23c88db49f4386b00877c21e87d, type: 2}
+  - m_RefCount: 1
     m_Data: {fileID: 11400000, guid: dfeb75b1b03669e468e8e7b04fb834b0, type: 2}
-  - m_RefCount: 7
+  - m_RefCount: 5
     m_Data: {fileID: 11400000, guid: 80bcdae51caae5349af73c5e73416f42, type: 2}
   - m_RefCount: 1
     m_Data: {fileID: 11400000, guid: 645c4157f74cfc040afacaa2cdc3a117, type: 2}
@@ -52047,7 +52064,7 @@ Tilemap:
     m_Data: {fileID: 11400000, guid: 73b54ea0d7044204b9e410895627aa85, type: 2}
   - m_RefCount: 1
     m_Data: {fileID: 11400000, guid: 573be0aeaf2aefc4f8be55c1123c5cb9, type: 2}
-  - m_RefCount: 1
+  - m_RefCount: 2
     m_Data: {fileID: 11400000, guid: ff06159136d2a8b478016cbc95505eef, type: 2}
   - m_RefCount: 1
     m_Data: {fileID: 11400000, guid: 05963d1cdcaa46741a19c72634b9c36e, type: 2}
@@ -52067,10 +52084,12 @@ Tilemap:
     m_Data: {fileID: 11400000, guid: ad66a152ad638624483c4b6acc465fbe, type: 2}
   - m_RefCount: 1
     m_Data: {fileID: 11400000, guid: 0cdab0bce44acea47b3af6cdfa9e01c7, type: 2}
+  - m_RefCount: 1
+    m_Data: {fileID: 11400000, guid: fd0d5fa59d809574bb9637fd24048d20, type: 2}
   m_TileSpriteArray:
   - m_RefCount: 2
     m_Data: {fileID: 741607100, guid: 42a595ec7bb3cd544908d026ca2b538e, type: 3}
-  - m_RefCount: 3
+  - m_RefCount: 5
     m_Data: {fileID: -1491599133, guid: 42a595ec7bb3cd544908d026ca2b538e, type: 3}
   - m_RefCount: 1
     m_Data: {fileID: -429575653, guid: 42a595ec7bb3cd544908d026ca2b538e, type: 3}
@@ -52114,13 +52133,13 @@ Tilemap:
     m_Data: {fileID: 170532626, guid: 42a595ec7bb3cd544908d026ca2b538e, type: 3}
   - m_RefCount: 1
     m_Data: {fileID: 1486153013, guid: 42a595ec7bb3cd544908d026ca2b538e, type: 3}
-  - m_RefCount: 3
+  - m_RefCount: 1
     m_Data: {fileID: -259679049, guid: 42a595ec7bb3cd544908d026ca2b538e, type: 3}
   - m_RefCount: 9
     m_Data: {fileID: -1779026841, guid: 42a595ec7bb3cd544908d026ca2b538e, type: 3}
   - m_RefCount: 1
     m_Data: {fileID: 935764042, guid: 42a595ec7bb3cd544908d026ca2b538e, type: 3}
-  - m_RefCount: 3
+  - m_RefCount: 4
     m_Data: {fileID: 130536740, guid: 42a595ec7bb3cd544908d026ca2b538e, type: 3}
   - m_RefCount: 11
     m_Data: {fileID: -318495355, guid: 42a595ec7bb3cd544908d026ca2b538e, type: 3}
@@ -52170,7 +52189,7 @@ Tilemap:
     m_Data: {fileID: 1550031301, guid: 42a595ec7bb3cd544908d026ca2b538e, type: 3}
   - m_RefCount: 1
     m_Data: {fileID: -785897696, guid: 42a595ec7bb3cd544908d026ca2b538e, type: 3}
-  - m_RefCount: 1
+  - m_RefCount: 3
     m_Data: {fileID: 1274883580, guid: 42a595ec7bb3cd544908d026ca2b538e, type: 3}
   - m_RefCount: 2
     m_Data: {fileID: -1419037078, guid: 42a595ec7bb3cd544908d026ca2b538e, type: 3}
@@ -52180,9 +52199,9 @@ Tilemap:
     m_Data: {fileID: 378161657, guid: 42a595ec7bb3cd544908d026ca2b538e, type: 3}
   - m_RefCount: 1
     m_Data: {fileID: 1947003595, guid: 42a595ec7bb3cd544908d026ca2b538e, type: 3}
-  - m_RefCount: 3
+  - m_RefCount: 1
     m_Data: {fileID: 1722591015, guid: 42a595ec7bb3cd544908d026ca2b538e, type: 3}
-  - m_RefCount: 7
+  - m_RefCount: 5
     m_Data: {fileID: -233586592, guid: 42a595ec7bb3cd544908d026ca2b538e, type: 3}
   - m_RefCount: 1
     m_Data: {fileID: 1212904293, guid: 42a595ec7bb3cd544908d026ca2b538e, type: 3}
@@ -52218,7 +52237,7 @@ Tilemap:
     m_Data: {fileID: -702876745, guid: 42a595ec7bb3cd544908d026ca2b538e, type: 3}
   - m_RefCount: 1
     m_Data: {fileID: -767520126, guid: 42a595ec7bb3cd544908d026ca2b538e, type: 3}
-  - m_RefCount: 1
+  - m_RefCount: 2
     m_Data: {fileID: -229525769, guid: 42a595ec7bb3cd544908d026ca2b538e, type: 3}
   - m_RefCount: 1
     m_Data: {fileID: 390384084, guid: 42a595ec7bb3cd544908d026ca2b538e, type: 3}
@@ -52238,8 +52257,10 @@ Tilemap:
     m_Data: {fileID: -412041753, guid: 42a595ec7bb3cd544908d026ca2b538e, type: 3}
   - m_RefCount: 1
     m_Data: {fileID: -1050834185, guid: 42a595ec7bb3cd544908d026ca2b538e, type: 3}
+  - m_RefCount: 1
+    m_Data: {fileID: 1869130767, guid: 42a595ec7bb3cd544908d026ca2b538e, type: 3}
   m_TileMatrixArray:
-  - m_RefCount: 202
+  - m_RefCount: 203
     m_Data:
       e00: 1
       e01: 0
@@ -52276,7 +52297,7 @@ Tilemap:
       e32: 0
       e33: 0
   m_TileColorArray:
-  - m_RefCount: 202
+  - m_RefCount: 203
     m_Data: {r: 1, g: 1, b: 1, a: 1}
   m_TileObjectToInstantiateArray: []
   m_AnimationFrameRate: 1
@@ -52471,9 +52492,15 @@ CompositeCollider2D:
         Y: -55000000
     - - X: 0
         Y: -55000000
-      - X: -15000000
+      - X: -10000000
         Y: -55000000
+      - X: -10000000
+        Y: -50000000
       - X: -15000000
+        Y: -50000000
+      - X: -15000000
+        Y: -59062500
+      - X: -14062500
         Y: -60000000
       - X: 0
         Y: -60000000
@@ -52789,6 +52816,13 @@ CompositeCollider2D:
       - {x: -7.5000296, y: -4.5}
       - {x: -8.5, y: -4.500029}
       - {x: -8.49997, y: -5.5}
+    - - {x: -0.000029300001, y: -6}
+      - {x: -0.000029300001, y: -5.5}
+      - {x: -1, y: -5.4999704}
+      - {x: -1.0000293, y: -5}
+      - {x: -1.5, y: -5.000029}
+      - {x: -1.4999924, y: -5.9062576}
+      - {x: -1.4062393, y: -6}
     - - {x: -9.5625105, y: -13}
       - {x: -9.499979, y: -12.937521}
       - {x: -9.4374895, y: -13}
@@ -52839,10 +52873,6 @@ CompositeCollider2D:
       - {x: -10, y: -5.562511}
       - {x: -9.999992, y: -12.937508}
       - {x: -9.9374895, y: -13}
-    - - {x: -0.000029300001, y: -6}
-      - {x: -0.000029300001, y: -5.5}
-      - {x: -1.5, y: -5.500029}
-      - {x: -1.4999707, y: -6}
     - - {x: -7.9999385, y: -7.6874385}
       - {x: -7.9999385, y: -7.4375615}
       - {x: -7.9374895, y: -7.5}
@@ -53086,7 +53116,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a6cea5ec2b10f7545830f661be27ba5c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  stuckThresholdX: 4
+  stuckThresholdMaxX: 0
+  stuckThresholdMinX: 0
 --- !u!61 &1070902184
 BoxCollider2D:
   m_ObjectHideFlags: 0
@@ -66057,7 +66088,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a6cea5ec2b10f7545830f661be27ba5c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  stuckThresholdX: 4
+  stuckThresholdMaxX: 0
+  stuckThresholdMinX: 0
 --- !u!61 &1436700237
 BoxCollider2D:
   m_ObjectHideFlags: 0
@@ -66272,7 +66304,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a6cea5ec2b10f7545830f661be27ba5c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  stuckThresholdX: 4
+  stuckThresholdMaxX: 0
+  stuckThresholdMinX: 0
 --- !u!61 &1437545798
 BoxCollider2D:
   m_ObjectHideFlags: 0
@@ -71364,7 +71397,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a6cea5ec2b10f7545830f661be27ba5c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  stuckThresholdX: 4
+  stuckThresholdMaxX: 0
+  stuckThresholdMinX: 0
 --- !u!61 &1475633412
 BoxCollider2D:
   m_ObjectHideFlags: 0
@@ -72131,7 +72165,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a6cea5ec2b10f7545830f661be27ba5c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  stuckThresholdX: 4
+  stuckThresholdMaxX: 0
+  stuckThresholdMinX: 0
 --- !u!61 &1567969519
 BoxCollider2D:
   m_ObjectHideFlags: 0
@@ -72713,7 +72748,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a6cea5ec2b10f7545830f661be27ba5c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  stuckThresholdX: 4
+  stuckThresholdMaxX: 0
+  stuckThresholdMinX: 0
 --- !u!61 &1596712148
 BoxCollider2D:
   m_ObjectHideFlags: 0
@@ -83266,7 +83302,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a6cea5ec2b10f7545830f661be27ba5c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  stuckThresholdX: 4
+  stuckThresholdMaxX: 0
+  stuckThresholdMinX: 0
 --- !u!61 &1763457391
 BoxCollider2D:
   m_ObjectHideFlags: 0
@@ -83777,6 +83814,7 @@ MonoBehaviour:
   idleTriggerTime: 3
   idleRandomInterval: {x: 3, y: 6}
   landTriggerMaxVerticalVelocity: 0.001
+  sleepDelay: 60
 --- !u!95 &1822326675
 Animator:
   serializedVersion: 5
@@ -88938,7 +88976,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a6cea5ec2b10f7545830f661be27ba5c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  stuckThresholdX: 4
+  stuckThresholdMaxX: 0
+  stuckThresholdMinX: 0
 --- !u!61 &1840469190
 BoxCollider2D:
   m_ObjectHideFlags: 0
@@ -89526,7 +89565,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a6cea5ec2b10f7545830f661be27ba5c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  stuckThresholdX: 4
+  stuckThresholdMaxX: 0
+  stuckThresholdMinX: 0
 --- !u!61 &1910272815
 BoxCollider2D:
   m_ObjectHideFlags: 0
@@ -90122,6 +90162,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   sequencePlayer: {fileID: 1991276738}
+  dialogueTableEntryKey: 
   dialogueData: {fileID: 11400000, guid: 61020cb83d86a1d4480bdd36e2dda306, type: 2}
   userConfigKey: HasPlayedFirstEnterWorld1
   onlyInActiveSceneName: World 1

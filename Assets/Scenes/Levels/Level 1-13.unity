@@ -337,7 +337,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6429178881412073976, guid: d09c7471a3a95a74aa28e36029ae0237, type: 3}
       propertyPath: DefaultOpen
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 8253349001071047797, guid: d09c7471a3a95a74aa28e36029ae0237, type: 3}
       propertyPath: m_Name
@@ -707,7 +707,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6429178881412073976, guid: d09c7471a3a95a74aa28e36029ae0237, type: 3}
       propertyPath: DefaultOpen
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 8253349001071047797, guid: d09c7471a3a95a74aa28e36029ae0237, type: 3}
       propertyPath: m_Name
@@ -3066,7 +3066,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a6cea5ec2b10f7545830f661be27ba5c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  stuckThresholdX: 4
+  stuckThresholdMaxX: 0
+  stuckThresholdMinX: 0
 --- !u!61 &1173338973
 BoxCollider2D:
   m_ObjectHideFlags: 0
@@ -3617,7 +3618,7 @@ Transform:
   m_GameObject: {fileID: 1284175437}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: -0.25, y: -3.75, z: 0}
+  m_LocalPosition: {x: -2.75, y: -3.75, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
@@ -3832,7 +3833,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6429178881412073976, guid: d09c7471a3a95a74aa28e36029ae0237, type: 3}
       propertyPath: DefaultOpen
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 8253349001071047797, guid: d09c7471a3a95a74aa28e36029ae0237, type: 3}
       propertyPath: m_Name
@@ -3960,7 +3961,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6429178881412073976, guid: d09c7471a3a95a74aa28e36029ae0237, type: 3}
       propertyPath: DefaultOpen
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 8253349001071047797, guid: d09c7471a3a95a74aa28e36029ae0237, type: 3}
       propertyPath: m_Name
@@ -4693,7 +4694,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a6cea5ec2b10f7545830f661be27ba5c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  stuckThresholdX: 4
+  stuckThresholdMaxX: 0
+  stuckThresholdMinX: 0
 --- !u!1 &1644887817
 GameObject:
   m_ObjectHideFlags: 0
@@ -5401,6 +5403,7 @@ MonoBehaviour:
   idleTriggerTime: 3
   idleRandomInterval: {x: 3, y: 6}
   landTriggerMaxVerticalVelocity: 0.001
+  sleepDelay: 60
 --- !u!95 &1822326675
 Animator:
   serializedVersion: 5
@@ -5752,7 +5755,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a6cea5ec2b10f7545830f661be27ba5c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  stuckThresholdX: 4
+  stuckThresholdMaxX: 0
+  stuckThresholdMinX: 0
 --- !u!61 &2016448036
 BoxCollider2D:
   m_ObjectHideFlags: 0
