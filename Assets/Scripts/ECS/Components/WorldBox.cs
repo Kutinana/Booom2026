@@ -228,11 +228,14 @@ public class WorldBox : StandardBox
     /// <summary>Teleport pusher to outer entrance opposite <paramref name="pushDirection"/> (blocked-push semantics).</summary>
     public bool TryTeleportPusherToOuterEntranceForPushInterrupt(BoxPushDirection pushDirection, GameObject pusher)
     {
-        if ((pushableFrom & ToMask(pushDirection)) != 0)
+        if ((pushableFrom & ToMask(Opposite(pushDirection))) != 0)
         {
             return false;
+            
         }
+        
         return TeleportPusherToOuterEntrance(pusher, Opposite(pushDirection), pushDirection);
+        
     }
 
     private Bounds GetPlayerBounds()
