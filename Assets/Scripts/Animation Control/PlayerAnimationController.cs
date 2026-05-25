@@ -29,6 +29,7 @@ public class PlayerAnimationController : MonoBehaviour
     private bool wasFalling;
     private bool wasDying;
     private bool downHeld;
+    private int frameSuppressCount = 5;
 
     private void Reset()
     {
@@ -145,7 +146,11 @@ public class PlayerAnimationController : MonoBehaviour
         animator.SetFloat("VerticalVelocity", velocity.y);
 
         // Landing detection：仍在明显上升时不打 Land（与 PlayerController 按竖直速度收紧 grounded 配套）
-        if (!wasGrounded && grounded && velocity.y <= landTriggerMaxVerticalVelocity)
+        if (frameSuppressCount > 0)
+        {
+            frameSuppressCount--;
+        }
+        else if (!wasGrounded && grounded && velocity.y <= landTriggerMaxVerticalVelocity)
         {
             animator.SetTrigger("Land");
         }
