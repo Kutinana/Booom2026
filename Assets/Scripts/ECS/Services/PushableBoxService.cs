@@ -76,6 +76,11 @@ public class PushableBoxService : ServiceBase<StandardBox>
                 continue;
             }
 
+            if (box.gameObject.scene != worldBox.gameObject.scene)
+            {
+                continue;
+            }
+
             Bounds boxBounds = box.Bounds;
             if (boxBounds.size == Vector3.zero)
             {
