@@ -337,7 +337,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6429178881412073976, guid: d09c7471a3a95a74aa28e36029ae0237, type: 3}
       propertyPath: DefaultOpen
-      value: 0
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 8253349001071047797, guid: d09c7471a3a95a74aa28e36029ae0237, type: 3}
       propertyPath: m_Name
@@ -707,7 +707,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6429178881412073976, guid: d09c7471a3a95a74aa28e36029ae0237, type: 3}
       propertyPath: DefaultOpen
-      value: 0
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 8253349001071047797, guid: d09c7471a3a95a74aa28e36029ae0237, type: 3}
       propertyPath: m_Name
@@ -3159,6 +3159,7 @@ MonoBehaviour:
     serializedVersion: 2
     m_Bits: 4294967295
   ApplyGravity: 1
+  FreezeHorizontalMovement: 0
   TestDirection: 0
 --- !u!95 &1173338976
 Animator:
@@ -3696,6 +3697,7 @@ MonoBehaviour:
     serializedVersion: 2
     m_Bits: 4294967295
   ApplyGravity: 1
+  FreezeHorizontalMovement: 0
   TestDirection: 0
   OuterQuadCollider: {fileID: 1030242292}
   InnerQuadCollider: {fileID: 1261429945}
@@ -3833,7 +3835,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6429178881412073976, guid: d09c7471a3a95a74aa28e36029ae0237, type: 3}
       propertyPath: DefaultOpen
-      value: 0
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 8253349001071047797, guid: d09c7471a3a95a74aa28e36029ae0237, type: 3}
       propertyPath: m_Name
@@ -3961,7 +3963,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6429178881412073976, guid: d09c7471a3a95a74aa28e36029ae0237, type: 3}
       propertyPath: DefaultOpen
-      value: 0
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 8253349001071047797, guid: d09c7471a3a95a74aa28e36029ae0237, type: 3}
       propertyPath: m_Name
@@ -4609,6 +4611,7 @@ MonoBehaviour:
     serializedVersion: 2
     m_Bits: 4294967295
   ApplyGravity: 1
+  FreezeHorizontalMovement: 0
   TestDirection: 0
 --- !u!61 &1579278815
 BoxCollider2D:
@@ -5848,6 +5851,7 @@ MonoBehaviour:
     serializedVersion: 2
     m_Bits: 4294967295
   ApplyGravity: 1
+  FreezeHorizontalMovement: 0
   TestDirection: 0
 --- !u!95 &2016448039
 Animator:

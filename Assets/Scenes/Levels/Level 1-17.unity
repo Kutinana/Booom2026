@@ -327,7 +327,6 @@ Transform:
   - {fileID: 736232123}
   - {fileID: 476199452}
   - {fileID: 1877465360}
-  - {fileID: 1114279679}
   - {fileID: 1655221384}
   - {fileID: 1982193221}
   - {fileID: 2057602985}
@@ -3556,80 +3555,6 @@ PrefabInstance:
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: d09c7471a3a95a74aa28e36029ae0237, type: 3}
---- !u!1001 &1114279678
-PrefabInstance:
-  m_ObjectHideFlags: 0
-  serializedVersion: 2
-  m_Modification:
-    serializedVersion: 3
-    m_TransformParent: {fileID: 247930346}
-    m_Modifications:
-    - target: {fileID: 3848948580077187489, guid: d09c7471a3a95a74aa28e36029ae0237, type: 3}
-      propertyPath: m_Layer
-      value: 3
-      objectReference: {fileID: 0}
-    - target: {fileID: 4278056204737627312, guid: d09c7471a3a95a74aa28e36029ae0237, type: 3}
-      propertyPath: m_LocalPosition.x
-      value: -3.75
-      objectReference: {fileID: 0}
-    - target: {fileID: 4278056204737627312, guid: d09c7471a3a95a74aa28e36029ae0237, type: 3}
-      propertyPath: m_LocalPosition.y
-      value: 0.25
-      objectReference: {fileID: 0}
-    - target: {fileID: 4278056204737627312, guid: d09c7471a3a95a74aa28e36029ae0237, type: 3}
-      propertyPath: m_LocalPosition.z
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 4278056204737627312, guid: d09c7471a3a95a74aa28e36029ae0237, type: 3}
-      propertyPath: m_LocalRotation.w
-      value: 1
-      objectReference: {fileID: 0}
-    - target: {fileID: 4278056204737627312, guid: d09c7471a3a95a74aa28e36029ae0237, type: 3}
-      propertyPath: m_LocalRotation.x
-      value: -0
-      objectReference: {fileID: 0}
-    - target: {fileID: 4278056204737627312, guid: d09c7471a3a95a74aa28e36029ae0237, type: 3}
-      propertyPath: m_LocalRotation.y
-      value: -0
-      objectReference: {fileID: 0}
-    - target: {fileID: 4278056204737627312, guid: d09c7471a3a95a74aa28e36029ae0237, type: 3}
-      propertyPath: m_LocalRotation.z
-      value: -0
-      objectReference: {fileID: 0}
-    - target: {fileID: 4278056204737627312, guid: d09c7471a3a95a74aa28e36029ae0237, type: 3}
-      propertyPath: m_LocalEulerAnglesHint.x
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 4278056204737627312, guid: d09c7471a3a95a74aa28e36029ae0237, type: 3}
-      propertyPath: m_LocalEulerAnglesHint.y
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 4278056204737627312, guid: d09c7471a3a95a74aa28e36029ae0237, type: 3}
-      propertyPath: m_LocalEulerAnglesHint.z
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 5237372365380531591, guid: d09c7471a3a95a74aa28e36029ae0237, type: 3}
-      propertyPath: m_Layer
-      value: 3
-      objectReference: {fileID: 0}
-    - target: {fileID: 8253349001071047797, guid: d09c7471a3a95a74aa28e36029ae0237, type: 3}
-      propertyPath: m_Name
-      value: Barrier2 (4)
-      objectReference: {fileID: 0}
-    - target: {fileID: 8253349001071047797, guid: d09c7471a3a95a74aa28e36029ae0237, type: 3}
-      propertyPath: m_Layer
-      value: 3
-      objectReference: {fileID: 0}
-    m_RemovedComponents: []
-    m_RemovedGameObjects: []
-    m_AddedGameObjects: []
-    m_AddedComponents: []
-  m_SourcePrefab: {fileID: 100100000, guid: d09c7471a3a95a74aa28e36029ae0237, type: 3}
---- !u!4 &1114279679 stripped
-Transform:
-  m_CorrespondingSourceObject: {fileID: 4278056204737627312, guid: d09c7471a3a95a74aa28e36029ae0237, type: 3}
-  m_PrefabInstance: {fileID: 1114279678}
-  m_PrefabAsset: {fileID: 0}
 --- !u!1001 &1128865498
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -4222,6 +4147,7 @@ MonoBehaviour:
     serializedVersion: 2
     m_Bits: 4294967295
   ApplyGravity: 1
+  FreezeHorizontalMovement: 0
   TestDirection: 0
   OuterQuadCollider: {fileID: 1030242292}
   InnerQuadCollider: {fileID: 1261429945}
@@ -4913,6 +4839,7 @@ MonoBehaviour:
     serializedVersion: 2
     m_Bits: 4294967295
   ApplyGravity: 1
+  FreezeHorizontalMovement: 0
   TestDirection: 0
 --- !u!61 &1579278815
 BoxCollider2D:
@@ -4998,7 +4925,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a6cea5ec2b10f7545830f661be27ba5c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  stuckThresholdX: 4
+  stuckThresholdMaxX: 0
+  stuckThresholdMinX: 0
 --- !u!1001 &1597788321
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -5735,6 +5663,7 @@ MonoBehaviour:
   idleTriggerTime: 3
   idleRandomInterval: {x: 3, y: 6}
   landTriggerMaxVerticalVelocity: 0.001
+  sleepDelay: 60
 --- !u!95 &1822326675
 Animator:
   serializedVersion: 5
