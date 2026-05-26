@@ -455,8 +455,14 @@ public class WorldBox : StandardBox
             attemptedBlockers[attemptIndex] = blocker;
             Vector3 blockerPosition = blocker.transform.position;
             BoxPushAttemptEvent attempt = blocker.TryPush(pushDirection, pusher);
-            if (!attempt.CanPush || !HasMovedFrom(blocker, blockerPosition))
+            if (!attempt.CanPush)
             {
+                return false;
+            }
+
+            if (!HasMovedFrom(blocker, blockerPosition))
+            {
+                TryPushWorldBoxFromBlockedTeleportTarget(pushDirection, pusher);
                 return false;
             }
         }
@@ -469,6 +475,18 @@ public class WorldBox : StandardBox
             use2D,
             use3D,
             out _);
+    }
+
+    private bool TryPushWorldBoxFromBlockedTeleportTarget(BoxPushDirection pushDirection, GameObject pusher)
+    {
+        if (pusher == null || pusher.GetComponent<PlayerController>() == null)
+        {
+            return false;
+        }
+
+        Vector3 worldBoxPosition = transform.position;
+        BoxPushAttemptEvent attempt = TryPush(pushDirection, pusher, initializedCanPush: true);
+        return attempt.CanPush && (transform.position - worldBoxPosition).sqrMagnitude > Mathf.Epsilon;
     }
 
     private static bool HasMovedFrom(StandardBox box, Vector3 position)
