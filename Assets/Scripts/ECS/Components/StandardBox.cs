@@ -17,6 +17,9 @@ public class StandardBox : MonoBehaviour, ISceneMovableItem
 
     [Header("Physical Simulation")]
     public bool ApplyGravity = true;
+    public bool FreezeHorizontalMovement = false;
+    private float lockedX;
+    private bool hasLockedX;
 
     public Vector3 CellOffset => cellOffset;
     public LayerMask CollisionMask => collisionMask;
@@ -70,6 +73,8 @@ public class StandardBox : MonoBehaviour, ISceneMovableItem
 
         grid = FindSceneGrid();
         RegisterToServices();
+        lockedX = transform.position.x;
+        hasLockedX = true;
     }
 
     protected virtual void Start()
@@ -84,6 +89,12 @@ public class StandardBox : MonoBehaviour, ISceneMovableItem
 
     public bool CanPushFrom(BoxPushDirection direction)
     {
+        if (FreezeHorizontalMovement &&
+            (direction == BoxPushDirection.Left || direction == BoxPushDirection.Right))
+        {
+            return false;
+        }
+
         return (pushableFrom & ToMask(direction)) != 0;
     }
 
@@ -144,6 +155,22 @@ public class StandardBox : MonoBehaviour, ISceneMovableItem
 
     public void MoveTo(Vector3 position)
     {
+        if (FreezeHorizontalMovement)
+        {
+            if (!hasLockedX)
+            {
+                lockedX = transform.position.x;
+                hasLockedX = true;
+            }
+
+            position.x = lockedX;
+        }
+        else
+        {
+            lockedX = position.x;
+            hasLockedX = true;
+        }
+
         // 同时更新 body 与 transform，使后续同帧内的位置读取/碰撞查询立即拿到新位置；
         // Rigidbody2D.MovePosition 是延迟到下个物理步的，会让线性推动期间玩家与箱子位置不同步而出现抖动。
         if (body2D != null)

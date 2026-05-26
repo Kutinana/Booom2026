@@ -11,7 +11,7 @@ public class WorldBoxExitBlockerService : ServiceBase
     private const string SceneBricksLayerName = "SceneBricks";
     private const string UntaggedTag = "Untagged";
 
-    [SerializeField, Min(0f)] private float innerCheckPadding = 0.02f;
+    [SerializeField, Min(0f)] private float innerCheckPadding = 0.1f;
     [SerializeField, Min(0.01f)] private float fallbackCellSize = 0.5f;
     [SerializeField, Min(0.01f)] private float fallbackDepth = 1f;
     [SerializeField, Min(0.01f)] private float minimumColliderSize = 0.05f;
@@ -287,7 +287,12 @@ public class WorldBoxExitBlockerService : ServiceBase
         for (int i = 0; i < hitCount; i++)
         {
             Collider2D hit = overlapHits2D[i];
-            bool accepted = IsStaticBlockingCollider(hit, worldBox, queryBounds, out string rejectReason);
+            bool accepted = IsStaticBlockingCollider(
+    hit,
+    worldBox,
+    direction,
+    queryBounds,
+    out string rejectReason);
             LogTargetHit("2D", worldBox, hit, accepted, rejectReason);
             if (accepted)
             {
@@ -435,6 +440,30 @@ public class WorldBoxExitBlockerService : ServiceBase
     private bool IsStaticBlockingCollider(Collider2D hit, WorldBox worldBox)
     {
         return IsStaticBlockingCollider(hit, worldBox, null, out _);
+    }
+    private bool IsStaticBlockingCollider(
+    Collider2D hit,
+    WorldBox worldBox,
+    BoxPushDirection direction,
+    Bounds? queryBounds,
+    out string rejectReason)
+    {
+        rejectReason = GetStaticBlockingRejectReason(hit, worldBox, queryBounds);
+
+        if (rejectReason == "scene movable item")
+        {
+            StandardBox standardBox = hit.GetComponentInParent<StandardBox>();
+
+            // 允许普通箱子作为“向下离开世界”时的阻挡
+            if (direction == BoxPushDirection.Down &&
+                standardBox != null &&
+                !(standardBox is WorldBox))
+            {
+                rejectReason = null;
+            }
+        }
+
+        return rejectReason == null;
     }
 
     private bool IsStaticBlockingCollider(Collider2D hit, WorldBox worldBox, Bounds? queryBounds, out string rejectReason)
