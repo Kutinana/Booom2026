@@ -355,9 +355,9 @@ public class PushableBoxService : ServiceBase<StandardBox>
     private static bool TryGetExitDirection(Bounds outerBounds, Bounds itemBounds, out BoxPushDirection direction)
     {
         float left = outerBounds.min.x - itemBounds.center.x;
-        float right = itemBounds.min.x - outerBounds.max.x;
+        float right = itemBounds.center.x - outerBounds.max.x;
         float down = outerBounds.min.y - itemBounds.center.y;
-        float up = itemBounds.min.y - outerBounds.max.y;
+        float up = itemBounds.center.y - outerBounds.max.y;
         float max = left;
         direction = BoxPushDirection.Left;
 
