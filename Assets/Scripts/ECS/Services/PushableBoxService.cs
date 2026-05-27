@@ -265,7 +265,7 @@ public class PushableBoxService : ServiceBase<StandardBox>
         }
     }
 
-    private static bool IsTouchingInnerBoundsForExiting(Bounds innerBounds, Bounds boxBounds, BoxPushDirection direction, float threshold)
+    public static bool IsTouchingInnerBoundsForExiting(Bounds innerBounds, Bounds boxBounds, BoxPushDirection direction, float threshold)
     {
         switch (direction)
         {
@@ -355,17 +355,65 @@ public class PushableBoxService : ServiceBase<StandardBox>
 
         blockerService.Clear(worldBox, box);
 
-        return !TryClearTeleportTargetStandardBoxBlockers(
-            blockerService,
+        // Find the immediate blocker at the entrance inside the WorldBox
+        if (!blockerService.TryGetTeleportTargetStandardBoxBlocker(
             movableTargetBounds,
             worldBox,
             ignoredBox: null,
             box.CollisionMask,
             use2D,
             use3D,
-            direction,
-            box.Owner,
-            checkingInner: true);
+            checkingInner: true,
+            out StandardBox blocker))
+        {
+            // No blocker!
+            return false;
+        }
+
+        // Collect the inner chain starting from the blocker
+        Vector3 axis = direction == BoxPushDirection.Right ? Vector3.right :
+                       direction == BoxPushDirection.Left ? Vector3.left :
+                       direction == BoxPushDirection.Up ? Vector3.up : Vector3.down;
+
+        if (!ServiceBase.TryGet(out PhysicalBoxService physicalBoxService))
+        {
+            return true;
+        }
+
+        var innerChain = new System.Collections.Generic.List<StandardBox>();
+        physicalBoxService.CollectHorizontalChain(blocker, axis, innerChain);
+
+        // Check if any member in the inner chain is blocked
+        foreach (StandardBox member in innerChain)
+        {
+            if (member == null)
+            {
+                continue;
+            }
+
+            float cellSize = 1f;
+            if (member.Grid != null)
+            {
+                cellSize = Mathf.Abs(direction == BoxPushDirection.Left || direction == BoxPushDirection.Right ? member.Grid.cellSize.x : member.Grid.cellSize.y);
+            }
+
+            // Cast to check for static/physical blockers
+            if (physicalBoxService.CastSingle(member, member.transform.position, axis, cellSize, out _, innerChain))
+            {
+                return true; // Blocked!
+            }
+
+            // If the member is at the exit boundary, check if its destination outside is blocked
+            if (IsTouchingInnerBoundsForExiting(worldBox.InnerBounds, member.Bounds, direction, OuterEdgeBlockerTouchTolerance))
+            {
+                if (IsOuterDestinationBlocked(member, worldBox, direction))
+                {
+                    return true; // Blocked!
+                }
+            }
+        }
+
+        return false; // Not blocked!
     }
 
     private bool IsOuterDestinationBlocked(StandardBox box, WorldBox worldBox, BoxPushDirection direction)
@@ -458,6 +506,7 @@ public class PushableBoxService : ServiceBase<StandardBox>
                 break;
         }
 
+        System.Collections.Generic.List<StandardBox> innerChain = null;
         if (isEntering)
         {
             Transform entrance = worldBox.GetOuterEntrance(Opposite(direction));
@@ -475,6 +524,35 @@ public class PushableBoxService : ServiceBase<StandardBox>
                 P_target_end = snapped;
             }
             P_target_start = P_target_end - axis * cellSize;
+
+            Bounds targetBounds = boxBounds;
+            targetBounds.center = P_target_end;
+
+            Bounds movableTargetBounds = targetBounds;
+            movableTargetBounds.Expand(-0.05f);
+
+            WorldBoxExitBlockerService blockerService = ServiceBase.Get<WorldBoxExitBlockerService>();
+            if (blockerService != null)
+            {
+                bool use2D = box.Collider2D != null;
+                bool use3D = box.Collider3D != null;
+                if (blockerService.TryGetTeleportTargetStandardBoxBlocker(
+                    movableTargetBounds,
+                    worldBox,
+                    ignoredBox: null,
+                    box.CollisionMask,
+                    use2D,
+                    use3D,
+                    checkingInner: true,
+                    out StandardBox blocker))
+                {
+                    if (ServiceBase.TryGet(out PhysicalBoxService physicalBoxService))
+                    {
+                        innerChain = new System.Collections.Generic.List<StandardBox>();
+                        physicalBoxService.CollectHorizontalChain(blocker, axis, innerChain);
+                    }
+                }
+            }
         }
         else
         {
@@ -523,6 +601,21 @@ public class PushableBoxService : ServiceBase<StandardBox>
             Width = cellSize,
             OriginalRenderer = origRenderer
         };
+
+        if (innerChain != null)
+        {
+            state.InnerChain.AddRange(innerChain);
+            for (int i = 0; i < innerChain.Count; i++)
+            {
+                StandardBox member = innerChain[i];
+                state.InnerChainStartPositions.Add(member.transform.position);
+
+                if (ServiceBase.TryGet(out PhysicalBoxService pbService))
+                {
+                    pbService.RegisterFollowerState(member, direction);
+                }
+            }
+        }
         
         activeTransitions.Add(state);
     }
@@ -566,6 +659,24 @@ public class PushableBoxService : ServiceBase<StandardBox>
         {
             state.VisualClone.transform.position = Vector3.Lerp(state.P_target_start, state.P_target_end, progress);
         }
+
+        Vector3 axis = Vector3.zero;
+        switch (state.Direction)
+        {
+            case BoxPushDirection.Right: axis = Vector3.right; break;
+            case BoxPushDirection.Left: axis = Vector3.left; break;
+            case BoxPushDirection.Up: axis = Vector3.up; break;
+            case BoxPushDirection.Down: axis = Vector3.down; break;
+        }
+
+        for (int i = 0; i < state.InnerChain.Count; i++)
+        {
+            StandardBox member = state.InnerChain[i];
+            if (member != null)
+            {
+                member.MoveTo(state.InnerChainStartPositions[i] + axis * (progress * state.Width));
+            }
+        }
     }
 
     private void CompleteTransition(BoxTransitionState state)
@@ -576,6 +687,37 @@ public class PushableBoxService : ServiceBase<StandardBox>
         }
         
         activeTransitions.Remove(state);
+
+        Vector3 axis = Vector3.zero;
+        switch (state.Direction)
+        {
+            case BoxPushDirection.Right: axis = Vector3.right; break;
+            case BoxPushDirection.Left: axis = Vector3.left; break;
+            case BoxPushDirection.Up: axis = Vector3.up; break;
+            case BoxPushDirection.Down: axis = Vector3.down; break;
+        }
+
+        for (int i = 0; i < state.InnerChain.Count; i++)
+        {
+            StandardBox member = state.InnerChain[i];
+            if (member != null)
+            {
+                if (IsOwnedByWorldBox(member.transform, state.WorldBox))
+                {
+                    Vector3 finalPos = state.InnerChainStartPositions[i] + axis * state.Width;
+                    member.MoveTo(finalPos);
+                    if (ServiceBase.TryGet(out SceneMovableInteractionService sceneMovable))
+                    {
+                        sceneMovable.RefreshItemImpactBaseline(member);
+                    }
+                }
+
+                if (ServiceBase.TryGet(out PhysicalBoxService pbService))
+                {
+                    pbService.CancelLinearPush(member);
+                }
+            }
+        }
         
         if (state.Box != null && state.WorldBox != null)
         {
@@ -597,6 +739,19 @@ public class PushableBoxService : ServiceBase<StandardBox>
         {
             Destroy(state.VisualClone);
         }
+
+        for (int i = 0; i < state.InnerChain.Count; i++)
+        {
+            StandardBox member = state.InnerChain[i];
+            if (member != null)
+            {
+                if (ServiceBase.TryGet(out PhysicalBoxService pbService))
+                {
+                    pbService.CancelLinearPush(member);
+                }
+            }
+        }
+
         activeTransitions.Remove(state);
     }
 
@@ -641,6 +796,9 @@ public class PushableBoxService : ServiceBase<StandardBox>
         public float Width;
         
         public SpriteRenderer OriginalRenderer;
+
+        public readonly System.Collections.Generic.List<StandardBox> InnerChain = new System.Collections.Generic.List<StandardBox>();
+        public readonly System.Collections.Generic.List<Vector3> InnerChainStartPositions = new System.Collections.Generic.List<Vector3>();
     }
 
 
