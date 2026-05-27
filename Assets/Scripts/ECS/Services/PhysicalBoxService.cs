@@ -646,6 +646,17 @@ public class PhysicalBoxService : ServiceBase<StandardBox>
         // 自然继续受重力加速、穿过 player、直到落到真实地面，匹配"砸落速度不变"的需求。
         GameObject ignoredPlayer = TryGetDyingPlayerGameObject();
 
+        bool isExitingWorldBox = false;
+        WorldBox exitingWorldBox = null;
+        BoxPushDirection transitionDir = default;
+        bool isEnteringWorldBox = false;
+        WorldBox enteringWorldBox = null;
+        if (ServiceBase.TryGet(out PushableBoxService pushableBoxService))
+        {
+            isExitingWorldBox = pushableBoxService.IsBoxExitingWorldBox(box, out exitingWorldBox, out transitionDir);
+            isEnteringWorldBox = pushableBoxService.IsBoxEnteringWorldBox(box, out enteringWorldBox, out _);
+        }
+
         Collider2D boxCollider2D = box.Collider2D;
         if (boxCollider2D != null)
         {
@@ -656,6 +667,29 @@ public class PhysicalBoxService : ServiceBase<StandardBox>
                 if (hit2D.collider == null || hit2D.collider.isTrigger || hit2D.collider == boxCollider2D)
                 {
                     continue;
+                }
+
+                if (isExitingWorldBox && IsOwnedByWorldBox(hit2D.collider.transform, exitingWorldBox) && IsAlongTransitionAxis(direction, transitionDir))
+                {
+                    continue;
+                }
+
+                if (isEnteringWorldBox && hit2D.collider != null && (hit2D.collider.gameObject == enteringWorldBox.gameObject || IsOwnedByWorldBox(hit2D.collider.transform, enteringWorldBox)))
+                {
+                    continue;
+                }
+
+                WorldBox hitWorldBox2D = hit2D.collider != null ? hit2D.collider.GetComponentInParent<WorldBox>() : null;
+                if (hitWorldBox2D != null && !IsOwnedByWorldBox(box.transform, hitWorldBox2D))
+                {
+                    BoxPushDirection pushDirFromVec = VectorToDirection(direction);
+                    if (hitWorldBox2D.GetOuterEntrance(Opposite(pushDirFromVec)) != null)
+                    {
+                        if (IsTouchingOuterBoundsForEntering(hitWorldBox2D.OuterBounds, box.Bounds, pushDirFromVec, 0.04f))
+                        {
+                            continue;
+                        }
+                    }
                 }
 
                 bool vertical = Mathf.Abs(direction.y) > 0f;
@@ -701,6 +735,29 @@ public class PhysicalBoxService : ServiceBase<StandardBox>
                     continue;
                 }
 
+                if (isExitingWorldBox && IsOwnedByWorldBox(hit3D.collider.transform, exitingWorldBox) && IsAlongTransitionAxis(direction, transitionDir))
+                {
+                    continue;
+                }
+
+                if (isEnteringWorldBox && hit3D.collider != null && (hit3D.collider.gameObject == enteringWorldBox.gameObject || IsOwnedByWorldBox(hit3D.collider.transform, enteringWorldBox)))
+                {
+                    continue;
+                }
+
+                WorldBox hitWorldBox3D = hit3D.collider != null ? hit3D.collider.GetComponentInParent<WorldBox>() : null;
+                if (hitWorldBox3D != null && !IsOwnedByWorldBox(box.transform, hitWorldBox3D))
+                {
+                    BoxPushDirection pushDirFromVec = VectorToDirection(direction);
+                    if (hitWorldBox3D.GetOuterEntrance(Opposite(pushDirFromVec)) != null)
+                    {
+                        if (IsTouchingOuterBoundsForEntering(hitWorldBox3D.OuterBounds, box.Bounds, pushDirFromVec, 0.04f))
+                        {
+                            continue;
+                        }
+                    }
+                }
+
                 PlayerController hitPlayer = hit3D.collider.GetComponentInParent<PlayerController>();
                 if (ignoredPlayer != null && hitPlayer != null && hitPlayer.gameObject == ignoredPlayer)
                 {
@@ -726,6 +783,29 @@ public class PhysicalBoxService : ServiceBase<StandardBox>
 
         return bestDistance < float.PositiveInfinity;
     }
+
+    private static bool IsOwnedByWorldBox(Transform start, WorldBox worldBox)
+    {
+        return start != null && worldBox != null && (start == worldBox.transform || start.IsChildOf(worldBox.transform));
+    }
+
+    private static bool IsAlongTransitionAxis(Vector3 direction, BoxPushDirection transitionDir)
+    {
+        Vector3 transitionAxis = Vector3.zero;
+        switch (transitionDir)
+        {
+            case BoxPushDirection.Left:
+            case BoxPushDirection.Right:
+                transitionAxis = Vector3.right;
+                break;
+            case BoxPushDirection.Up:
+            case BoxPushDirection.Down:
+                transitionAxis = Vector3.up;
+                break;
+        }
+        return Mathf.Abs(Vector3.Dot(direction.normalized, transitionAxis)) > 0.5f;
+    }
+
 
     private static bool ListContains(IList<StandardBox> list, StandardBox box)
     {
@@ -943,6 +1023,11 @@ public class PhysicalBoxService : ServiceBase<StandardBox>
             }
 
             if (!TryGetBlockedWorldBoxAhead(pusherBox, direction, axis, out WorldBox blockedWorldBox))
+            {
+                continue;
+            }
+
+            if (blockedWorldBox.GetOuterEntrance(Opposite(direction)) != null)
             {
                 continue;
             }
@@ -1609,6 +1694,17 @@ public class PhysicalBoxService : ServiceBase<StandardBox>
         linearPushes.Remove(box);
     }
 
+    public bool TryGetLinearPushDirection(StandardBox box, out BoxPushDirection direction)
+    {
+        direction = default;
+        if (box != null && linearPushes.TryGetValue(box, out LinearPushState state) && state.Active)
+        {
+            direction = state.Direction;
+            return true;
+        }
+        return false;
+    }
+
     /// <summary>Active horizontal linear push for <paramref name="pusher"/> (not in release transition).</summary>
     public bool TryGetActiveLinearHorizontalPushForPusher(GameObject pusher, out StandardBox box, out BoxPushDirection direction)
     {
@@ -1914,5 +2010,59 @@ public class PhysicalBoxService : ServiceBase<StandardBox>
 
         return fallSpeeds.TryGetValue(box, out float speed) &&
                speed > PushContactTolerance;
+    }
+
+    private static BoxPushDirection VectorToDirection(Vector3 dir)
+    {
+        if (Mathf.Abs(dir.x) > Mathf.Abs(dir.y))
+        {
+            return dir.x > 0f ? BoxPushDirection.Right : BoxPushDirection.Left;
+        }
+        else
+        {
+            return dir.y > 0f ? BoxPushDirection.Up : BoxPushDirection.Down;
+        }
+    }
+
+    private static BoxPushDirection Opposite(BoxPushDirection direction)
+    {
+        switch (direction)
+        {
+            case BoxPushDirection.Left:
+                return BoxPushDirection.Right;
+            case BoxPushDirection.Right:
+                return BoxPushDirection.Left;
+            case BoxPushDirection.Up:
+                return BoxPushDirection.Down;
+            case BoxPushDirection.Down:
+                return BoxPushDirection.Up;
+            default:
+                return direction;
+        }
+    }
+
+    private static bool IsTouchingOuterBoundsForEntering(Bounds outerBounds, Bounds boxBounds, BoxPushDirection direction, float threshold)
+    {
+        switch (direction)
+        {
+            case BoxPushDirection.Right:
+                return Mathf.Abs(boxBounds.max.x - outerBounds.min.x) <= threshold &&
+                       boxBounds.min.y < outerBounds.max.y &&
+                       boxBounds.max.y > outerBounds.min.y;
+            case BoxPushDirection.Left:
+                return Mathf.Abs(boxBounds.min.x - outerBounds.max.x) <= threshold &&
+                       boxBounds.min.y < outerBounds.max.y &&
+                       boxBounds.max.y > outerBounds.min.y;
+            case BoxPushDirection.Up:
+                return Mathf.Abs(boxBounds.max.y - outerBounds.min.y) <= threshold &&
+                       boxBounds.min.x < outerBounds.max.x &&
+                       boxBounds.max.x > outerBounds.min.x;
+            case BoxPushDirection.Down:
+                return Mathf.Abs(boxBounds.min.y - outerBounds.max.y) <= threshold &&
+                       boxBounds.min.x < outerBounds.max.x &&
+                       boxBounds.max.x > outerBounds.min.x;
+            default:
+                return false;
+        }
     }
 }

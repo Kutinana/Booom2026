@@ -20,6 +20,9 @@ public class WorldBox : StandardBox
     public bool HasLastExitDirection { get; private set; }
     public BoxPushDirection LastExitDirection { get; private set; }
 
+    public Bounds InnerBounds => CalculateBounds(InnerQuadCollider);
+    public Bounds OuterBounds => CalculateBounds(OuterQuadCollider);
+
     private Transform playerTransform;
     private Collider playerCollider3D;
     private Collider2D playerCollider2D;
@@ -268,7 +271,8 @@ public class WorldBox : StandardBox
             pusher,
             ignoredBox: null,
             use2D: playerCollider2D != null,
-            use3D: playerCollider3D != null))
+            use3D: playerCollider3D != null,
+            checkingInner: false))
         {
             return false;
         }
@@ -421,7 +425,8 @@ public class WorldBox : StandardBox
         GameObject pusher,
         StandardBox ignoredBox,
         bool use2D,
-        bool use3D)
+        bool use3D,
+        bool checkingInner)
     {
         WorldBoxExitBlockerService service = GetExitBlockerService();
         if (service == null)
@@ -439,6 +444,7 @@ public class WorldBox : StandardBox
                 CollisionMask,
                 use2D,
                 use3D,
+                checkingInner,
                 out StandardBox blocker))
             {
                 return true;
@@ -474,6 +480,7 @@ public class WorldBox : StandardBox
             CollisionMask,
             use2D,
             use3D,
+            checkingInner,
             out _);
     }
 
@@ -711,7 +718,8 @@ public class WorldBox : StandardBox
             pusher,
             ignoredBox: null,
             use2D: playerCollider2D != null,
-            use3D: playerCollider3D != null))
+            use3D: playerCollider3D != null,
+            checkingInner: true))
         {
             return false;
         }
@@ -740,7 +748,8 @@ public class WorldBox : StandardBox
             pusher,
             ignoredBox: null,
             use2D: pusher.GetComponent<Collider2D>() != null,
-            use3D: pusher.GetComponent<Collider>() != null))
+            use3D: pusher.GetComponent<Collider>() != null,
+            checkingInner: true))
         {
             return false;
         }
@@ -783,7 +792,7 @@ public class WorldBox : StandardBox
         return new Bounds(pusher.transform.position, Vector3.one);
     }
 
-    private Transform GetOuterEntrance(BoxPushDirection direction)
+    public Transform GetOuterEntrance(BoxPushDirection direction)
     {
         if (OuterEntrances == null)
         {

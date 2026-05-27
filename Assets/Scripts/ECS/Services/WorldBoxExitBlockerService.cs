@@ -137,6 +137,19 @@ public class WorldBoxExitBlockerService : ServiceBase
         bool use3D,
         out StandardBox blocker)
     {
+        return TryGetTeleportTargetStandardBoxBlockerInternal(targetBounds, worldBox, ignoredBox, blockingMask, use2D, use3D, false, out blocker);
+    }
+
+    private bool TryGetTeleportTargetStandardBoxBlockerInternal(
+        Bounds targetBounds,
+        WorldBox worldBox,
+        StandardBox ignoredBox,
+        LayerMask blockingMask,
+        bool use2D,
+        bool use3D,
+        bool checkingInner,
+        out StandardBox blocker)
+    {
         blocker = null;
         if (targetBounds.size == Vector3.zero)
         {
@@ -154,17 +167,30 @@ public class WorldBoxExitBlockerService : ServiceBase
         Physics.SyncTransforms();
         Physics2D.SyncTransforms();
 
-        if (use2D && TryGetTeleportTargetStandardBoxBlocker2D(queryBounds, worldBox, ignoredBox, blockingMask, out blocker))
+        if (use2D && TryGetTeleportTargetStandardBoxBlocker2D(queryBounds, worldBox, ignoredBox, blockingMask, checkingInner, out blocker))
         {
             return true;
         }
 
-        if (use3D && TryGetTeleportTargetStandardBoxBlocker3D(queryBounds, worldBox, ignoredBox, blockingMask, out blocker))
+        if (use3D && TryGetTeleportTargetStandardBoxBlocker3D(queryBounds, worldBox, ignoredBox, blockingMask, checkingInner, out blocker))
         {
             return true;
         }
 
         return false;
+    }
+
+    public bool TryGetTeleportTargetStandardBoxBlocker(
+        Bounds targetBounds,
+        WorldBox worldBox,
+        StandardBox ignoredBox,
+        LayerMask blockingMask,
+        bool use2D,
+        bool use3D,
+        bool checkingInner,
+        out StandardBox blocker)
+    {
+        return TryGetTeleportTargetStandardBoxBlockerInternal(targetBounds, worldBox, ignoredBox, blockingMask, use2D, use3D, checkingInner, out blocker);
     }
 
     public void Clear(WorldBox worldBox)
@@ -345,6 +371,7 @@ public class WorldBoxExitBlockerService : ServiceBase
         WorldBox worldBox,
         StandardBox ignoredBox,
         LayerMask blockingMask,
+        bool checkingInner,
         out StandardBox blocker)
     {
         blocker = null;
@@ -363,7 +390,7 @@ public class WorldBoxExitBlockerService : ServiceBase
             }
 
             StandardBox candidate = hit.GetComponentInParent<StandardBox>();
-            if (!IsTeleportTargetStandardBoxBlocker(candidate, worldBox, ignoredBox))
+            if (!IsTeleportTargetStandardBoxBlocker(candidate, worldBox, ignoredBox, checkingInner))
             {
                 continue;
             }
@@ -380,6 +407,7 @@ public class WorldBoxExitBlockerService : ServiceBase
         WorldBox worldBox,
         StandardBox ignoredBox,
         LayerMask blockingMask,
+        bool checkingInner,
         out StandardBox blocker)
     {
         blocker = null;
@@ -405,7 +433,7 @@ public class WorldBoxExitBlockerService : ServiceBase
             }
 
             StandardBox candidate = hit.GetComponentInParent<StandardBox>();
-            if (!IsTeleportTargetStandardBoxBlocker(candidate, worldBox, ignoredBox))
+            if (!IsTeleportTargetStandardBoxBlocker(candidate, worldBox, ignoredBox, checkingInner))
             {
                 continue;
             }
@@ -417,7 +445,7 @@ public class WorldBoxExitBlockerService : ServiceBase
         return false;
     }
 
-    private static bool IsTeleportTargetStandardBoxBlocker(StandardBox candidate, WorldBox worldBox, StandardBox ignoredBox)
+    private static bool IsTeleportTargetStandardBoxBlocker(StandardBox candidate, WorldBox worldBox, StandardBox ignoredBox, bool checkingInner)
     {
         if (candidate == null || candidate == ignoredBox || candidate is WorldBox)
         {
@@ -429,9 +457,14 @@ public class WorldBoxExitBlockerService : ServiceBase
             return false;
         }
 
-        if (IsOwnedByWorldBox(candidate.transform, worldBox))
+        bool owned = IsOwnedByWorldBox(candidate.transform, worldBox);
+        if (checkingInner)
         {
-            return false;
+            if (!owned) return false;
+        }
+        else
+        {
+            if (owned) return false;
         }
 
         return candidate.Bounds.size != Vector3.zero;
