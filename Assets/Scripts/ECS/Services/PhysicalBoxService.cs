@@ -84,9 +84,16 @@ public class PhysicalBoxService : ServiceBase<StandardBox>
     private void FixedUpdate()
     {
         float dt = Time.fixedDeltaTime;
+        bool hasPushableBoxService = ServiceBase.TryGet(out PushableBoxService pushableBoxService);
+
         foreach (StandardBox box in RegisteredComponents)
         {
             if (box == null || !box.ApplyGravity)
+            {
+                continue;
+            }
+
+            if (hasPushableBoxService && pushableBoxService.IsBoxTransitioning(box))
             {
                 continue;
             }
@@ -654,12 +661,12 @@ public class PhysicalBoxService : ServiceBase<StandardBox>
                     continue;
                 }
 
-                if (isExitingWorldBox && StandardBox.IsOwnedByWorldBox(hit2D.collider.transform, exitingWorldBox) && IsAlongTransitionAxis(direction, transitionDir))
+                if (isExitingWorldBox && (StandardBox.IsOwnedByWorldBox(hit2D.collider.transform, exitingWorldBox) || hit2D.collider.GetComponentInParent<WorldBox>() == exitingWorldBox) && IsAlongTransitionAxis(direction, transitionDir))
                 {
                     continue;
                 }
 
-                if (isEnteringWorldBox && hit2D.collider != null && (hit2D.collider.gameObject == enteringWorldBox.gameObject || StandardBox.IsOwnedByWorldBox(hit2D.collider.transform, enteringWorldBox)))
+                if (isEnteringWorldBox && hit2D.collider != null && (hit2D.collider.gameObject == enteringWorldBox.gameObject || StandardBox.IsOwnedByWorldBox(hit2D.collider.transform, enteringWorldBox) || hit2D.collider.GetComponentInParent<WorldBox>() == enteringWorldBox))
                 {
                     continue;
                 }
@@ -752,12 +759,12 @@ public class PhysicalBoxService : ServiceBase<StandardBox>
                     continue;
                 }
 
-                if (isExitingWorldBox && StandardBox.IsOwnedByWorldBox(hit3D.collider.transform, exitingWorldBox) && IsAlongTransitionAxis(direction, transitionDir))
+                if (isExitingWorldBox && (StandardBox.IsOwnedByWorldBox(hit3D.collider.transform, exitingWorldBox) || hit3D.collider.GetComponentInParent<WorldBox>() == exitingWorldBox) && IsAlongTransitionAxis(direction, transitionDir))
                 {
                     continue;
                 }
 
-                if (isEnteringWorldBox && hit3D.collider != null && (hit3D.collider.gameObject == enteringWorldBox.gameObject || StandardBox.IsOwnedByWorldBox(hit3D.collider.transform, enteringWorldBox)))
+                if (isEnteringWorldBox && hit3D.collider != null && (hit3D.collider.gameObject == enteringWorldBox.gameObject || StandardBox.IsOwnedByWorldBox(hit3D.collider.transform, enteringWorldBox) || hit3D.collider.GetComponentInParent<WorldBox>() == enteringWorldBox))
                 {
                     continue;
                 }

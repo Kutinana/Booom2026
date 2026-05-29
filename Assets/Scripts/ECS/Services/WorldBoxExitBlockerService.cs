@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -19,12 +19,13 @@ public class WorldBoxExitBlockerService : ServiceBase
 
     #region Debug Fields
 
-    [Header("Debug")]
-    [SerializeField] private bool logInnerTargetOverlapHits = false;
+    [Header("Debug")] [SerializeField] private bool logInnerTargetOverlapHits = false;
     [SerializeField] private bool drawInnerTargetOverlapGizmos = false;
     [SerializeField, Min(0f)] private float innerTargetOverlapGizmoDuration = 1f;
 
-    private readonly Dictionary<WorldBox, DebugOverlapQuery2D> debugOverlapQueries2D = new Dictionary<WorldBox, DebugOverlapQuery2D>();
+    private readonly Dictionary<WorldBox, DebugOverlapQuery2D> debugOverlapQueries2D =
+        new Dictionary<WorldBox, DebugOverlapQuery2D>();
+
     private readonly List<WorldBox> expiredDebugOverlapOwners = new List<WorldBox>(16);
 
     #endregion
@@ -77,7 +78,8 @@ public class WorldBoxExitBlockerService : ServiceBase
             use2D = true;
         }
 
-        if (!TryGetStaticBlockingColliderTag(innerTargetBounds, worldBox, direction, blockingMask, use2D, use3D, out string blockingTag))
+        if (!TryGetStaticBlockingColliderTag(innerTargetBounds, worldBox, direction, blockingMask, use2D, use3D,
+                out string blockingTag))
         {
             return false;
         }
@@ -87,7 +89,8 @@ public class WorldBoxExitBlockerService : ServiceBase
             return false;
         }
 
-        RefreshWall(owner != null ? owner : worldBox, worldBox, direction, outerBounds, actorBounds, use2D, use3D, blockingTag);
+        RefreshWall(owner != null ? owner : worldBox, worldBox, direction, outerBounds, actorBounds, use2D, use3D,
+            blockingTag);
         return true;
     }
 
@@ -114,7 +117,8 @@ public class WorldBoxExitBlockerService : ServiceBase
             use2D = true;
         }
 
-        if (!TryGetStaticBlockingColliderTag(innerTargetBounds, worldBox, direction, blockingMask, use2D, use3D, out string blockingTag))
+        if (!TryGetStaticBlockingColliderTag(innerTargetBounds, worldBox, direction, blockingMask, use2D, use3D,
+                out string blockingTag))
         {
             return false;
         }
@@ -136,7 +140,8 @@ public class WorldBoxExitBlockerService : ServiceBase
         bool use3D,
         out StandardBox blocker)
     {
-        return TryGetTeleportTargetStandardBoxBlockerInternal(targetBounds, worldBox, ignoredBox, blockingMask, use2D, use3D, false, out blocker);
+        return TryGetTeleportTargetStandardBoxBlockerInternal(targetBounds, worldBox, ignoredBox, blockingMask, use2D,
+            use3D, false, out blocker);
     }
 
     private bool TryGetTeleportTargetStandardBoxBlockerInternal(
@@ -166,12 +171,14 @@ public class WorldBoxExitBlockerService : ServiceBase
         Physics.SyncTransforms();
         Physics2D.SyncTransforms();
 
-        if (use2D && TryGetTeleportTargetStandardBoxBlocker2D(queryBounds, worldBox, ignoredBox, blockingMask, checkingInner, out blocker))
+        if (use2D && TryGetTeleportTargetStandardBoxBlocker2D(queryBounds, worldBox, ignoredBox, blockingMask,
+                out blocker))
         {
             return true;
         }
 
-        if (use3D && TryGetTeleportTargetStandardBoxBlocker3D(queryBounds, worldBox, ignoredBox, blockingMask, checkingInner, out blocker))
+        if (use3D && TryGetTeleportTargetStandardBoxBlocker3D(queryBounds, worldBox, ignoredBox, blockingMask,
+                out blocker))
         {
             return true;
         }
@@ -189,7 +196,8 @@ public class WorldBoxExitBlockerService : ServiceBase
         bool checkingInner,
         out StandardBox blocker)
     {
-        return TryGetTeleportTargetStandardBoxBlockerInternal(targetBounds, worldBox, ignoredBox, blockingMask, use2D, use3D, checkingInner, out blocker);
+        return TryGetTeleportTargetStandardBoxBlockerInternal(targetBounds, worldBox, ignoredBox, blockingMask, use2D,
+            use3D, checkingInner, out blocker);
     }
 
     public void Clear(WorldBox worldBox)
@@ -280,7 +288,8 @@ public class WorldBoxExitBlockerService : ServiceBase
         Physics.SyncTransforms();
         Physics2D.SyncTransforms();
 
-        if (check2D && TryGetStaticBlockingColliderTag2D(queryBounds, worldBox, direction, blockingMask, out blockingTag))
+        if (check2D && TryGetStaticBlockingColliderTag2D(queryBounds, worldBox, direction, blockingMask,
+                out blockingTag))
         {
             return true;
         }
@@ -306,18 +315,19 @@ public class WorldBoxExitBlockerService : ServiceBase
             Mathf.Max(minimumColliderSize, queryBounds.size.y));
 
         Bounds actualQueryBounds = Create2DOverlapQueryBounds(queryBounds, size);
-        int hitCount = Physics2D.OverlapBoxNonAlloc((Vector2)actualQueryBounds.center, size, 0f, overlapHits2D, blockingMask);
+        int hitCount =
+            Physics2D.OverlapBoxNonAlloc((Vector2)actualQueryBounds.center, size, 0f, overlapHits2D, blockingMask);
         RecordDebugOverlapQuery2D(worldBox, direction, actualQueryBounds, blockingMask, hitCount);
         LogTargetScan("2D", worldBox, actualQueryBounds, blockingMask, hitCount);
         for (int i = 0; i < hitCount; i++)
         {
             Collider2D hit = overlapHits2D[i];
             bool accepted = IsStaticBlockingCollider(
-    hit,
-    worldBox,
-    direction,
-    queryBounds,
-    out string rejectReason);
+                hit,
+                worldBox,
+                direction,
+                queryBounds,
+                out string rejectReason);
             LogTargetHit("2D", worldBox, hit, accepted, rejectReason);
             if (accepted)
             {
@@ -370,7 +380,6 @@ public class WorldBoxExitBlockerService : ServiceBase
         WorldBox worldBox,
         StandardBox ignoredBox,
         LayerMask blockingMask,
-        bool checkingInner,
         out StandardBox blocker)
     {
         blocker = null;
@@ -379,7 +388,8 @@ public class WorldBoxExitBlockerService : ServiceBase
             Mathf.Max(minimumColliderSize, queryBounds.size.y));
 
         Bounds actualQueryBounds = Create2DOverlapQueryBounds(queryBounds, size);
-        int hitCount = Physics2D.OverlapBoxNonAlloc((Vector2)actualQueryBounds.center, size, 0f, overlapHits2D, blockingMask);
+        int hitCount =
+            Physics2D.OverlapBoxNonAlloc((Vector2)actualQueryBounds.center, size, 0f, overlapHits2D, blockingMask);
         for (int i = 0; i < hitCount; i++)
         {
             Collider2D hit = overlapHits2D[i];
@@ -389,7 +399,7 @@ public class WorldBoxExitBlockerService : ServiceBase
             }
 
             StandardBox candidate = hit.GetComponentInParent<StandardBox>();
-            if (!IsTeleportTargetStandardBoxBlocker(candidate, worldBox, ignoredBox, checkingInner))
+            if (!IsTeleportTargetStandardBoxBlocker(candidate, worldBox, ignoredBox))
             {
                 continue;
             }
@@ -406,7 +416,6 @@ public class WorldBoxExitBlockerService : ServiceBase
         WorldBox worldBox,
         StandardBox ignoredBox,
         LayerMask blockingMask,
-        bool checkingInner,
         out StandardBox blocker)
     {
         blocker = null;
@@ -432,7 +441,7 @@ public class WorldBoxExitBlockerService : ServiceBase
             }
 
             StandardBox candidate = hit.GetComponentInParent<StandardBox>();
-            if (!IsTeleportTargetStandardBoxBlocker(candidate, worldBox, ignoredBox, checkingInner))
+            if (!IsTeleportTargetStandardBoxBlocker(candidate, worldBox, ignoredBox))
             {
                 continue;
             }
@@ -444,7 +453,8 @@ public class WorldBoxExitBlockerService : ServiceBase
         return false;
     }
 
-    private static bool IsTeleportTargetStandardBoxBlocker(StandardBox candidate, WorldBox worldBox, StandardBox ignoredBox, bool checkingInner)
+    private static bool IsTeleportTargetStandardBoxBlocker(StandardBox candidate, WorldBox worldBox,
+        StandardBox ignoredBox)
     {
         if (candidate == null || candidate == ignoredBox || candidate is WorldBox)
         {
@@ -456,26 +466,16 @@ public class WorldBoxExitBlockerService : ServiceBase
             return false;
         }
 
-        bool owned = StandardBox.IsOwnedByWorldBox(candidate.transform, worldBox);
-        if (checkingInner)
-        {
-            if (!owned) return false;
-        }
-        else
-        {
-            if (owned) return false;
-        }
-
         return candidate.Bounds.size != Vector3.zero;
     }
 
 
     private bool IsStaticBlockingCollider(
-    Collider2D hit,
-    WorldBox worldBox,
-    BoxPushDirection direction,
-    Bounds? queryBounds,
-    out string rejectReason)
+        Collider2D hit,
+        WorldBox worldBox,
+        BoxPushDirection direction,
+        Bounds? queryBounds,
+        out string rejectReason)
     {
         rejectReason = GetStaticBlockingRejectReason(hit, worldBox, queryBounds);
 
@@ -495,12 +495,12 @@ public class WorldBoxExitBlockerService : ServiceBase
         return rejectReason == null;
     }
 
-    private bool IsStaticBlockingCollider(Collider2D hit, WorldBox worldBox, Bounds? queryBounds, out string rejectReason)
+    private bool IsStaticBlockingCollider(Collider2D hit, WorldBox worldBox, Bounds? queryBounds,
+        out string rejectReason)
     {
         rejectReason = GetStaticBlockingRejectReason(hit, worldBox, queryBounds);
         return rejectReason == null;
     }
-
 
 
     private bool IsStaticBlockingCollider(Collider hit, WorldBox worldBox, out string rejectReason)
@@ -509,7 +509,8 @@ public class WorldBoxExitBlockerService : ServiceBase
         return rejectReason == null;
     }
 
-    private Bounds CalculateOuterWallBounds(WorldBox worldBox, BoxPushDirection direction, Bounds outerBounds, Bounds playerBounds)
+    private Bounds CalculateOuterWallBounds(WorldBox worldBox, BoxPushDirection direction, Bounds outerBounds,
+        Bounds playerBounds)
     {
         Vector3 cellSize = GetCellSize(worldBox != null ? worldBox.Grid : null);
         Vector3 halfCell = cellSize * 0.5f;
@@ -535,7 +536,8 @@ public class WorldBoxExitBlockerService : ServiceBase
                 break;
         }
 
-        Vector3 center = SnapToGrid(worldBox != null ? worldBox.Grid : null, point, worldBox != null ? worldBox.CellOffset : new Vector3(0.5f, 0.5f, 0f));
+        Vector3 center = SnapToGrid(worldBox != null ? worldBox.Grid : null, point,
+            worldBox != null ? worldBox.CellOffset : new Vector3(0.5f, 0.5f, 0f));
         center.z = playerBounds.center.z;
 
         Vector3 size = new Vector3(
@@ -652,7 +654,8 @@ public class WorldBoxExitBlockerService : ServiceBase
 
     #region Debug
 
-    private void LogTargetScan(string physicsType, WorldBox worldBox, Bounds queryBounds, LayerMask blockingMask, int hitCount)
+    private void LogTargetScan(string physicsType, WorldBox worldBox, Bounds queryBounds, LayerMask blockingMask,
+        int hitCount)
     {
         if (!logInnerTargetOverlapHits)
         {
@@ -817,7 +820,8 @@ public class WorldBoxExitBlockerService : ServiceBase
     private static string FormatDebugOverlapQueryLabel(WorldBox worldBox, DebugOverlapQuery2D query)
     {
         Vector3 size = query.ActualBounds.size;
-        return $"OverlapBox2D {query.Direction} hits={query.HitCount} size=({size.x:F3}, {size.y:F3}) mask={query.BlockingMask.value} box={GetObjectPath(worldBox != null ? worldBox.transform : null)}";
+        return
+            $"OverlapBox2D {query.Direction} hits={query.HitCount} size=({size.x:F3}, {size.y:F3}) mask={query.BlockingMask.value} box={GetObjectPath(worldBox != null ? worldBox.transform : null)}";
     }
 
     private readonly struct DebugOverlapQuery2D
@@ -907,7 +911,6 @@ public class WorldBoxExitBlockerService : ServiceBase
     }
 
 
-
     private static bool HasSceneMovableItem(Transform start)
     {
         Transform current = start;
@@ -992,10 +995,6 @@ public class WorldBoxExitBlockerService : ServiceBase
             return "temporary wall";
         }
 
-        if (StandardBox.IsOwnedByWorldBox(hit.transform, worldBox))
-        {
-            return "owned by WorldBox";
-        }
 
         if (HasSceneMovableItem(hit.transform))
         {
@@ -1037,10 +1036,6 @@ public class WorldBoxExitBlockerService : ServiceBase
             return "temporary wall";
         }
 
-        if (StandardBox.IsOwnedByWorldBox(hit.transform, worldBox))
-        {
-            return "owned by WorldBox";
-        }
 
         if (HasSceneMovableItem(hit.transform))
         {
@@ -1149,7 +1144,8 @@ public class WorldBoxExitBlockerService : ServiceBase
         return tag == PlatformTag;
     }
 
-    private static bool ShouldSkipOuterPlatformBlocker(BoxPushDirection direction, Bounds outerBounds, Bounds playerBounds)
+    private static bool ShouldSkipOuterPlatformBlocker(BoxPushDirection direction, Bounds outerBounds,
+        Bounds playerBounds)
     {
         return IsOuterSideOrTopEdge(direction) || IsPastOuterBottomEdge(direction, outerBounds, playerBounds);
     }
@@ -1157,8 +1153,8 @@ public class WorldBoxExitBlockerService : ServiceBase
     private static bool IsOuterSideOrTopEdge(BoxPushDirection direction)
     {
         return direction == BoxPushDirection.Left ||
-            direction == BoxPushDirection.Right ||
-            direction == BoxPushDirection.Up;
+               direction == BoxPushDirection.Right ||
+               direction == BoxPushDirection.Up;
     }
 
     private static bool IsPastOuterBottomEdge(BoxPushDirection direction, Bounds outerBounds, Bounds playerBounds)
@@ -1185,9 +1181,9 @@ public class WorldBoxExitBlockerService : ServiceBase
     private static bool OverlapsXY(Bounds a, Bounds b)
     {
         return a.min.x < b.max.x &&
-            a.max.x > b.min.x &&
-            a.min.y < b.max.y &&
-            a.max.y > b.min.y;
+               a.max.x > b.min.x &&
+               a.min.y < b.max.y &&
+               a.max.y > b.min.y;
     }
 
     private sealed class TemporaryWall
