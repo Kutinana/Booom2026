@@ -6,20 +6,10 @@ public class PhysicalBoxService : ServiceBase<StandardBox>
 {
     private const float PushContactTolerance = 0.001f;
 
-    // ReleaseLinearPush 判 displacement 是否过半时使用的容差。
-    //
-    // 用 Mathf.Epsilon 太严：墙体碰撞箱不完美对齐 grid 时（比如墙比 grid 偏出 ε），
-    // box 推到 displacement = halfCell - ε 就被卡住，严格 < halfCell 但已经"几乎完成一格"。
-    // 此时按 50% 规则回退，会突兀地把玩家也拖回出发点，且回退方向上玩家本身就在那里，
-    // chain block cast 立刻把 release transition 夹断 → box 永远到不了任何对齐位置。
-    //
-    // 0.01 = 1% cell，能 cover 常见物理 ε（skinWidth 量级），视觉上几乎察觉不到偏差，
-    // 同时不大幅破坏 50% 规则的直觉（玩家明显推不到一半还是会回退）。
+    // 释放线性推动判定 displacement 是否过半时使用的容差（1% cell），避免墙体不完美对齐时的回退卡死问题。
     private const float PushReleaseAdvanceTolerance = 0.01f;
 
-    // UpdateLinearPushTransitions 中 remaining 小于此阈值就 snap 完成 release，避免：
-    // box 物理上因墙/碰撞 ε 偏移无法精确走到 target，每帧 move 比 PushContactTolerance 还小，
-    // chain block 中止条件不成立、目标接近条件也不满足 → release transition 死循环。
+    // 释放过渡中 remaining 小于此阈值则直接对齐（snap），避免因微小物理偏移无法精确到达而导致死循环。
     private const float ReleaseSnapDistance = PushContactTolerance;
 
     [SerializeField] private float gravity = 28f;
@@ -41,11 +31,7 @@ public class PhysicalBoxService : ServiceBase<StandardBox>
     private readonly RaycastHit2D[] hits2D = new RaycastHit2D[8];
     private readonly RaycastHit[] hits3D = new RaycastHit[8];
 
-    // 纵向堆叠 + 横向串联推动联动的复用 buffer。
-    //   chainGroupScratch: 横向 chain（含 root，沿推动方向 BFS 紧贴邻居）；整组同步移动，按 chain block 阻挡。
-    //   stackGroupScratch: 纵向堆叠成员（chain 各成员上方紧贴 box，BFS 向上扩展）；按 lower_only 跟随。
-    //   StackContactEpsilon: 紧贴判定的最大空隙；
-    //   StackOverlapRatio: 横跨/横向连接时的 overlap 占比下限（< 0.5 才能覆盖"半搭" 50% 的横跨堆叠）。
+    // 纵向堆叠与横向串联推动共用的缓存和判定常量
     private readonly List<StandardBox> chainGroupScratch = new List<StandardBox>(8);
     private readonly List<StandardBox> stackGroupScratch = new List<StandardBox>(8);
     private readonly List<StandardBox> combinedIgnoreScratch = new List<StandardBox>(16);
@@ -643,8 +629,6 @@ public class PhysicalBoxService : ServiceBase<StandardBox>
         float bestDistance = float.PositiveInfinity;
         hit = default;
 
-        // 死亡过渡中：让箱子的 cast 看不到当前 player，使 SimulateFall 不再被 player 头顶卡住，
-        // 自然继续受重力加速、穿过 player、直到落到真实地面，匹配"砸落速度不变"的需求。
         GameObject ignoredPlayer = TryGetDyingPlayerGameObject();
 
         bool isExitingWorldBox = false;
@@ -670,18 +654,18 @@ public class PhysicalBoxService : ServiceBase<StandardBox>
                     continue;
                 }
 
-                if (isExitingWorldBox && IsOwnedByWorldBox(hit2D.collider.transform, exitingWorldBox) && IsAlongTransitionAxis(direction, transitionDir))
+                if (isExitingWorldBox && StandardBox.IsOwnedByWorldBox(hit2D.collider.transform, exitingWorldBox) && IsAlongTransitionAxis(direction, transitionDir))
                 {
                     continue;
                 }
 
-                if (isEnteringWorldBox && hit2D.collider != null && (hit2D.collider.gameObject == enteringWorldBox.gameObject || IsOwnedByWorldBox(hit2D.collider.transform, enteringWorldBox)))
+                if (isEnteringWorldBox && hit2D.collider != null && (hit2D.collider.gameObject == enteringWorldBox.gameObject || StandardBox.IsOwnedByWorldBox(hit2D.collider.transform, enteringWorldBox)))
                 {
                     continue;
                 }
 
                 WorldBox hitWorldBox2D = hit2D.collider != null ? hit2D.collider.GetComponentInParent<WorldBox>() : null;
-                if (hitWorldBox2D != null && IsOwnedByWorldBox(box.transform, hitWorldBox2D))
+                if (hitWorldBox2D != null && StandardBox.IsOwnedByWorldBox(box.transform, hitWorldBox2D))
                 {
                     BoxPushDirection castDir = VectorToDirection(direction);
                     if (PushableBoxService.IsTouchingInnerBoundsForExiting(hitWorldBox2D.InnerBounds, box.Bounds, castDir, 0.04f))
@@ -690,21 +674,19 @@ public class PhysicalBoxService : ServiceBase<StandardBox>
                     }
                 }
 
-                if (hitWorldBox2D != null && !IsOwnedByWorldBox(box.transform, hitWorldBox2D))
+                if (hitWorldBox2D != null && !StandardBox.IsOwnedByWorldBox(box.transform, hitWorldBox2D))
                 {
                     BoxPushDirection pushDirFromVec = VectorToDirection(direction);
-                    if (hitWorldBox2D.GetOuterEntrance(Opposite(pushDirFromVec)) != null)
+                    if (hitWorldBox2D.GetOuterEntrance(pushDirFromVec.Opposite()) != null)
                     {
-                        // 命中内侧 StandardBox 时跳过，让外部 box 能贴到入口
                         StandardBox hitStandardBox = hit2D.collider.GetComponentInParent<StandardBox>();
-                        if (hitStandardBox != null && !(hitStandardBox is WorldBox) && IsOwnedByWorldBox(hitStandardBox.transform, hitWorldBox2D))
+                        if (hitStandardBox != null && !(hitStandardBox is WorldBox) && StandardBox.IsOwnedByWorldBox(hitStandardBox.transform, hitWorldBox2D))
                         {
                             continue;
                         }
 
                         bool canGroupEnter = false;
-                        // 使用 worldBox.Bounds（物理外壳碰撞体的实际坐标），而非 OuterBounds（内部 quad 的坐标系，与外部坐标不一致）。
-                        if (IsTouchingOuterBoundsForEntering(hitWorldBox2D.Bounds, box.Bounds, pushDirFromVec, 0.04f))
+                        if (PushableBoxService.IsTouchingOuterBoundsForEntering(hitWorldBox2D.Bounds, box.Bounds, pushDirFromVec, 0.04f))
                         {
                             canGroupEnter = true;
                         }
@@ -713,7 +695,7 @@ public class PhysicalBoxService : ServiceBase<StandardBox>
                             for (int idx = 0; idx < ignoreBoxes.Count; idx++)
                             {
                                 StandardBox member = ignoreBoxes[idx];
-                                if (member != null && IsTouchingOuterBoundsForEntering(hitWorldBox2D.Bounds, member.Bounds, pushDirFromVec, 0.04f))
+                                if (member != null && PushableBoxService.IsTouchingOuterBoundsForEntering(hitWorldBox2D.Bounds, member.Bounds, pushDirFromVec, 0.04f))
                                 {
                                     canGroupEnter = true;
                                     break;
@@ -730,7 +712,6 @@ public class PhysicalBoxService : ServiceBase<StandardBox>
 
                 bool vertical = Mathf.Abs(direction.y) > 0f;
 
-               
                 if (!vertical && hit2D.collider.CompareTag("Platform"))
                 {
                     continue;
@@ -745,7 +726,7 @@ public class PhysicalBoxService : ServiceBase<StandardBox>
                 if (ignoreBoxes != null)
                 {
                     StandardBox hitBox = hit2D.collider.GetComponentInParent<StandardBox>();
-                    if (hitBox != null && ListContains(ignoreBoxes, hitBox))
+                    if (hitBox != null && ignoreBoxes.Contains(hitBox))
                     {
                         continue;
                     }
@@ -771,18 +752,18 @@ public class PhysicalBoxService : ServiceBase<StandardBox>
                     continue;
                 }
 
-                if (isExitingWorldBox && IsOwnedByWorldBox(hit3D.collider.transform, exitingWorldBox) && IsAlongTransitionAxis(direction, transitionDir))
+                if (isExitingWorldBox && StandardBox.IsOwnedByWorldBox(hit3D.collider.transform, exitingWorldBox) && IsAlongTransitionAxis(direction, transitionDir))
                 {
                     continue;
                 }
 
-                if (isEnteringWorldBox && hit3D.collider != null && (hit3D.collider.gameObject == enteringWorldBox.gameObject || IsOwnedByWorldBox(hit3D.collider.transform, enteringWorldBox)))
+                if (isEnteringWorldBox && hit3D.collider != null && (hit3D.collider.gameObject == enteringWorldBox.gameObject || StandardBox.IsOwnedByWorldBox(hit3D.collider.transform, enteringWorldBox)))
                 {
                     continue;
                 }
 
                 WorldBox hitWorldBox3D = hit3D.collider != null ? hit3D.collider.GetComponentInParent<WorldBox>() : null;
-                if (hitWorldBox3D != null && IsOwnedByWorldBox(box.transform, hitWorldBox3D))
+                if (hitWorldBox3D != null && StandardBox.IsOwnedByWorldBox(box.transform, hitWorldBox3D))
                 {
                     BoxPushDirection castDir = VectorToDirection(direction);
                     if (PushableBoxService.IsTouchingInnerBoundsForExiting(hitWorldBox3D.InnerBounds, box.Bounds, castDir, 0.04f))
@@ -791,20 +772,19 @@ public class PhysicalBoxService : ServiceBase<StandardBox>
                     }
                 }
 
-                if (hitWorldBox3D != null && !IsOwnedByWorldBox(box.transform, hitWorldBox3D))
+                if (hitWorldBox3D != null && !StandardBox.IsOwnedByWorldBox(box.transform, hitWorldBox3D))
                 {
                     BoxPushDirection pushDirFromVec = VectorToDirection(direction);
-                    if (hitWorldBox3D.GetOuterEntrance(Opposite(pushDirFromVec)) != null)
+                    if (hitWorldBox3D.GetOuterEntrance(pushDirFromVec.Opposite()) != null)
                     {
                         StandardBox hitStandardBox = hit3D.collider.GetComponentInParent<StandardBox>();
-                        if (hitStandardBox != null && !(hitStandardBox is WorldBox) && IsOwnedByWorldBox(hitStandardBox.transform, hitWorldBox3D))
+                        if (hitStandardBox != null && !(hitStandardBox is WorldBox) && StandardBox.IsOwnedByWorldBox(hitStandardBox.transform, hitWorldBox3D))
                         {
                             continue;
                         }
 
                         bool canGroupEnter = false;
-                        // 使用 worldBox.Bounds（物理外壳碰撞体的实际坐标），而非 OuterBounds（内部 quad 的坐标系）。
-                        if (IsTouchingOuterBoundsForEntering(hitWorldBox3D.Bounds, box.Bounds, pushDirFromVec, 0.04f))
+                        if (PushableBoxService.IsTouchingOuterBoundsForEntering(hitWorldBox3D.Bounds, box.Bounds, pushDirFromVec, 0.04f))
                         {
                             canGroupEnter = true;
                         }
@@ -813,7 +793,7 @@ public class PhysicalBoxService : ServiceBase<StandardBox>
                             for (int idx = 0; idx < ignoreBoxes.Count; idx++)
                             {
                                 StandardBox member = ignoreBoxes[idx];
-                                if (member != null && IsTouchingOuterBoundsForEntering(hitWorldBox3D.Bounds, member.Bounds, pushDirFromVec, 0.04f))
+                                if (member != null && PushableBoxService.IsTouchingOuterBoundsForEntering(hitWorldBox3D.Bounds, member.Bounds, pushDirFromVec, 0.04f))
                                 {
                                     canGroupEnter = true;
                                     break;
@@ -837,7 +817,7 @@ public class PhysicalBoxService : ServiceBase<StandardBox>
                 if (ignoreBoxes != null)
                 {
                     StandardBox hitBox = hit3D.collider.GetComponentInParent<StandardBox>();
-                    if (hitBox != null && ListContains(ignoreBoxes, hitBox))
+                    if (hitBox != null && ignoreBoxes.Contains(hitBox))
                     {
                         continue;
                     }
@@ -854,12 +834,7 @@ public class PhysicalBoxService : ServiceBase<StandardBox>
         return bestDistance < float.PositiveInfinity;
     }
 
-    private static bool IsOwnedByWorldBox(Transform start, WorldBox worldBox)
-    {
-        if (start == null || worldBox == null) return false;
-        StandardBox box = start.GetComponentInParent<StandardBox>();
-        return box != null && box.CurrentWorldBox == worldBox;
-    }
+
 
     private static bool IsAlongTransitionAxis(Vector3 direction, BoxPushDirection transitionDir)
     {
@@ -879,23 +854,7 @@ public class PhysicalBoxService : ServiceBase<StandardBox>
     }
 
 
-    private static bool ListContains(IList<StandardBox> list, StandardBox box)
-    {
-        if (list == null || box == null)
-        {
-            return false;
-        }
 
-        for (int i = 0; i < list.Count; i++)
-        {
-            if (list[i] == box)
-            {
-                return true;
-            }
-        }
-
-        return false;
-    }
 
     private GameObject TryGetDyingPlayerGameObject()
     {
@@ -923,20 +882,11 @@ public class PhysicalBoxService : ServiceBase<StandardBox>
 
         outGroup.Add(root);
 
-        // WorldBox 自身被推时不收集外部链——出口侧已退出的独立 box
-        // 不应随 WorldBox 一起被推入墙中。
+        // WorldBox 自身被推时不收集已退出的独立 box
         if (root is WorldBox)
         {
-#if UNITY_EDITOR
-            Debug.Log($"[WBChain] CollectHorizontalChain: root=WorldBox, skip chain collect, dir={axis}");
-#endif
             return;
         }
-
-#if UNITY_EDITOR
-        if (root != null)
-            Debug.Log($"[WBChain] CollectHorizontalChain: root={root.name}, dir={axis}");
-#endif
 
         // 广度优先：从 root 起逐个向 axis 方向追加紧贴的下一个成员。
         for (int i = 0; i < outGroup.Count; i++)
@@ -1046,6 +996,9 @@ public class PhysicalBoxService : ServiceBase<StandardBox>
             return false;
         }
 
+        if (neighbor is WorldBox)
+            return false;
+
         if (outGroup.Contains(neighbor))
         {
             return false;
@@ -1082,8 +1035,7 @@ public class PhysicalBoxService : ServiceBase<StandardBox>
         }
 
         // 若 below 是 WorldBox 自身，不收集非其子节点的 box。
-        // 这些是从出口侧退出的独立 box，不应随 WorldBox 推动。
-        if (below is WorldBox belowWorldBox && !IsOwnedByWorldBox(neighbor.transform, belowWorldBox))
+        if (below is WorldBox belowWorldBox && !StandardBox.IsOwnedByWorldBox(neighbor.transform, belowWorldBox))
         {
             return false;
         }
@@ -1122,7 +1074,7 @@ public class PhysicalBoxService : ServiceBase<StandardBox>
                 continue;
             }
 
-            if (blockedWorldBox.GetOuterEntrance(Opposite(direction)) != null)
+            if (blockedWorldBox.GetOuterEntrance(direction.Opposite()) != null)
             {
                 continue;
             }
@@ -1329,10 +1281,7 @@ public class PhysicalBoxService : ServiceBase<StandardBox>
     }
 
     /// <summary>
-    /// 把 root 组的水平位移 (axis * magnitude) 同步到给定堆叠组成员；按 Q3=lower_only 处理：
-    /// 成员能走多少走多少，撞墙就停在 cast 距离处与 root 脱节。撞 player 时按 Q4 触发 impact。
-    /// 脱节（stackedMagnitude < magnitude）时给成员注入一次 alignment release，让它在下一帧平滑滑到最近 grid 格。
-    /// ignoreBoxes：cast 时忽略的其它组内成员（chain + 其它 stacked），避免组内自堵自。
+    /// 同步水平位移到堆叠组成员（撞墙脱节，撞玩家触发 impact）。
     /// </summary>
     private void ApplyStackedFollow(List<StandardBox> stackGroup, Vector3 axis, float magnitude, float dt, IList<StandardBox> ignoreBoxes = null)
     {
@@ -1398,11 +1347,7 @@ public class PhysicalBoxService : ServiceBase<StandardBox>
     }
 
     /// <summary>
-    /// 给一个"刚刚脱离堆叠跟随"的 box 注入一次 alignment release：找到最近的 grid 对齐 X，
-    /// 构造一个 ReleaseTransition state 让它在下一帧平滑滑过去。
-    ///   - 误差小于 skinWidth：直接 snap，不走过渡；
-    ///   - 已经有 active LinearPushState：让原状态收尾，不覆盖；
-    ///   - 没 Grid 引用：跳过（无法对齐）。
+    /// 为脱离跟随的箱子尝试注入网格滑动对齐状态。
     /// </summary>
     private void TryQueueAlignmentRelease(StandardBox box)
     {
@@ -1739,24 +1684,6 @@ public class PhysicalBoxService : ServiceBase<StandardBox>
         }
 
         // 整 chain 同步移动 magnitude。
-#if UNITY_EDITOR
-        if (chainGroupScratch.Count > 0 && chainGroupScratch[0] is WorldBox)
-        {
-            var sb = new System.Text.StringBuilder();
-            sb.Append($"[WBChain] TryAdvance push WorldBox, chain={chainGroupScratch.Count} members=[");
-            for (int i = 0; i < chainGroupScratch.Count; i++)
-            {
-                if (i > 0) sb.Append(", ");
-                var m = chainGroupScratch[i];
-                sb.Append(m.name);
-                sb.Append("(parent=");
-                sb.Append(m.transform.parent != null ? m.transform.parent.name : "null");
-                sb.Append(")");
-            }
-            sb.Append($"] magnitude={magnitude:F3}");
-            Debug.Log(sb.ToString());
-        }
-#endif
         for (int i = 0; i < chainGroupScratch.Count; i++)
         {
             StandardBox member = chainGroupScratch[i];
@@ -2236,45 +2163,4 @@ public class PhysicalBoxService : ServiceBase<StandardBox>
         }
     }
 
-    private static BoxPushDirection Opposite(BoxPushDirection direction)
-    {
-        switch (direction)
-        {
-            case BoxPushDirection.Left:
-                return BoxPushDirection.Right;
-            case BoxPushDirection.Right:
-                return BoxPushDirection.Left;
-            case BoxPushDirection.Up:
-                return BoxPushDirection.Down;
-            case BoxPushDirection.Down:
-                return BoxPushDirection.Up;
-            default:
-                return direction;
-        }
-    }
-
-    private static bool IsTouchingOuterBoundsForEntering(Bounds outerBounds, Bounds boxBounds, BoxPushDirection direction, float threshold)
-    {
-        switch (direction)
-        {
-            case BoxPushDirection.Right:
-                return Mathf.Abs(boxBounds.max.x - outerBounds.min.x) <= threshold &&
-                       boxBounds.min.y < outerBounds.max.y &&
-                       boxBounds.max.y > outerBounds.min.y;
-            case BoxPushDirection.Left:
-                return Mathf.Abs(boxBounds.min.x - outerBounds.max.x) <= threshold &&
-                       boxBounds.min.y < outerBounds.max.y &&
-                       boxBounds.max.y > outerBounds.min.y;
-            case BoxPushDirection.Up:
-                return Mathf.Abs(boxBounds.max.y - outerBounds.min.y) <= threshold &&
-                       boxBounds.min.x < outerBounds.max.x &&
-                       boxBounds.max.x > outerBounds.min.x;
-            case BoxPushDirection.Down:
-                return Mathf.Abs(boxBounds.min.y - outerBounds.max.y) <= threshold &&
-                       boxBounds.min.x < outerBounds.max.x &&
-                       boxBounds.max.x > outerBounds.min.x;
-            default:
-                return false;
-        }
-    }
 }

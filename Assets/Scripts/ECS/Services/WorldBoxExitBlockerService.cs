@@ -92,8 +92,7 @@ public class WorldBoxExitBlockerService : ServiceBase
     }
 
     /// <summary>
-    /// 只读：与 <see cref="TryRefreshBlockerForStaticInnerHit"/> 相同的「内侧落点是否有静态阻挡」判定，
-    /// 但不创建或刷新临时墙。用于 Player 推动 WorldBox 过程中检测阻挡边沿（门开/关等）。
+    /// 只读判定内侧落点是否有静态阻挡（不创建临时墙），用于推箱子过程中检测出入口开闭状态。
     /// </summary>
     public bool QueryInnerExitStaticallyBlocked(
         WorldBox worldBox,
@@ -457,7 +456,7 @@ public class WorldBoxExitBlockerService : ServiceBase
             return false;
         }
 
-        bool owned = IsOwnedByWorldBox(candidate.transform, worldBox);
+        bool owned = StandardBox.IsOwnedByWorldBox(candidate.transform, worldBox);
         if (checkingInner)
         {
             if (!owned) return false;
@@ -470,10 +469,7 @@ public class WorldBoxExitBlockerService : ServiceBase
         return candidate.Bounds.size != Vector3.zero;
     }
 
-    private bool IsStaticBlockingCollider(Collider2D hit, WorldBox worldBox)
-    {
-        return IsStaticBlockingCollider(hit, worldBox, null, out _);
-    }
+
     private bool IsStaticBlockingCollider(
     Collider2D hit,
     WorldBox worldBox,
@@ -505,10 +501,7 @@ public class WorldBoxExitBlockerService : ServiceBase
         return rejectReason == null;
     }
 
-    private bool IsStaticBlockingCollider(Collider hit, WorldBox worldBox)
-    {
-        return IsStaticBlockingCollider(hit, worldBox, out _);
-    }
+
 
     private bool IsStaticBlockingCollider(Collider hit, WorldBox worldBox, out string rejectReason)
     {
@@ -913,12 +906,7 @@ public class WorldBoxExitBlockerService : ServiceBase
             worldSize.z / Mathf.Max(Mathf.Abs(scale.z), 0.0001f));
     }
 
-    private static bool IsOwnedByWorldBox(Transform start, WorldBox worldBox)
-    {
-        if (start == null || worldBox == null) return false;
-        StandardBox box = start.GetComponentInParent<StandardBox>();
-        return box != null && box.CurrentWorldBox == worldBox;
-    }
+
 
     private static bool HasSceneMovableItem(Transform start)
     {
@@ -1004,7 +992,7 @@ public class WorldBoxExitBlockerService : ServiceBase
             return "temporary wall";
         }
 
-        if (IsOwnedByWorldBox(hit.transform, worldBox))
+        if (StandardBox.IsOwnedByWorldBox(hit.transform, worldBox))
         {
             return "owned by WorldBox";
         }
@@ -1049,7 +1037,7 @@ public class WorldBoxExitBlockerService : ServiceBase
             return "temporary wall";
         }
 
-        if (IsOwnedByWorldBox(hit.transform, worldBox))
+        if (StandardBox.IsOwnedByWorldBox(hit.transform, worldBox))
         {
             return "owned by WorldBox";
         }
