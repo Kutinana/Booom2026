@@ -695,6 +695,13 @@ public class PhysicalBoxService : ServiceBase<StandardBox>
                     BoxPushDirection pushDirFromVec = VectorToDirection(direction);
                     if (hitWorldBox2D.GetOuterEntrance(Opposite(pushDirFromVec)) != null)
                     {
+                        // 命中内侧 StandardBox 时跳过，让外部 box 能贴到入口
+                        StandardBox hitStandardBox = hit2D.collider.GetComponentInParent<StandardBox>();
+                        if (hitStandardBox != null && !(hitStandardBox is WorldBox) && IsOwnedByWorldBox(hitStandardBox.transform, hitWorldBox2D))
+                        {
+                            continue;
+                        }
+
                         bool canGroupEnter = false;
                         // 使用 worldBox.Bounds（物理外壳碰撞体的实际坐标），而非 OuterBounds（内部 quad 的坐标系，与外部坐标不一致）。
                         if (IsTouchingOuterBoundsForEntering(hitWorldBox2D.Bounds, box.Bounds, pushDirFromVec, 0.04f))
@@ -789,6 +796,12 @@ public class PhysicalBoxService : ServiceBase<StandardBox>
                     BoxPushDirection pushDirFromVec = VectorToDirection(direction);
                     if (hitWorldBox3D.GetOuterEntrance(Opposite(pushDirFromVec)) != null)
                     {
+                        StandardBox hitStandardBox = hit3D.collider.GetComponentInParent<StandardBox>();
+                        if (hitStandardBox != null && !(hitStandardBox is WorldBox) && IsOwnedByWorldBox(hitStandardBox.transform, hitWorldBox3D))
+                        {
+                            continue;
+                        }
+
                         bool canGroupEnter = false;
                         // 使用 worldBox.Bounds（物理外壳碰撞体的实际坐标），而非 OuterBounds（内部 quad 的坐标系）。
                         if (IsTouchingOuterBoundsForEntering(hitWorldBox3D.Bounds, box.Bounds, pushDirFromVec, 0.04f))

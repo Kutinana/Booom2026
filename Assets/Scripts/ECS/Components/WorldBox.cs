@@ -264,17 +264,27 @@ public class WorldBox : StandardBox
 
         Bounds targetBounds = playerBounds;
         targetBounds.center = position;
-        GameObject pusher = playerTransform != null ? playerTransform.gameObject : null;
-        if (!TryClearTeleportTargetStandardBoxBlocker(
-            targetBounds,
-            direction,
-            pusher,
-            ignoredBox: null,
-            use2D: playerCollider2D != null,
-            use3D: playerCollider3D != null,
-            checkingInner: false))
+
+        // 检查内侧落点是否被 WorldBox 内部的 StandardBox 占据。
+        // 与 box 进入不同：玩家进入时不应尝试推动阻挡者，只做阻塞判定。
+        WorldBoxExitBlockerService blockerService = GetExitBlockerService();
+        if (blockerService != null)
         {
-            return false;
+            bool use2D = playerCollider2D != null;
+            bool use3D = playerCollider3D != null;
+            if (blockerService.TryGetTeleportTargetStandardBoxBlocker(
+                targetBounds,
+                this,
+                ignoredBox: null,
+                CollisionMask,
+                use2D,
+                use3D,
+                checkingInner: true,
+                out StandardBox blocker))
+            {
+                // 内侧落点被占据 → 入口堵死，玩家不能进入
+                return false;
+            }
         }
 
         MovePlayer(position);

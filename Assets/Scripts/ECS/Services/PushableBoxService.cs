@@ -158,7 +158,18 @@ public class PushableBoxService : ServiceBase<StandardBox>
         Bounds innerBounds = worldBox.InnerBounds;
         Bounds entryBounds = worldBox.Bounds; // 使用 2D 物理 Bounds 确保精确判定
 
-        // 2. Scan all registered boxes for new transitions
+        // 2. Scan all registered boxes for new transitions.
+        // 阻止同 WorldBox 的新 entering transition 在上一 transition 完成前启动。
+        bool hasActiveEntering = false;
+        for (int i = 0; i < activeTransitions.Count; i++)
+        {
+            if (activeTransitions[i].WorldBox == worldBox && activeTransitions[i].IsEntering)
+            {
+                hasActiveEntering = true;
+                break;
+            }
+        }
+
         foreach (StandardBox box in this.components)
         {
             if (box == null || box == worldBox || box.gameObject.scene != worldBox.gameObject.scene)
@@ -210,7 +221,7 @@ public class PushableBoxService : ServiceBase<StandardBox>
 
                 if (!IsOwnedByWorldBox(box.transform, worldBox))
                 {
-                    if (IsTouchingOuterBoundsForEntering(entryBounds, boxBounds, pushDir, OuterEdgeBlockerTouchTolerance))
+                    if (!hasActiveEntering && IsTouchingOuterBoundsForEntering(entryBounds, boxBounds, pushDir, OuterEdgeBlockerTouchTolerance))
                     {
                         if (!IsInnerDestinationBlocked(box, worldBox, pushDir, entryBounds, boxBounds))
                         {
@@ -383,25 +394,29 @@ public class PushableBoxService : ServiceBase<StandardBox>
         var innerChain = new System.Collections.Generic.List<StandardBox>();
         physicalBoxService.CollectHorizontalChain(blocker, axis, innerChain);
 
+        // 扩展忽略列表：合并 innerChain 与所有 WorldBox 内部的 StandardBox
+        var extendedIgnore = new System.Collections.Generic.List<StandardBox>();
+        extendedIgnore.AddRange(innerChain);
+        foreach (StandardBox registered in this.components)
+        {
+            if (registered != null && !(registered is WorldBox) && IsOwnedByWorldBox(registered.transform, worldBox))
+            {
+                if (!extendedIgnore.Contains(registered))
+                    extendedIgnore.Add(registered);
+            }
+        }
+
         // Check if any member in the inner chain is blocked
         foreach (StandardBox member in innerChain)
         {
-            if (member == null)
-            {
-                continue;
-            }
+            if (member == null) continue;
 
-            float cellSize = 1f;
+            float memberCellSize = 1f;
             if (member.Grid != null)
-            {
-                cellSize = Mathf.Abs(direction == BoxPushDirection.Left || direction == BoxPushDirection.Right ? member.Grid.cellSize.x : member.Grid.cellSize.y);
-            }
+                memberCellSize = Mathf.Abs(direction == BoxPushDirection.Left || direction == BoxPushDirection.Right ? member.Grid.cellSize.x : member.Grid.cellSize.y);
 
-            // Cast to check for static/physical blockers
-            if (physicalBoxService.CastSingle(member, member.transform.position, axis, cellSize, out _, innerChain))
-            {
-                return true; // Blocked!
-            }
+            if (physicalBoxService.CastSingle(member, member.transform.position, axis, memberCellSize, out _, extendedIgnore))
+                return true;
 
             // If the member is at the exit boundary, check if its destination outside is blocked
             if (IsTouchingInnerBoundsForExiting(worldBox.InnerBounds, member.Bounds, direction, OuterEdgeBlockerTouchTolerance))
@@ -714,7 +729,7 @@ public class PushableBoxService : ServiceBase<StandardBox>
 
                 if (ServiceBase.TryGet(out PhysicalBoxService pbService))
                 {
-                    pbService.CancelLinearPush(member);
+                    pbService.QueueGridAlignmentRelease(member);
                 }
             }
         }
@@ -861,7 +876,7 @@ public class PushableBoxService : ServiceBase<StandardBox>
         box.MoveTo(targetPosition);
         if (ServiceBase.TryGet(out PhysicalBoxService physicalBoxService))
         {
-            physicalBoxService.CancelLinearPush(box);
+            physicalBoxService.QueueGridAlignmentRelease(box);
         }
 
         if (ServiceBase.TryGet(out SceneMovableInteractionService sceneMovable))
