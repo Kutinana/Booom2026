@@ -287,6 +287,14 @@ public class WorldBox : StandardBox
             }
         }
 
+        // 若有活跃的 entering/exiting transition，入口可能有 visual clone
+        // 而真实 box 尚未通过 SetParent 进入碰撞查询范围，需额外阻塞。
+        if (ServiceBase.TryGet(out PushableBoxService pushableBoxService) &&
+            pushableBoxService.HasActiveTransitionForWorldBox(this))
+        {
+            return false;
+        }
+
         MovePlayer(position);
         TypeEventSystem.Global.Send<OnOuterToInnerEvent>();
         playerController?.ClampMotion();

@@ -132,6 +132,19 @@ public class PushableBoxService : ServiceBase<StandardBox>
         return false;
     }
 
+    /// <summary>指定 WorldBox 是否有任何活跃的 entering 或 exiting transition。</summary>
+    public bool HasActiveTransitionForWorldBox(WorldBox worldBox)
+    {
+        for (int i = 0; i < activeTransitions.Count; i++)
+        {
+            if (activeTransitions[i].WorldBox == worldBox)
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+
     public void CheckAndTryTeleportAllPushableBoxesWithOuterBoundsToInner(Bounds outerBounds, WorldBox worldBox)
     {
         if (worldBox == null)
@@ -614,7 +627,8 @@ public class PushableBoxService : ServiceBase<StandardBox>
             P_target_start = P_target_start,
             P_target_end = P_target_end,
             Width = cellSize,
-            OriginalRenderer = origRenderer
+            OriginalRenderer = origRenderer,
+            StartCell = box.AlignToGrid && box.Grid != null ? box.Grid.WorldToCell(P_start) : default
         };
 
         if (innerChain != null)
@@ -657,6 +671,18 @@ public class PushableBoxService : ServiceBase<StandardBox>
         Vector3 totalDir = totalVector.normalized;
         float dot = Vector3.Dot(currentVector, totalDir);
         float progress = Mathf.Clamp01(dot / totalDist);
+
+        // Entering：grid cell 变化 + 进度兜底。仅 cell 变化不够，box 需要
+        // 推进至少 80% 才能保证 visual clone 已接近入口、不会突兀消失。
+        if (state.IsEntering && state.Box.AlignToGrid && state.Box.Grid != null)
+        {
+            Vector3Int currentCell = state.Box.Grid.WorldToCell(state.Box.transform.position);
+            if (currentCell != state.StartCell && progress >= 0.8f)
+            {
+                CompleteTransition(state);
+                return;
+            }
+        }
 
         if (progress >= 0.99f)
         {
@@ -814,6 +840,9 @@ public class PushableBoxService : ServiceBase<StandardBox>
 
         public readonly System.Collections.Generic.List<StandardBox> InnerChain = new System.Collections.Generic.List<StandardBox>();
         public readonly System.Collections.Generic.List<Vector3> InnerChainStartPositions = new System.Collections.Generic.List<Vector3>();
+
+        // Entering 完成判定：box 的 grid cell 变化即认为已进入
+        public Vector3Int StartCell;
     }
 
 

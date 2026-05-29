@@ -1063,6 +1063,13 @@ public class PhysicalBoxService : ServiceBase<StandardBox>
             return false;
         }
 
+        // 若 below 是 WorldBox 自身，不收集非其子节点的 box。
+        // 这些是从出口侧退出的独立 box，不应随 WorldBox 推动。
+        if (below is WorldBox belowWorldBox && !IsOwnedByWorldBox(neighbor.transform, belowWorldBox))
+        {
+            return false;
+        }
+
         if (HasActiveLinearPushState(neighbor))
         {
             return false;
