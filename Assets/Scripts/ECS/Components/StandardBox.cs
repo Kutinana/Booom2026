@@ -258,7 +258,7 @@ public class StandardBox : MonoBehaviour, ISceneMovableItem
         return found;
     }
 
-    protected static BoxPushDirectionMask ToMask(BoxPushDirection direction)
+    public static BoxPushDirectionMask ToMask(BoxPushDirection direction)
     {
         switch (direction)
         {
