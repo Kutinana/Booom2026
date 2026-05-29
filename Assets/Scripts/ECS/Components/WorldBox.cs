@@ -153,6 +153,8 @@ public class WorldBox : StandardBox
             return;
         }
 
+        // 入口被堵时尝试传送；若失败则使 WorldBox 可被推
+        AddPushableDirection(ToMask(Opposite(e.Direction)));
         MovePusherToOuterEntranceFromBlockedPush(e.Direction, e.Pusher);
     }
 
@@ -163,6 +165,7 @@ public class WorldBox : StandardBox
             return;
         }
 
+        AddPushableDirection(ToMask(Opposite(e.Direction)));
         MovePusherToOuterEntranceFromBlockedPush(e.Direction, e.Pusher);
     }
 
@@ -282,7 +285,6 @@ public class WorldBox : StandardBox
                 checkingInner: true,
                 out StandardBox blocker))
             {
-                // 内侧落点被占据 → 入口堵死，玩家不能进入
                 return false;
             }
         }
@@ -377,6 +379,39 @@ public class WorldBox : StandardBox
             !TryRefreshExitBlocker(direction, outerBounds, innerBounds, playerBounds))
         {
             ClearExitBlocker();
+        }
+    }
+
+    private void TrySetPushableIfInnerBlockedByBox(BoxPushDirection direction, Bounds innerBounds, Bounds playerBounds)
+    {
+        if (!TryGetInnerTargetBounds(direction, outerBounds: CalculateBounds(OuterQuadCollider), innerBounds, playerBounds, out Bounds targetBounds))
+            return;
+
+        WorldBoxExitBlockerService service = GetExitBlockerService();
+        if (service == null) return;
+
+        bool blocked = false;
+        bool use2D = playerCollider2D != null;
+        bool use3D = playerCollider3D != null;
+
+        if (service.TryGetTeleportTargetStandardBoxBlocker(
+            targetBounds, this, ignoredBox: null, CollisionMask,
+            use2D, use3D, checkingInner: true, out _))
+        {
+            blocked = true;
+        }
+
+        // visual clone 也算占据
+        if (!blocked && ServiceBase.TryGet(out PushableBoxService pushableBoxService) &&
+            pushableBoxService.HasActiveTransitionForWorldBox(this))
+        {
+            blocked = true;
+        }
+
+        if (blocked)
+        {
+            AddPushableDirection(ToMask(direction));
+            AddPushableDirection(ToMask(Opposite(direction)));
         }
     }
 

@@ -38,11 +38,19 @@ public partial class PlayerController
         {
             box = rightBox;
             direction = BoxPushDirection.Right;
+#if UNITY_EDITOR
+            if (box is WorldBox)
+                Debug.Log($"[WBChain] HandleBoxPush: pushing WorldBox, dir=Right");
+#endif
         }
         else if (moveInput.x < -0.01f && contacts.leftBlocked && leftBox != null)
         {
             box = leftBox;
             direction = BoxPushDirection.Left;
+#if UNITY_EDITOR
+            if (box is WorldBox)
+                Debug.Log($"[WBChain] HandleBoxPush: pushing WorldBox, dir=Left");
+#endif
         }
 
         if (box == null)
@@ -80,6 +88,10 @@ public partial class PlayerController
             EndPushSession();
             ResetStallState();
             bool canPush = box.InitializePush(direction, gameObject).CanPush;
+#if UNITY_EDITOR
+            if (box is WorldBox)
+                Debug.Log($"[WBChain] InitializePush WorldBox: canPush={canPush} dir={direction}");
+#endif
             if (!canPush)
             {
                 return;

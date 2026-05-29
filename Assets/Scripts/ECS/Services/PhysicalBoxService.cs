@@ -856,7 +856,9 @@ public class PhysicalBoxService : ServiceBase<StandardBox>
 
     private static bool IsOwnedByWorldBox(Transform start, WorldBox worldBox)
     {
-        return start != null && worldBox != null && (start == worldBox.transform || start.IsChildOf(worldBox.transform));
+        if (start == null || worldBox == null) return false;
+        StandardBox box = start.GetComponentInParent<StandardBox>();
+        return box != null && box.CurrentWorldBox == worldBox;
     }
 
     private static bool IsAlongTransitionAxis(Vector3 direction, BoxPushDirection transitionDir)

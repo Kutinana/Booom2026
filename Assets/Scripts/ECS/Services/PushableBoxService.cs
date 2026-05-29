@@ -672,9 +672,8 @@ public class PushableBoxService : ServiceBase<StandardBox>
         float dot = Vector3.Dot(currentVector, totalDir);
         float progress = Mathf.Clamp01(dot / totalDist);
 
-        // Entering：grid cell 变化 + 进度兜底。仅 cell 变化不够，box 需要
-        // 推进至少 80% 才能保证 visual clone 已接近入口、不会突兀消失。
-        if (state.IsEntering && state.Box.AlignToGrid && state.Box.Grid != null)
+        // Entering 和 Exiting：grid cell 变化 + 进度兜底
+        if (state.Box.AlignToGrid && state.Box.Grid != null)
         {
             Vector3Int currentCell = state.Box.Grid.WorldToCell(state.Box.transform.position);
             if (currentCell != state.StartCell && progress >= 0.8f)
@@ -798,10 +797,7 @@ public class PushableBoxService : ServiceBase<StandardBox>
 
     private static void MoveBoxToOuter(StandardBox box, Vector3 targetPosition)
     {
-        if (box != null)
-        {
-            box.transform.SetParent(null); // 退出内侧：脱离 WorldBox 子层级
-        }
+        box.CurrentWorldBox = null;
         box.MoveTo(targetPosition);
         if (ServiceBase.TryGet(out PhysicalBoxService physicalBoxService))
         {
@@ -818,7 +814,9 @@ public class PushableBoxService : ServiceBase<StandardBox>
 
     private static bool IsOwnedByWorldBox(Transform start, WorldBox worldBox)
     {
-        return start != null && worldBox != null && (start == worldBox.transform || start.IsChildOf(worldBox.transform));
+        if (start == null || worldBox == null) return false;
+        StandardBox box = start.GetComponentInParent<StandardBox>();
+        return box != null && box.CurrentWorldBox == worldBox;
     }
 
     private class BoxTransitionState
@@ -898,10 +896,7 @@ public class PushableBoxService : ServiceBase<StandardBox>
 
     private static void MoveBoxToInner(StandardBox box, Vector3 targetPosition, WorldBox worldBox)
     {
-        if (box != null && worldBox != null)
-        {
-            box.transform.SetParent(worldBox.transform); // 进入世界：设为 WorldBox 的子节点以正常参与内侧渲染并随其同步移动
-        }
+        box.CurrentWorldBox = worldBox;
         box.MoveTo(targetPosition);
         if (ServiceBase.TryGet(out PhysicalBoxService physicalBoxService))
         {
