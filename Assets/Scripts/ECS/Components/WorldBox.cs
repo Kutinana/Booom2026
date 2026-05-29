@@ -478,6 +478,11 @@ public class WorldBox : StandardBox
 
             attemptedBlockers[attemptIndex] = blocker;
             Vector3 blockerPosition = blocker.transform.position;
+#if UNITY_EDITOR
+            var st = new System.Diagnostics.StackTrace(1, true);
+            var frame = st.GetFrame(0);
+            Debug.Log($"[WBChain] TryClearBlocker: blocker={blocker.name} pushDir={pushDirection} caller={frame.GetMethod().DeclaringType.Name}.{frame.GetMethod().Name}:{frame.GetFileLineNumber()}");
+#endif
             BoxPushAttemptEvent attempt = blocker.TryPush(pushDirection, pusher);
             if (!attempt.CanPush)
             {
@@ -729,17 +734,18 @@ public class WorldBox : StandardBox
 
         Bounds targetBounds = GetPlayerBounds();
         targetBounds.center = entrance.position;
-        GameObject pusher = playerTransform != null ? playerTransform.gameObject : null;
-        if (!TryClearTeleportTargetStandardBoxBlocker(
-            targetBounds,
-            pushDirection,
-            pusher,
-            ignoredBox: null,
-            use2D: playerCollider2D != null,
-            use3D: playerCollider3D != null,
-            checkingInner: true))
+
+        WorldBoxExitBlockerService blockerService = GetExitBlockerService();
+        if (blockerService != null)
         {
-            return false;
+            bool use2D = playerCollider2D != null;
+            bool use3D = playerCollider3D != null;
+            if (blockerService.TryGetTeleportTargetStandardBoxBlocker(
+                targetBounds, this, ignoredBox: null, CollisionMask,
+                use2D, use3D, checkingInner: true, out _))
+            {
+                return false;
+            }
         }
 
         MovePlayer(entrance.position);
@@ -760,16 +766,18 @@ public class WorldBox : StandardBox
         Bounds targetBounds = GetPusherBounds(pusher, pusherController);
         targetBounds.center = entrance.position;
 
-        if (!TryClearTeleportTargetStandardBoxBlocker(
-            targetBounds,
-            pushDirection,
-            pusher,
-            ignoredBox: null,
-            use2D: pusher.GetComponent<Collider2D>() != null,
-            use3D: pusher.GetComponent<Collider>() != null,
-            checkingInner: true))
+        // 只检测不推动：不应为了给 pusher 让位而推动出口侧的独立 box
+        WorldBoxExitBlockerService blockerService = GetExitBlockerService();
+        if (blockerService != null)
         {
-            return false;
+            bool use2D = pusher.GetComponent<Collider2D>() != null;
+            bool use3D = pusher.GetComponent<Collider>() != null;
+            if (blockerService.TryGetTeleportTargetStandardBoxBlocker(
+                targetBounds, this, ignoredBox: null, CollisionMask,
+                use2D, use3D, checkingInner: true, out _))
+            {
+                return false;
+            }
         }
 
         MovePusher(pusher, pusherController, entrance.position);

@@ -920,7 +920,23 @@ public class PhysicalBoxService : ServiceBase<StandardBox>
         }
 
         outGroup.Add(root);
-        // 广度优先：从 root 起逐个向 axis 方向追加紧贴的下一个成员。已 active push 的成员通过 IsChainCandidate 排除。
+
+        // WorldBox 自身被推时不收集外部链——出口侧已退出的独立 box
+        // 不应随 WorldBox 一起被推入墙中。
+        if (root is WorldBox)
+        {
+#if UNITY_EDITOR
+            Debug.Log($"[WBChain] CollectHorizontalChain: root=WorldBox, skip chain collect, dir={axis}");
+#endif
+            return;
+        }
+
+#if UNITY_EDITOR
+        if (root != null)
+            Debug.Log($"[WBChain] CollectHorizontalChain: root={root.name}, dir={axis}");
+#endif
+
+        // 广度优先：从 root 起逐个向 axis 方向追加紧贴的下一个成员。
         for (int i = 0; i < outGroup.Count; i++)
         {
             AppendChainInDirection(outGroup[i], axis, outGroup);
@@ -1721,6 +1737,24 @@ public class PhysicalBoxService : ServiceBase<StandardBox>
         }
 
         // 整 chain 同步移动 magnitude。
+#if UNITY_EDITOR
+        if (chainGroupScratch.Count > 0 && chainGroupScratch[0] is WorldBox)
+        {
+            var sb = new System.Text.StringBuilder();
+            sb.Append($"[WBChain] TryAdvance push WorldBox, chain={chainGroupScratch.Count} members=[");
+            for (int i = 0; i < chainGroupScratch.Count; i++)
+            {
+                if (i > 0) sb.Append(", ");
+                var m = chainGroupScratch[i];
+                sb.Append(m.name);
+                sb.Append("(parent=");
+                sb.Append(m.transform.parent != null ? m.transform.parent.name : "null");
+                sb.Append(")");
+            }
+            sb.Append($"] magnitude={magnitude:F3}");
+            Debug.Log(sb.ToString());
+        }
+#endif
         for (int i = 0; i < chainGroupScratch.Count; i++)
         {
             StandardBox member = chainGroupScratch[i];
