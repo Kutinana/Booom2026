@@ -117,16 +117,7 @@ public partial class PlayerController
 
                 worldBoxExitPendingPressureLogicalUnblock = false;
             }
-
-            if (debugWorldBoxInnerExitEdge)
-            {
-#if UNITY_EDITOR
-                Debug.Log(
-                    $"[Player] WorldBox exit edge: rawInnerBlocked={rawInnerBlocked} innerBlocked={innerBlocked} hadInnerBlock={worldBoxExitHadInnerBlock} box={box.name} dir={direction}",
-                    this);
-#endif
-            }
-
+            
             if (innerBlocked)
             {
                 worldBoxExitHadInnerBlock = true;

@@ -1,6 +1,18 @@
 using QFramework;
 using UnityEngine;
 
+/// <summary>
+/// WorldBox is world's nested rendering carrier. There is no real inside/outside distinction;
+/// the entire level is one unified world.
+/// <para>
+/// Direction conventions (inner/outer semantics):
+/// <list type="bullet">
+///   <item><b>Inward (Outer to Inner)</b>: moving from WorldBox edge portal to the corresponding world-edge portal.</item>
+///   <item><b>Outward (Inner to Outer)</b>: moving from world-edge portal to the WorldBox-side portal.</item>
+/// </list>
+/// OuterEntrances correspond to portal exit positions next to the WorldBox.
+/// </para>
+/// </summary>
 [DefaultExecutionOrder(1100)]
 public class WorldBox : StandardBox
 {
@@ -20,6 +32,9 @@ public class WorldBox : StandardBox
     public bool HasLastExitDirection { get; private set; }
     public BoxPushDirection LastExitDirection { get; private set; }
 
+    public Bounds InnerBounds => CalculateBounds(InnerQuadCollider);
+    public Bounds OuterBounds => CalculateBounds(OuterQuadCollider);
+
     private Transform playerTransform;
     private Collider playerCollider3D;
     private Collider2D playerCollider2D;
@@ -34,6 +49,13 @@ public class WorldBox : StandardBox
     private IUnRegister pushAttemptUnRegister;
     private WorldBoxExitBlockerService exitBlockerService;
     private PushableBoxService pushableBoxService;
+
+    /// <summary>
+    /// Tracks direction bits dynamically added to <see cref="StandardBox.pushableFrom"/>
+    /// when a teleport fails due to a blocked portal entrance.
+    /// These bits must be reverted once the entrance is no longer blocked.
+    /// </summary>
+    private BoxPushDirectionMask dynamicPushableFromTeleportBlock;
 
     private void OnEnable()
     {
@@ -67,6 +89,8 @@ public class WorldBox : StandardBox
             ClearExitBlocker();
             return;
         }
+
+        RefreshDynamicPushableFromTeleportBlock();
 
         Bounds outerBounds = CalculateBounds(OuterQuadCollider);
         Bounds innerBounds = CalculateBounds(InnerQuadCollider);
@@ -163,19 +187,25 @@ public class WorldBox : StandardBox
         MovePusherToOuterEntranceFromBlockedPush(e.Direction, e.Pusher);
     }
 
+    /// <summary>
+    /// Fallback when push is blocked (WorldBox is not pushable by default):
+    /// try to teleport the pusher to the corresponding OuterEntrance (portal exit next to WorldBox).
+    /// If teleport also fails (entrance blocked by normalbox), dynamically make WorldBox pushable from that direction.
+    /// </summary>
     private void MovePusherToOuterEntranceFromBlockedPush(BoxPushDirection direction, GameObject pusher)
     {
         BoxPushDirection side = Opposite(direction);
-        TeleportPusherToOuterEntrance(pusher, side, direction);
+        if (!TeleportPusherToOuterEntrance(pusher, side, direction))
+        {
+            // Teleport failed: entrance blocked. Dynamically make WorldBox pushable from this direction.
+            BoxPushDirectionMask mask = ToMask(Opposite(direction));
+            dynamicPushableFromTeleportBlock |= mask;
+            AddPushableDirection(mask);
+        }
     }
 
     public override bool HandlePlayerImpact(SceneMovablePlayerImpactContext context)
     {
-        if (CanPushFrom(context.ItemFace))
-        {
-            return base.HandlePlayerImpact(context);
-        }
-
         if (!EnsurePlayer())
         {
             return false;
@@ -185,17 +215,23 @@ public class WorldBox : StandardBox
         if (t)
         {
             playerController?.ApplyExternalVelocity(-context.RelativeVelocity);
+            return true;
+        }
+
+        if (CanPushFrom(context.ItemFace))
+        {
+            return base.HandlePlayerImpact(context);
         }
 
 #if UNITY_EDITOR
         Debug.Log($"Handled player impact on WorldBox. Teleported: {t}");
 #endif
-        return t;
+        return false;
     }
 
     private bool TeleportPlayerToOuterEntrance(BoxPushDirection side)
     {
-        if (!TryMovePlayerToOuterEntrance(side, side))
+        if (!TryMovePlayerToOuterEntrance(side, Opposite(side)))
         {
             return false;
         }
@@ -261,14 +297,43 @@ public class WorldBox : StandardBox
 
         Bounds targetBounds = playerBounds;
         targetBounds.center = position;
-        GameObject pusher = playerTransform != null ? playerTransform.gameObject : null;
-        if (!TryClearTeleportTargetStandardBoxBlocker(
-            targetBounds,
-            direction,
-            pusher,
-            ignoredBox: null,
-            use2D: playerCollider2D != null,
-            use3D: playerCollider3D != null))
+
+        // 检查内侧落点是否被 StandardBox 占据（内部 + 已退出但仍在入口处）
+        WorldBoxExitBlockerService blockerService = GetExitBlockerService();
+        if (blockerService != null)
+        {
+            bool use2D = playerCollider2D != null;
+            bool use3D = playerCollider3D != null;
+
+            // 入口处有 box：尝试将其向 entry 方向推动一格；能推动则可进入，不能则拒绝。
+            // 优先处理 owned box（checkingInner），其次是非 owned box。
+            if (blockerService.TryGetTeleportTargetStandardBoxBlocker(
+                targetBounds, this, ignoredBox: null, CollisionMask,
+                use2D, use3D,  out StandardBox blocker))
+            {
+#if UNITY_EDITOR
+                Debug.Log($"[WorldBox] MovePlayerToInnerSide: blocker={blocker.name} pos={blocker.transform.position} direction={direction}", this);
+#endif
+                if (!TryPushEntranceBlocker(blocker, direction))
+                    return false;
+            }
+
+            // 推动后复查是否还有阻挡
+            if (blockerService.TryGetTeleportTargetStandardBoxBlocker(
+                targetBounds, this, ignoredBox: null, CollisionMask,
+                use2D, use3D,  out StandardBox stillBlocker))
+            {
+#if UNITY_EDITOR
+                Debug.Log($"[WorldBox] MovePlayerToInnerSide: still blocked by box={stillBlocker?.name}", this);
+#endif
+                return false;
+            }
+        }
+
+        // 若有活跃的 entering/exiting transition，入口可能有 visual clone
+        // 而真实 box 尚未通过 SetParent 进入碰撞查询范围，需额外阻塞。
+        if (ServiceBase.TryGet(out PushableBoxService pushableBoxService) &&
+            pushableBoxService.HasActiveTransitionForWorldBox(this))
         {
             return false;
         }
@@ -355,6 +420,27 @@ public class WorldBox : StandardBox
             !TryRefreshExitBlocker(direction, outerBounds, innerBounds, playerBounds))
         {
             ClearExitBlocker();
+            TrySetPushableIfInnerBlockedByBox(direction, innerBounds, playerBounds);
+        }
+    }
+
+    private void TrySetPushableIfInnerBlockedByBox(BoxPushDirection direction, Bounds innerBounds, Bounds playerBounds)
+    {
+        if (!TryGetInnerTargetBounds(direction, outerBounds: CalculateBounds(OuterQuadCollider), innerBounds, playerBounds, out Bounds targetBounds))
+            return;
+
+        WorldBoxExitBlockerService service = GetExitBlockerService();
+        if (service == null) return;
+
+        bool use2D = playerCollider2D != null;
+        bool use3D = playerCollider3D != null;
+        if (service.TryGetTeleportTargetStandardBoxBlocker(
+            targetBounds, this, ignoredBox: null, CollisionMask,
+            use2D, use3D,  out _) ||
+            service.TryGetTeleportTargetStandardBoxBlocker(
+            targetBounds, this, ignoredBox: null, CollisionMask,
+            use2D, use3D,  out _))
+        {
         }
     }
 
@@ -395,6 +481,83 @@ public class WorldBox : StandardBox
         return pushableBoxService;
     }
 
+    /// <summary>
+    /// Checks each direction in <see cref="dynamicPushableFromTeleportBlock"/> to see if
+    /// the corresponding OuterEntrance (portal exit next to WorldBox) is still blocked.
+    /// If the blocker normalbox has been removed, reverts the pushable direction bit,
+    /// restoring teleport-on-contact behavior for that side.
+    /// </summary>
+    private void RefreshDynamicPushableFromTeleportBlock()
+    {
+        if (dynamicPushableFromTeleportBlock == BoxPushDirectionMask.None)
+        {
+            return;
+        }
+
+        CheckAndClearDynamicDirection(BoxPushDirection.Left);
+        CheckAndClearDynamicDirection(BoxPushDirection.Right);
+        CheckAndClearDynamicDirection(BoxPushDirection.Up);
+        CheckAndClearDynamicDirection(BoxPushDirection.Down);
+    }
+
+    /// <summary>
+    /// For a single direction: if the corresponding portal entrance is no longer blocked
+    /// by a normalbox, clear its dynamic pushable bit so the WorldBox reverts to
+    /// teleport-on-contact instead of push-on-contact for that side.
+    /// <para>
+    /// <paramref name="direction"/> is the pushableFrom direction ("pushable from this side"),
+    /// which directly corresponds to the OuterEntrance side that was blocked.
+    /// E.g. <c>Left</c> means OuterEntrance(Left) was blocked during the original teleport attempt.
+    /// </para>
+    /// </summary>
+    private void CheckAndClearDynamicDirection(BoxPushDirection direction)
+    {
+        BoxPushDirectionMask mask = ToMask(direction);
+        if ((dynamicPushableFromTeleportBlock & mask) == 0)
+        {
+            return;
+        }
+
+        // The bit stored in dynamicPushableFromTeleportBlock matches the side passed to
+        // GetOuterEntrance() during the original failed teleport in MovePusherToOuterEntranceFromBlockedPush:
+        //   pushDir=Right → side=Opposite(Right)=Left → GetOuterEntrance(Left) was blocked
+        //   mask = ToMask(Left) stored in dynamicPushableFromTeleportBlock
+        // So direction == Left maps directly to GetOuterEntrance(Left).
+        Transform entrance = GetOuterEntrance(direction);
+        if (entrance == null)
+        {
+            return; // No entrance on this side; keep pushable
+        }
+
+        WorldBoxExitBlockerService blockerService = GetExitBlockerService();
+        if (blockerService == null)
+        {
+            return;
+        }
+
+        // Build a query bounds at the entrance position using the player's collider size
+        Bounds targetBounds = EnsurePlayer() ? GetPlayerBounds() : new Bounds(entrance.position, Vector3.one * 0.5f);
+        targetBounds.center = entrance.position;
+
+        bool use2D = playerCollider2D != null;
+        bool use3D = playerCollider3D != null;
+        if (!use2D && !use3D)
+        {
+            use2D = true;
+        }
+
+        if (blockerService.TryGetTeleportTargetStandardBoxBlocker(
+            targetBounds, this, ignoredBox: null, CollisionMask,
+            use2D, use3D, out _))
+        {
+            return; // Still blocked => keep pushable
+        }
+
+        // Entrance unblocked => revert dynamic pushable direction
+        dynamicPushableFromTeleportBlock &= ~mask;
+        RemovePushableDirection(mask);
+    }
+
     private void ClearExitBlocker()
     {
         if (exitBlockerService == null && ServiceBase.TryGet(out WorldBoxExitBlockerService service))
@@ -421,7 +584,8 @@ public class WorldBox : StandardBox
         GameObject pusher,
         StandardBox ignoredBox,
         bool use2D,
-        bool use3D)
+        bool use3D,
+        bool checkingInner)
     {
         WorldBoxExitBlockerService service = GetExitBlockerService();
         if (service == null)
@@ -439,6 +603,7 @@ public class WorldBox : StandardBox
                 CollisionMask,
                 use2D,
                 use3D,
+                checkingInner,
                 out StandardBox blocker))
             {
                 return true;
@@ -454,6 +619,11 @@ public class WorldBox : StandardBox
 
             attemptedBlockers[attemptIndex] = blocker;
             Vector3 blockerPosition = blocker.transform.position;
+#if UNITY_EDITOR
+            var st = new System.Diagnostics.StackTrace(1, true);
+            var frame = st.GetFrame(0);
+            Debug.Log($"[WBChain] TryClearBlocker: blocker={blocker.name} pushDir={pushDirection} caller={frame.GetMethod().DeclaringType.Name}.{frame.GetMethod().Name}:{frame.GetFileLineNumber()}");
+#endif
             BoxPushAttemptEvent attempt = blocker.TryPush(pushDirection, pusher);
             if (!attempt.CanPush)
             {
@@ -474,6 +644,7 @@ public class WorldBox : StandardBox
             CollisionMask,
             use2D,
             use3D,
+            checkingInner,
             out _);
     }
 
@@ -492,6 +663,19 @@ public class WorldBox : StandardBox
     private static bool HasMovedFrom(StandardBox box, Vector3 position)
     {
         return box != null && (box.transform.position - position).sqrMagnitude > Mathf.Epsilon;
+    }
+
+    /// <summary>
+    /// 尝试推动入口处的 box 向 entry 方向移动一格。用于玩家传送进入时清理入口。
+    /// </summary>
+    private bool TryPushEntranceBlocker(StandardBox blocker, BoxPushDirection direction)
+    {
+        Vector3 blockerPosition = blocker.transform.position;
+        BoxPushAttemptEvent attempt = blocker.TryPush(direction, playerTransform?.gameObject);
+#if UNITY_EDITOR
+        Debug.Log($"[WorldBox] TryPushEntranceBlocker: blocker={blocker.name} canPush={attempt.CanPush} moved={HasMovedFrom(blocker, blockerPosition)} newPos={blocker.transform.position}", this);
+#endif
+        return attempt.CanPush && HasMovedFrom(blocker, blockerPosition);
     }
 
     /// <summary>
@@ -704,16 +888,40 @@ public class WorldBox : StandardBox
 
         Bounds targetBounds = GetPlayerBounds();
         targetBounds.center = entrance.position;
-        GameObject pusher = playerTransform != null ? playerTransform.gameObject : null;
-        if (!TryClearTeleportTargetStandardBoxBlocker(
-            targetBounds,
-            pushDirection,
-            pusher,
-            ignoredBox: null,
-            use2D: playerCollider2D != null,
-            use3D: playerCollider3D != null))
+
+        WorldBoxExitBlockerService blockerService = GetExitBlockerService();
+        if (blockerService != null)
         {
-            return false;
+            bool use2D = playerCollider2D != null;
+            bool use3D = playerCollider3D != null;
+
+            if (blockerService.TryGetTeleportTargetStandardBoxBlocker(
+                targetBounds, this, ignoredBox: null, CollisionMask,
+                use2D, use3D,  out StandardBox innerBlocker))
+            {
+                if (!TryPushEntranceBlocker(innerBlocker, pushDirection))
+                    return false;
+            }
+            else if (blockerService.TryGetTeleportTargetStandardBoxBlocker(
+                targetBounds, this, ignoredBox: null, CollisionMask,
+                use2D, use3D,  out StandardBox outerBlocker))
+            {
+                if (!TryPushEntranceBlocker(outerBlocker, pushDirection))
+                    return false;
+            }
+
+            if (blockerService.TryGetTeleportTargetStandardBoxBlocker(
+                targetBounds, this, ignoredBox: null, CollisionMask,
+                use2D, use3D,  out _))
+            {
+                return false;
+            }
+            if (blockerService.TryGetTeleportTargetStandardBoxBlocker(
+                targetBounds, this, ignoredBox: null, CollisionMask,
+                use2D, use3D,  out _))
+            {
+                return false;
+            }
         }
 
         MovePlayer(entrance.position);
@@ -734,15 +942,39 @@ public class WorldBox : StandardBox
         Bounds targetBounds = GetPusherBounds(pusher, pusherController);
         targetBounds.center = entrance.position;
 
-        if (!TryClearTeleportTargetStandardBoxBlocker(
-            targetBounds,
-            pushDirection,
-            pusher,
-            ignoredBox: null,
-            use2D: pusher.GetComponent<Collider2D>() != null,
-            use3D: pusher.GetComponent<Collider>() != null))
+        WorldBoxExitBlockerService blockerService = GetExitBlockerService();
+        if (blockerService != null)
         {
-            return false;
+            bool use2D = pusher.GetComponent<Collider2D>() != null;
+            bool use3D = pusher.GetComponent<Collider>() != null;
+
+            if (blockerService.TryGetTeleportTargetStandardBoxBlocker(
+                targetBounds, this, ignoredBox: null, CollisionMask,
+                use2D, use3D,  out StandardBox innerBlocker))
+            {
+                if (!TryPushEntranceBlocker(innerBlocker, pushDirection))
+                    return false;
+            }
+            else if (blockerService.TryGetTeleportTargetStandardBoxBlocker(
+                targetBounds, this, ignoredBox: null, CollisionMask,
+                use2D, use3D,  out StandardBox outerBlocker))
+            {
+                if (!TryPushEntranceBlocker(outerBlocker, pushDirection))
+                    return false;
+            }
+
+            if (blockerService.TryGetTeleportTargetStandardBoxBlocker(
+                targetBounds, this, ignoredBox: null, CollisionMask,
+                use2D, use3D,  out _))
+            {
+                return false;
+            }
+            if (blockerService.TryGetTeleportTargetStandardBoxBlocker(
+                targetBounds, this, ignoredBox: null, CollisionMask,
+                use2D, use3D,  out _))
+            {
+                return false;
+            }
         }
 
         MovePusher(pusher, pusherController, entrance.position);
@@ -783,7 +1015,7 @@ public class WorldBox : StandardBox
         return new Bounds(pusher.transform.position, Vector3.one);
     }
 
-    private Transform GetOuterEntrance(BoxPushDirection direction)
+    public Transform GetOuterEntrance(BoxPushDirection direction)
     {
         if (OuterEntrances == null)
         {

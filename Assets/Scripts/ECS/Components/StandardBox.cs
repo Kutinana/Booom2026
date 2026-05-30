@@ -21,6 +21,9 @@ public class StandardBox : MonoBehaviour, ISceneMovableItem
     private float lockedX;
     private bool hasLockedX;
 
+    /// <summary>当前所在 WorldBox（进入后设置，退出后清空），替代原来的 transform 父子关系。</summary>
+    [System.NonSerialized] public WorldBox CurrentWorldBox;
+
     public Vector3 CellOffset => cellOffset;
     public LayerMask CollisionMask => collisionMask;
     public Grid Grid => grid;
@@ -100,7 +103,7 @@ public class StandardBox : MonoBehaviour, ISceneMovableItem
 
     public bool CanPushToward(BoxPushDirection direction)
     {
-        return CanPushFrom(Opposite(direction));
+        return CanPushFrom(direction.Opposite());
     }
 
     public BoxPushInitializeEvent InitializePush(BoxPushDirection direction, GameObject pusher = null)
@@ -255,7 +258,7 @@ public class StandardBox : MonoBehaviour, ISceneMovableItem
         return found;
     }
 
-    protected static BoxPushDirectionMask ToMask(BoxPushDirection direction)
+    public static BoxPushDirectionMask ToMask(BoxPushDirection direction)
     {
         switch (direction)
         {
@@ -272,21 +275,11 @@ public class StandardBox : MonoBehaviour, ISceneMovableItem
         }
     }
 
-    private static BoxPushDirection Opposite(BoxPushDirection direction)
+    public static bool IsOwnedByWorldBox(Transform start, WorldBox worldBox)
     {
-        switch (direction)
-        {
-            case BoxPushDirection.Left:
-                return BoxPushDirection.Right;
-            case BoxPushDirection.Right:
-                return BoxPushDirection.Left;
-            case BoxPushDirection.Up:
-                return BoxPushDirection.Down;
-            case BoxPushDirection.Down:
-                return BoxPushDirection.Up;
-            default:
-                return direction;
-        }
+        if (start == null || worldBox == null) return false;
+        StandardBox box = start.GetComponentInParent<StandardBox>();
+        return box != null && box.CurrentWorldBox == worldBox;
     }
     [Header("Test")]
     public BoxPushDirection TestDirection;
@@ -358,4 +351,24 @@ public class StandardBox : MonoBehaviour, ISceneMovableItem
     }
 
 
+}
+
+public static class BoxPushDirectionExtensions
+{
+    public static BoxPushDirection Opposite(this BoxPushDirection direction)
+    {
+        switch (direction)
+        {
+            case BoxPushDirection.Left:
+                return BoxPushDirection.Right;
+            case BoxPushDirection.Right:
+                return BoxPushDirection.Left;
+            case BoxPushDirection.Up:
+                return BoxPushDirection.Down;
+            case BoxPushDirection.Down:
+                return BoxPushDirection.Up;
+            default:
+                return direction;
+        }
+    }
 }
