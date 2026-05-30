@@ -1,6 +1,18 @@
 using QFramework;
 using UnityEngine;
 
+/// <summary>
+/// WorldBox is world's nested rendering carrier. There is no real inside/outside distinction;
+/// the entire level is one unified world.
+/// <para>
+/// Direction conventions (inner/outer semantics):
+/// <list type="bullet">
+///   <item><b>Inward (Outer to Inner)</b>: moving from WorldBox edge portal to the corresponding world-edge portal.</item>
+///   <item><b>Outward (Inner to Outer)</b>: moving from world-edge portal to the WorldBox-side portal.</item>
+/// </list>
+/// OuterEntrances correspond to portal exit positions next to the WorldBox.
+/// </para>
+/// </summary>
 [DefaultExecutionOrder(1100)]
 public class WorldBox : StandardBox
 {
@@ -38,6 +50,13 @@ public class WorldBox : StandardBox
     private WorldBoxExitBlockerService exitBlockerService;
     private PushableBoxService pushableBoxService;
 
+    /// <summary>
+    /// Tracks direction bits dynamically added to <see cref="StandardBox.pushableFrom"/>
+    /// when a teleport fails due to a blocked portal entrance.
+    /// These bits must be reverted once the entrance is no longer blocked.
+    /// </summary>
+    private BoxPushDirectionMask dynamicPushableFromTeleportBlock;
+
     private void OnEnable()
     {
         pushInitializeUnRegister?.UnRegister();
@@ -70,6 +89,8 @@ public class WorldBox : StandardBox
             ClearExitBlocker();
             return;
         }
+
+        RefreshDynamicPushableFromTeleportBlock();
 
         Bounds outerBounds = CalculateBounds(OuterQuadCollider);
         Bounds innerBounds = CalculateBounds(InnerQuadCollider);
@@ -166,13 +187,20 @@ public class WorldBox : StandardBox
         MovePusherToOuterEntranceFromBlockedPush(e.Direction, e.Pusher);
     }
 
+    /// <summary>
+    /// Fallback when push is blocked (WorldBox is not pushable by default):
+    /// try to teleport the pusher to the corresponding OuterEntrance (portal exit next to WorldBox).
+    /// If teleport also fails (entrance blocked by normalbox), dynamically make WorldBox pushable from that direction.
+    /// </summary>
     private void MovePusherToOuterEntranceFromBlockedPush(BoxPushDirection direction, GameObject pusher)
     {
         BoxPushDirection side = Opposite(direction);
         if (!TeleportPusherToOuterEntrance(pusher, side, direction))
         {
-            // 传送失败 → 入口被堵 → 使 WorldBox 可被推
-            AddPushableDirection(ToMask(Opposite(direction)));
+            // Teleport failed: entrance blocked. Dynamically make WorldBox pushable from this direction.
+            BoxPushDirectionMask mask = ToMask(Opposite(direction));
+            dynamicPushableFromTeleportBlock |= mask;
+            AddPushableDirection(mask);
         }
     }
 
@@ -451,6 +479,83 @@ public class WorldBox : StandardBox
         }
 
         return pushableBoxService;
+    }
+
+    /// <summary>
+    /// Checks each direction in <see cref="dynamicPushableFromTeleportBlock"/> to see if
+    /// the corresponding OuterEntrance (portal exit next to WorldBox) is still blocked.
+    /// If the blocker normalbox has been removed, reverts the pushable direction bit,
+    /// restoring teleport-on-contact behavior for that side.
+    /// </summary>
+    private void RefreshDynamicPushableFromTeleportBlock()
+    {
+        if (dynamicPushableFromTeleportBlock == BoxPushDirectionMask.None)
+        {
+            return;
+        }
+
+        CheckAndClearDynamicDirection(BoxPushDirection.Left);
+        CheckAndClearDynamicDirection(BoxPushDirection.Right);
+        CheckAndClearDynamicDirection(BoxPushDirection.Up);
+        CheckAndClearDynamicDirection(BoxPushDirection.Down);
+    }
+
+    /// <summary>
+    /// For a single direction: if the corresponding portal entrance is no longer blocked
+    /// by a normalbox, clear its dynamic pushable bit so the WorldBox reverts to
+    /// teleport-on-contact instead of push-on-contact for that side.
+    /// <para>
+    /// <paramref name="direction"/> is the pushableFrom direction ("pushable from this side"),
+    /// which directly corresponds to the OuterEntrance side that was blocked.
+    /// E.g. <c>Left</c> means OuterEntrance(Left) was blocked during the original teleport attempt.
+    /// </para>
+    /// </summary>
+    private void CheckAndClearDynamicDirection(BoxPushDirection direction)
+    {
+        BoxPushDirectionMask mask = ToMask(direction);
+        if ((dynamicPushableFromTeleportBlock & mask) == 0)
+        {
+            return;
+        }
+
+        // The bit stored in dynamicPushableFromTeleportBlock matches the side passed to
+        // GetOuterEntrance() during the original failed teleport in MovePusherToOuterEntranceFromBlockedPush:
+        //   pushDir=Right → side=Opposite(Right)=Left → GetOuterEntrance(Left) was blocked
+        //   mask = ToMask(Left) stored in dynamicPushableFromTeleportBlock
+        // So direction == Left maps directly to GetOuterEntrance(Left).
+        Transform entrance = GetOuterEntrance(direction);
+        if (entrance == null)
+        {
+            return; // No entrance on this side; keep pushable
+        }
+
+        WorldBoxExitBlockerService blockerService = GetExitBlockerService();
+        if (blockerService == null)
+        {
+            return;
+        }
+
+        // Build a query bounds at the entrance position using the player's collider size
+        Bounds targetBounds = EnsurePlayer() ? GetPlayerBounds() : new Bounds(entrance.position, Vector3.one * 0.5f);
+        targetBounds.center = entrance.position;
+
+        bool use2D = playerCollider2D != null;
+        bool use3D = playerCollider3D != null;
+        if (!use2D && !use3D)
+        {
+            use2D = true;
+        }
+
+        if (blockerService.TryGetTeleportTargetStandardBoxBlocker(
+            targetBounds, this, ignoredBox: null, CollisionMask,
+            use2D, use3D, out _))
+        {
+            return; // Still blocked => keep pushable
+        }
+
+        // Entrance unblocked => revert dynamic pushable direction
+        dynamicPushableFromTeleportBlock &= ~mask;
+        RemovePushableDirection(mask);
     }
 
     private void ClearExitBlocker()
