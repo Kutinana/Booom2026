@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -91,6 +91,29 @@ public class WorldBoxExitBlockerService : ServiceBase
 
         RefreshWall(owner != null ? owner : worldBox, worldBox, direction, outerBounds, actorBounds, use2D, use3D,
             blockingTag);
+        return true;
+    }
+
+    public bool TryRefreshBlockerForDynamicHit(
+        WorldBox worldBox,
+        UnityEngine.Object owner,
+        BoxPushDirection direction,
+        Bounds outerBounds,
+        Bounds actorBounds,
+        bool use2D,
+        bool use3D)
+    {
+        if (worldBox == null || outerBounds.size == Vector3.zero)
+        {
+            return false;
+        }
+
+        if (!use2D && !use3D)
+        {
+            use2D = true;
+        }
+
+        RefreshWall(owner != null ? owner : worldBox, worldBox, direction, outerBounds, actorBounds, use2D, use3D, UntaggedTag);
         return true;
     }
 

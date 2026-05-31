@@ -461,7 +461,24 @@ public class WorldBox : StandardBox
 
         bool use2D = playerCollider2D != null;
         bool use3D = playerCollider3D != null;
-        return service.TryRefreshBlockerForStaticInnerHit(this, direction, outerBounds, innerTargetBounds, playerBounds, CollisionMask, use2D, use3D);
+        
+        if (service.TryRefreshBlockerForStaticInnerHit(this, direction, outerBounds, innerTargetBounds, playerBounds, CollisionMask, use2D, use3D))
+        {
+            return true;
+        }
+
+        if (service.TryGetTeleportTargetStandardBoxBlocker(
+            innerTargetBounds, this, ignoredBox: null, CollisionMask,
+            use2D, use3D, out StandardBox blocker))
+        {
+            if (!CanPushEntranceBlocker(blocker, direction, out _))
+            {
+                service.TryRefreshBlockerForDynamicHit(this, this, direction, outerBounds, playerBounds, use2D, use3D);
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private WorldBoxExitBlockerService GetExitBlockerService()
@@ -631,11 +648,9 @@ public class WorldBox : StandardBox
 
 
 
-    /// <summary>
-    /// 尝试推动入口处的 box 向 entry 方向移动一格。用于玩家传送进入时清理入口。
-    /// </summary>
-    private bool TryPushEntranceBlocker(StandardBox blocker, BoxPushDirection direction)
+    private bool CanPushEntranceBlocker(StandardBox blocker, BoxPushDirection direction, out System.Collections.Generic.List<StandardBox> chain)
     {
+        chain = null;
         if (blocker == null || !ServiceBase.TryGet(out PhysicalBoxService physicalBoxService))
         {
             return false;
@@ -645,7 +660,7 @@ public class WorldBox : StandardBox
             direction == BoxPushDirection.Left ? Vector3.left :
             direction == BoxPushDirection.Up ? Vector3.up : Vector3.down;
 
-        var chain = new System.Collections.Generic.List<StandardBox>();
+        chain = new System.Collections.Generic.List<StandardBox>();
         physicalBoxService.CollectHorizontalChain(blocker, axis, chain);
 
         var extendedIgnore = new System.Collections.Generic.List<StandardBox>();
@@ -666,6 +681,28 @@ public class WorldBox : StandardBox
                 return false; // Chain is statically blocked
             }
         }
+
+        return true;
+    }
+
+    /// <summary>
+    /// 尝试推动入口处的 box 向 entry 方向移动一格。用于玩家传送进入时清理入口。
+    /// </summary>
+    private bool TryPushEntranceBlocker(StandardBox blocker, BoxPushDirection direction)
+    {
+        if (!CanPushEntranceBlocker(blocker, direction, out var chain))
+        {
+            return false;
+        }
+
+        if (!ServiceBase.TryGet(out PhysicalBoxService physicalBoxService))
+        {
+            return false;
+        }
+
+        Vector3 axis = direction == BoxPushDirection.Right ? Vector3.right :
+            direction == BoxPushDirection.Left ? Vector3.left :
+            direction == BoxPushDirection.Up ? Vector3.up : Vector3.down;
 
         // Can push! Move the entire chain instantly by one cell size.
         // This makes room for the teleporting entity (player).
