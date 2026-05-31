@@ -341,8 +341,8 @@ public class PushableBoxService : ServiceBase<StandardBox>
     }
 
 
-    private bool IsInnerDestinationBlocked(StandardBox box, WorldBox worldBox, BoxPushDirection direction,
-        Bounds outerBounds, Bounds boxBounds, System.Collections.Generic.HashSet<StandardBox> visited)
+    public bool IsInnerDestinationBlocked(StandardBox box, WorldBox worldBox, BoxPushDirection direction,
+        Bounds outerBounds, Bounds boxBounds, System.Collections.Generic.HashSet<StandardBox> visited = null)
     {
         if (visited == null) visited = new System.Collections.Generic.HashSet<StandardBox>();
         if (!visited.Add(box)) return false; // Loop detected, not blocked by itself

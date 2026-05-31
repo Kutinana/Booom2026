@@ -16,8 +16,6 @@ using UnityEngine;
 [DefaultExecutionOrder(1100)]
 public class WorldBox : StandardBox
 {
-    private const int MaxTeleportTargetBlockerClearAttempts = 8;
-
     [System.Serializable]
     public struct DirectionEntrance
     {

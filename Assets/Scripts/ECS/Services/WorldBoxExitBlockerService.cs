@@ -257,6 +257,36 @@ public class WorldBoxExitBlockerService : ServiceBase
         RemoveWall(new BlockerKey(worldBox, owner));
     }
 
+    public bool IsExitBlocker2D(Collider2D col, out WorldBox worldBox)
+    {
+        worldBox = null;
+        if (col == null) return false;
+        foreach (KeyValuePair<BlockerKey, TemporaryWall> pair in walls)
+        {
+            if (pair.Value.Collider2D == col)
+            {
+                worldBox = pair.Key.WorldBox;
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public bool IsExitBlocker3D(Collider col, out WorldBox worldBox)
+    {
+        worldBox = null;
+        if (col == null) return false;
+        foreach (KeyValuePair<BlockerKey, TemporaryWall> pair in walls)
+        {
+            if (pair.Value.Collider3D == col)
+            {
+                worldBox = pair.Key.WorldBox;
+                return true;
+            }
+        }
+        return false;
+    }
+
     protected override void OnDestroy()
     {
         foreach (KeyValuePair<BlockerKey, TemporaryWall> pair in walls)

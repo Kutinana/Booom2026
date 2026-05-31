@@ -27,6 +27,8 @@ public class PhysicalBoxService : ServiceBase<StandardBox>
 
     private readonly Dictionary<StandardBox, float> fallSpeeds = new Dictionary<StandardBox, float>();
     private readonly Dictionary<StandardBox, LinearPushState> linearPushes = new Dictionary<StandardBox, LinearPushState>();
+    private readonly Dictionary<StandardBox, Vector3> previousPositions = new Dictionary<StandardBox, Vector3>();
+    private readonly Dictionary<StandardBox, bool> wasMoving = new Dictionary<StandardBox, bool>();
     private readonly List<StandardBox> linearPushScratch = new List<StandardBox>(8);
     private readonly RaycastHit2D[] hits2D = new RaycastHit2D[8];
     private readonly RaycastHit[] hits3D = new RaycastHit[8];
@@ -65,9 +67,17 @@ public class PhysicalBoxService : ServiceBase<StandardBox>
     public override void Register(StandardBox component)
     {
         base.Register(component);
-        if (component != null && !fallSpeeds.ContainsKey(component))
+        if (component != null)
         {
-            fallSpeeds.Add(component, 0f);
+            if (!fallSpeeds.ContainsKey(component))
+            {
+                fallSpeeds.Add(component, 0f);
+            }
+            if (!previousPositions.ContainsKey(component))
+            {
+                previousPositions.Add(component, component.transform.position);
+                wasMoving.Add(component, false);
+            }
         }
     }
 
@@ -78,6 +88,8 @@ public class PhysicalBoxService : ServiceBase<StandardBox>
         {
             fallSpeeds.Remove(component);
             linearPushes.Remove(component);
+            previousPositions.Remove(component);
+            wasMoving.Remove(component);
         }
     }
 
@@ -103,6 +115,31 @@ public class PhysicalBoxService : ServiceBase<StandardBox>
 
         UpdateLinearPushTransitions(dt);
 
+        foreach (StandardBox box in RegisteredComponents)
+        {
+            if (box == null)
+            {
+                continue;
+            }
+
+            Vector3 currentPos = box.transform.position;
+            if (previousPositions.TryGetValue(box, out Vector3 prevPos))
+            {
+                bool isMoving = (currentPos - prevPos).sqrMagnitude > 1e-6f;
+                if (!isMoving && wasMoving.TryGetValue(box, out bool movingBefore) && movingBefore)
+                {
+                    box.SnapToGrid();
+                    currentPos = box.transform.position;
+                    RefreshSceneMovableBaselineForStandardBox(box);
+                }
+                wasMoving[box] = isMoving;
+            }
+            else
+            {
+                wasMoving[box] = false;
+            }
+            previousPositions[box] = currentPos;
+        }
     }
 
     private void OnPushAttempted(BoxPushAttemptEvent e)
@@ -661,6 +698,14 @@ public class PhysicalBoxService : ServiceBase<StandardBox>
                     continue;
                 }
 
+                if (ignoreBoxes != null && ServiceBase.TryGet(out WorldBoxExitBlockerService blockerService2D))
+                {
+                    if (blockerService2D.IsExitBlocker2D(hit2D.collider, out WorldBox wb) && ignoreBoxes.Contains(wb))
+                    {
+                        continue;
+                    }
+                }
+
                 if (isExitingWorldBox && hit2D.collider.GetComponentInParent<WorldBox>() == exitingWorldBox && IsAlongTransitionAxis(direction, transitionDir))
                 {
                     continue;
@@ -747,6 +792,14 @@ public class PhysicalBoxService : ServiceBase<StandardBox>
                 if (hit3D.collider == null || hit3D.collider == boxCollider3D)
                 {
                     continue;
+                }
+
+                if (ignoreBoxes != null && ServiceBase.TryGet(out WorldBoxExitBlockerService blockerService3D))
+                {
+                    if (blockerService3D.IsExitBlocker3D(hit3D.collider, out WorldBox wb) && ignoreBoxes.Contains(wb))
+                    {
+                        continue;
+                    }
                 }
 
                 if (isExitingWorldBox && hit3D.collider.GetComponentInParent<WorldBox>() == exitingWorldBox && IsAlongTransitionAxis(direction, transitionDir))
@@ -869,11 +922,7 @@ public class PhysicalBoxService : ServiceBase<StandardBox>
 
         outGroup.Add(root);
 
-        // WorldBox 自身被推时不收集已退出的独立 box
-        if (root is WorldBox)
-        {
-            return;
-        }
+
 
         // 广度优先：从 root 起逐个向 axis 方向追加紧贴的下一个成员。
         for (int i = 0; i < outGroup.Count; i++)
@@ -983,8 +1032,31 @@ public class PhysicalBoxService : ServiceBase<StandardBox>
             return false;
         }
 
-        if (neighbor is WorldBox)
-            return false;
+        if (neighbor is WorldBox worldBox)
+        {
+            BoxPushDirection direction = positiveDirection ? BoxPushDirection.Right : BoxPushDirection.Left;
+            
+            if (worldBox.GetOuterEntrance(direction.Opposite()) != null)
+            {
+                bool canEnter = false;
+                if (ServiceBase.TryGet(out PushableBoxService pushableService))
+                {
+                    canEnter = !pushableService.IsInnerDestinationBlocked(below, worldBox, direction, worldBox.OuterBounds, below.Bounds, null);
+                }
+
+                if (canEnter)
+                {
+                    return false;
+                }
+            }
+            else
+            {
+                if (!worldBox.CanPushToward(direction))
+                {
+                    return false;
+                }
+            }
+        }
 
         if (outGroup.Contains(neighbor))
         {
@@ -1014,13 +1086,6 @@ public class PhysicalBoxService : ServiceBase<StandardBox>
         {
             return false;
         }
-
-        BoxPushDirection direction = positiveDirection ? BoxPushDirection.Right : BoxPushDirection.Left;
-        if (neighbor is WorldBox worldBox && !worldBox.CanPushToward(direction))
-        {
-            return false;
-        }
-
 
 
         if (HasActiveLinearPushState(neighbor))
