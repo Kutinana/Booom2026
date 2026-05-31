@@ -226,17 +226,17 @@ public class PushableBoxService : ServiceBase<StandardBox>
             Bounds boxBounds = box.Bounds;
             if (boxBounds.size == Vector3.zero) continue;
 
-            if (physicalBoxService.TryGetLinearPushDirection(box, out BoxPushDirection pushDir))
+            if (physicalBoxService.TryGetActiveLinearPushInfo(box, out BoxPushDirection pushDir, out Vector3 pushOrigin))
             {
                 if (IsTouchingOuterBoundsForEntering(entryBounds, boxBounds, pushDir, OuterEdgeBlockerTouchTolerance))
                 {
                     Vector3 axis = GetAxis(pushDir);
                     float cellSize = GetCellSize(box, pushDir);
-                    Vector3 nextCenter = boxBounds.center + axis * cellSize;
+                    Vector3 nextCenter = pushOrigin + axis * cellSize;
 
                     if (!IsInnerDestinationBlocked(box, worldBox, pushDir, entryBounds, boxBounds))
                     {
-                        StartTransition(box, worldBox, pushDir, isEntering: true, boxBounds.center, nextCenter, cellSize);
+                        StartTransition(box, worldBox, pushDir, isEntering: true, pushOrigin, nextCenter, cellSize);
                         break;
                     }
                     else
@@ -271,17 +271,18 @@ public class PushableBoxService : ServiceBase<StandardBox>
             Bounds boxBounds = box.Bounds;
             if (boxBounds.size == Vector3.zero) continue;
 
-            if (physicalBoxService.TryGetLinearPushDirection(box, out BoxPushDirection pushDir))
+            if (physicalBoxService.TryGetActiveLinearPushInfo(box, out BoxPushDirection pushDir, out Vector3 pushOrigin))
             {
                 if (IsTouchingOuterBoundsForExiting(outerBounds, boxBounds, pushDir, OuterEdgeBlockerTouchTolerance))
                 {
                     Vector3 axis = GetAxis(pushDir);
                     float cellSize = GetCellSize(box, pushDir);
-                    Vector3 nextCenter = boxBounds.center + axis * cellSize;
+                    Vector3 nextCenter = pushOrigin + axis * cellSize;
 
                     if (!IsOuterDestinationBlocked(box, worldBox, pushDir))
                     {
-                        StartTransition(box, worldBox, pushDir, isEntering: false, boxBounds.center, nextCenter, cellSize);
+                        StartTransition(box, worldBox, pushDir, isEntering: false, pushOrigin, nextCenter, cellSize);
+                        break;
                     }
                 }
             }
@@ -739,17 +740,6 @@ public class PushableBoxService : ServiceBase<StandardBox>
         float dot = Vector3.Dot(currentVector, totalDir);
         float progress = Mathf.Clamp01(dot / totalDist);
 
-        // Entering 和 Exiting：grid cell 变化 + 进度兜底
-        if (state.Box.AlignToGrid && state.Box.Grid != null)
-        {
-            Vector3Int currentCell = state.Box.Grid.WorldToCell(state.Box.transform.position);
-            if (currentCell != state.StartCell && progress >= 0.8f)
-            {
-                CompleteTransition(state);
-                return;
-            }
-        }
-
         if (progress >= 0.99f)
         {
             CompleteTransition(state);
@@ -760,6 +750,18 @@ public class PushableBoxService : ServiceBase<StandardBox>
         {
             CancelTransition(state);
             return;
+        }
+
+        if (progress <= 0.05f)
+        {
+            if (ServiceBase.TryGet(out PhysicalBoxService pbService))
+            {
+                if (!pbService.TryGetActiveLinearPushInfo(state.Box, out _, out _))
+                {
+                    CancelTransition(state);
+                    return;
+                }
+            }
         }
 
         if (state.VisualClone != null)
@@ -850,6 +852,8 @@ public class PushableBoxService : ServiceBase<StandardBox>
             StandardBox member = state.InnerChain[i];
             if (member != null)
             {
+                member.MoveTo(state.InnerChainStartPositions[i]);
+                
                 if (ServiceBase.TryGet(out PhysicalBoxService pbService))
                 {
                     pbService.CancelLinearPush(member);

@@ -214,7 +214,7 @@ public class StandardBox : MonoBehaviour, ISceneMovableItem
         }
     }
 
-    private void SnapToGrid()
+    public void SnapToGrid()
     {
         if (!AlignToGrid || grid == null)
         {

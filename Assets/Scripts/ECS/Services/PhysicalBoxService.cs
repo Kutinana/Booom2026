@@ -1367,6 +1367,7 @@ public class PhysicalBoxService : ServiceBase<StandardBox>
             Pusher = null,
             MovePusherWithBox = false,
         };
+        
         linearPushes[box] = alignState;
     }
 
@@ -1607,6 +1608,20 @@ public class PhysicalBoxService : ServiceBase<StandardBox>
         // 在 root 移动之前先固化 chain 与上方堆叠关系（box 一旦移走，紧贴判定就失效）。
         CollectHorizontalChain(box, axis, chainGroupScratch);
         CollectVerticalStackForChain(chainGroupScratch, stackGroupScratch);
+
+        if (needReset)
+        {
+            for (int i = 0; i < chainGroupScratch.Count; i++)
+            {
+                if (chainGroupScratch[i] != null)
+                {
+                    chainGroupScratch[i].SnapToGrid();
+                }
+            }
+            // 重新同步对齐后的坐标
+            state.OriginCellPosition = box.transform.position;
+            state.ReleaseTargetPosition = box.transform.position;
+        }
         bool teleportedWorldBoxPusher = false;
         if (TryTeleportFirstBlockedWorldBoxPusherInGroup(box, direction, axis, chainGroupScratch, out StandardBox teleportedPusher))
         {
@@ -1674,35 +1689,6 @@ public class PhysicalBoxService : ServiceBase<StandardBox>
             member.MoveTo(memberFrom + axis * magnitude);
         }
 
-        // === 为 chain 中非 root 的成员注册 follower LinearPushState ===
-        // PushableBoxService.CheckAndTryTeleportAllPushableBoxesWithOuterBoundsToInner 通过
-        // TryGetLinearPushDirection 扫描，只有具备 active linear push state 的 box 才会被检测
-        // 是否需要进入 WorldBox 过渡。chain follower box 由 root 带动，本身没有独立 push state，
-        // 因此这里主动给它们注册一个轻量的 follower state，让扫描能找到它们。
-        for (int i = 1; i < chainGroupScratch.Count; i++)
-        {
-            StandardBox follower = chainGroupScratch[i];
-            if (follower == null || follower == box)
-            {
-                continue;
-            }
-            // 只在 follower 尚无 active state 时写入，避免覆盖 follower 自身的 push session。
-            if (!linearPushes.TryGetValue(follower, out LinearPushState existingFollower) || !existingFollower.Active)
-            {
-                linearPushes[follower] = new LinearPushState
-                {
-                    Active = true,
-                    Direction = direction,
-                    OriginCellPosition = follower.transform.position,
-                    ReleaseTransition = false,
-                    ReleaseTargetPosition = follower.transform.position,
-                    AdvancedThisSession = false,
-                    Pusher = null,          // null 表示这是 chain follower，不是直接被推者
-                    MovePusherWithBox = false,
-                    IsFollower = true       // 标记为 follower，HasActiveLinearPushState 对其返回 false
-                };
-            }
-        }
 
         // === 纵向堆叠（含横跨支撑）跟随 ===
         // Q3=lower_only：成员能走多少走多少，撞墙就停下（与 chain 脱节，下一帧失去支撑下落）。
@@ -1732,6 +1718,37 @@ public class PhysicalBoxService : ServiceBase<StandardBox>
             // WorldBox 过渡由 PushableBoxService 在 CheckAndTryTeleportAllPushableBoxes 中通过 follower state 检测。
         }
 
+        // === 为 chain 中非 root 的成员注册/更新 follower LinearPushState ===
+        // PushableBoxService.CheckAndTryTeleportAllPushableBoxesWithOuterBoundsToInner 通过
+        // TryGetActiveLinearPushInfo 扫描，只有具备 active state 的 box 才会被检测。
+        // chain follower box 由 root 带动，在此处将其 OriginCellPosition 与 root 完美对齐并同步，
+        // 避免物理误差累积导致传送进度卡死。
+        for (int i = 1; i < chainGroupScratch.Count; i++)
+        {
+            StandardBox follower = chainGroupScratch[i];
+            if (follower == null || follower == box) continue;
+
+            Vector3 offset = follower.transform.position - box.transform.position;
+            Vector3 correctFollowerOrigin = state.OriginCellPosition + offset;
+
+            if (!linearPushes.TryGetValue(follower, out LinearPushState existingFollower))
+            {
+                existingFollower = new LinearPushState();
+            }
+
+            existingFollower.Active = true;
+            existingFollower.Direction = direction;
+            existingFollower.OriginCellPosition = correctFollowerOrigin;
+            existingFollower.ReleaseTransition = state.ReleaseTransition;
+            existingFollower.ReleaseTargetPosition = correctFollowerOrigin;
+            existingFollower.AdvancedThisSession = state.AdvancedThisSession;
+            existingFollower.Pusher = null;
+            existingFollower.MovePusherWithBox = false;
+            existingFollower.IsFollower = true;
+
+            linearPushes[follower] = existingFollower;
+        }
+
         linearPushes[box] = state;
         return magnitude * sign;
     }
@@ -1752,14 +1769,17 @@ public class PhysicalBoxService : ServiceBase<StandardBox>
         {
             Vector3 axis = cancelState.Direction == BoxPushDirection.Right ? Vector3.right : Vector3.left;
             CollectHorizontalChain(box, axis, chainGroupScratch);
-            for (int i = 1; i < chainGroupScratch.Count; i++)
+            for (int i = 0; i < chainGroupScratch.Count; i++)
             {
                 StandardBox follower = chainGroupScratch[i];
-                if (follower == null || follower == box)
+                if (follower == null)
                 {
                     continue;
                 }
-                if (linearPushes.TryGetValue(follower, out LinearPushState fs) && fs.Active && fs.IsFollower)
+                
+                follower.SnapToGrid();
+                
+                if (follower != box && linearPushes.TryGetValue(follower, out LinearPushState fs) && fs.Active && fs.IsFollower)
                 {
                     linearPushes.Remove(follower);
                 }
@@ -1790,13 +1810,15 @@ public class PhysicalBoxService : ServiceBase<StandardBox>
         };
     }
 
-    public bool TryGetLinearPushDirection(StandardBox box, out BoxPushDirection direction)
+    public bool TryGetActiveLinearPushInfo(StandardBox box, out BoxPushDirection direction, out Vector3 originPos)
     {
         direction = default;
+        originPos = default;
         if (box != null && linearPushes.TryGetValue(box, out LinearPushState state) && state.Active && !state.ReleaseTransition)
         {
             // follower state 也返回方向，让 PushableBoxService 能检测到 chain follower 是否需要进入 WorldBox 过渡。
             direction = state.Direction;
+            originPos = state.OriginCellPosition;
             return true;
         }
         return false;
@@ -1892,6 +1914,12 @@ public class PhysicalBoxService : ServiceBase<StandardBox>
         state.ReleaseTargetPosition.y = box.transform.position.y;
         state.ReleaseTargetPosition.z = box.transform.position.z;
         state.ReleaseTransition = true;
+        
+        float originX = state.OriginCellPosition.x;
+        float currentX = box.transform.position.x;
+        float deltaX = currentX - originX;
+        float fraction = Mathf.Abs(deltaX) / cellSize;
+
         linearPushes[box] = state;
     }
 
@@ -2078,6 +2106,20 @@ public class PhysicalBoxService : ServiceBase<StandardBox>
     private void CompleteRelease(StandardBox box, Vector3 target)
     {
         box.MoveTo(target);
+
+        if (linearPushes.TryGetValue(box, out LinearPushState state))
+        {
+            Vector3 axis = state.Direction == BoxPushDirection.Right ? Vector3.right : Vector3.left;
+            CollectHorizontalChain(box, axis, chainGroupScratch);
+            for (int i = 0; i < chainGroupScratch.Count; i++)
+            {
+                if (chainGroupScratch[i] != null && chainGroupScratch[i] != box)
+                {
+                    chainGroupScratch[i].SnapToGrid();
+                }
+            }
+        }
+
         linearPushes.Remove(box);
         RefreshSceneMovableBaselineForStandardBox(box);
         NotifyStandardBoxHorizontalGridSettled(box);
