@@ -500,7 +500,7 @@ public class PushableBoxService : ServiceBase<StandardBox>
         }
 
         if (!blockerService.TryGetTeleportTargetStandardBoxBlocker(
-                movableTargetBounds, worldBox, ignoredBox: null, box.CollisionMask, use2D, use3D, checkingInner: false, out StandardBox blocker))
+                movableTargetBounds, worldBox, ignoredBox: null, worldBox.CollisionMask, use2D, use3D, checkingInner: false, out StandardBox blocker))
         {
             return false;
         }
@@ -542,6 +542,8 @@ public class PushableBoxService : ServiceBase<StandardBox>
     private void StartTransition(StandardBox box, WorldBox worldBox, BoxPushDirection direction, bool isEntering,
         Vector3 startPos, Vector3 endPos, float cellSize)
     {
+        BoxTransitionState phantomTransition = null;
+        System.Collections.Generic.List<StandardBox> innerChain = null;
         Bounds boxBounds = box.Bounds;
         Vector3 P_start = startPos;
         Vector3 P_end = endPos;
@@ -564,8 +566,6 @@ public class PushableBoxService : ServiceBase<StandardBox>
                 axis = Vector3.down;
                 break;
         }
-
-        System.Collections.Generic.List<StandardBox> innerChain = null;
         if (isEntering)
         {
             Transform entrance = worldBox.GetOuterEntrance(direction.Opposite());
@@ -640,20 +640,54 @@ public class PushableBoxService : ServiceBase<StandardBox>
             {
                 bool use2D = box.Collider2D != null;
                 bool use3D = box.Collider3D != null;
+
+                // 1. Find and force-complete any phantom transition that is targeting our destination.
+                // This ensures their physical bodies are actually at the destination so they can be picked up as blockers.
+                BoxTransitionState pt = null;
+                for (int i = 0; i < activeTransitions.Count; i++)
+                {
+                    var otherTransition = activeTransitions[i];
+                    if (otherTransition.Box != box && 
+                        Vector3.Distance(otherTransition.P_target_end, P_target_end) < 0.1f)
+                    {
+                        pt = otherTransition;
+                        break;
+                    }
+                }
+
+                if (pt != null)
+                {
+                    CompleteTransition(pt);
+                    Physics2D.SyncTransforms();
+                    Physics.SyncTransforms();
+                }
+
+                // 2. Now query the physics world. The phantom transition (if any) is now a real physical blocker.
+                StandardBox blocker = null;
                 if (blockerService.TryGetTeleportTargetStandardBoxBlocker(
                         movableTargetBounds,
                         worldBox,
                         ignoredBox: null,
-                        box.CollisionMask,
+                        worldBox.CollisionMask,
                         use2D,
                         use3D,
                         checkingInner: false,
-                        out StandardBox blocker))
+                        out StandardBox physicalBlocker))
+                {
+                    blocker = physicalBlocker;
+                }
+
+                // 3. Collect the chain.
+                if (blocker != null)
                 {
                     if (ServiceBase.TryGet(out PhysicalBoxService physicalBoxService))
                     {
                         innerChain = new System.Collections.Generic.List<StandardBox>();
                         physicalBoxService.CollectHorizontalChain(blocker, axis, innerChain);
+                        if (!innerChain.Contains(blocker))
+                        {
+                            innerChain.Add(blocker);
+                        }
                     }
                 }
             }
@@ -828,6 +862,7 @@ public class PushableBoxService : ServiceBase<StandardBox>
 
         if (state.Box != null && state.WorldBox != null)
         {
+            Debug.Log($"[PushableBoxService] CompleteTransition: IsEntering={state.IsEntering}, box={state.Box.name}, target={state.P_target_end}, innerChainCount={state.InnerChain.Count}");
             if (state.IsEntering)
             {
                 MoveBoxToInner(state.Box, state.P_target_end, state.WorldBox);
@@ -866,11 +901,16 @@ public class PushableBoxService : ServiceBase<StandardBox>
 
     private static void MoveBoxToOuter(StandardBox box, Vector3 targetPosition)
     {
+        Debug.Log($"[PushableBoxService] MoveBoxToOuter: Moving {box.name} to {targetPosition}");
         box.MoveTo(targetPosition);
         if (ServiceBase.TryGet(out PhysicalBoxService physicalBoxService))
         {
             physicalBoxService.CancelLinearPush(box);
+            physicalBoxService.QueueGridAlignmentRelease(box);
         }
+
+        Physics2D.SyncTransforms();
+        Physics.SyncTransforms();
 
         if (ServiceBase.TryGet(out SceneMovableInteractionService sceneMovable))
         {
@@ -967,6 +1007,9 @@ public class PushableBoxService : ServiceBase<StandardBox>
             physicalBoxService.CancelLinearPush(box);
             physicalBoxService.QueueGridAlignmentRelease(box);
         }
+
+        Physics2D.SyncTransforms();
+        Physics.SyncTransforms();
 
         if (ServiceBase.TryGet(out SceneMovableInteractionService sceneMovable))
         {
