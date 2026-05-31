@@ -661,39 +661,29 @@ public class PhysicalBoxService : ServiceBase<StandardBox>
                     continue;
                 }
 
-                if (isExitingWorldBox && (StandardBox.IsOwnedByWorldBox(hit2D.collider.transform, exitingWorldBox) || hit2D.collider.GetComponentInParent<WorldBox>() == exitingWorldBox) && IsAlongTransitionAxis(direction, transitionDir))
+                if (isExitingWorldBox && hit2D.collider.GetComponentInParent<WorldBox>() == exitingWorldBox && IsAlongTransitionAxis(direction, transitionDir))
                 {
                     continue;
                 }
 
-                if (isEnteringWorldBox && hit2D.collider != null && (hit2D.collider.gameObject == enteringWorldBox.gameObject || StandardBox.IsOwnedByWorldBox(hit2D.collider.transform, enteringWorldBox) || hit2D.collider.GetComponentInParent<WorldBox>() == enteringWorldBox))
+                if (isEnteringWorldBox && hit2D.collider != null && (hit2D.collider.gameObject == enteringWorldBox.gameObject || hit2D.collider.GetComponentInParent<WorldBox>() == enteringWorldBox))
                 {
                     continue;
                 }
 
                 WorldBox hitWorldBox2D = hit2D.collider != null ? hit2D.collider.GetComponentInParent<WorldBox>() : null;
-                if (hitWorldBox2D != null && StandardBox.IsOwnedByWorldBox(box.transform, hitWorldBox2D))
+                if (hitWorldBox2D != null)
                 {
                     BoxPushDirection castDir = VectorToDirection(direction);
                     if (PushableBoxService.IsTouchingInnerBoundsForExiting(hitWorldBox2D.InnerBounds, box.Bounds, castDir, 0.04f))
                     {
                         continue;
                     }
-                }
 
-                if (hitWorldBox2D != null && !StandardBox.IsOwnedByWorldBox(box.transform, hitWorldBox2D))
-                {
-                    BoxPushDirection pushDirFromVec = VectorToDirection(direction);
-                    if (hitWorldBox2D.GetOuterEntrance(pushDirFromVec.Opposite()) != null)
+                    if (hitWorldBox2D.GetOuterEntrance(castDir.Opposite()) != null)
                     {
-                        StandardBox hitStandardBox = hit2D.collider.GetComponentInParent<StandardBox>();
-                        if (hitStandardBox != null && !(hitStandardBox is WorldBox) && StandardBox.IsOwnedByWorldBox(hitStandardBox.transform, hitWorldBox2D))
-                        {
-                            continue;
-                        }
-
                         bool canGroupEnter = false;
-                        if (PushableBoxService.IsTouchingOuterBoundsForEntering(hitWorldBox2D.Bounds, box.Bounds, pushDirFromVec, 0.04f))
+                        if (PushableBoxService.IsTouchingOuterBoundsForEntering(hitWorldBox2D.Bounds, box.Bounds, castDir, 0.04f))
                         {
                             canGroupEnter = true;
                         }
@@ -702,7 +692,7 @@ public class PhysicalBoxService : ServiceBase<StandardBox>
                             for (int idx = 0; idx < ignoreBoxes.Count; idx++)
                             {
                                 StandardBox member = ignoreBoxes[idx];
-                                if (member != null && PushableBoxService.IsTouchingOuterBoundsForEntering(hitWorldBox2D.Bounds, member.Bounds, pushDirFromVec, 0.04f))
+                                if (member != null && PushableBoxService.IsTouchingOuterBoundsForEntering(hitWorldBox2D.Bounds, member.Bounds, castDir, 0.04f))
                                 {
                                     canGroupEnter = true;
                                     break;
@@ -759,39 +749,29 @@ public class PhysicalBoxService : ServiceBase<StandardBox>
                     continue;
                 }
 
-                if (isExitingWorldBox && (StandardBox.IsOwnedByWorldBox(hit3D.collider.transform, exitingWorldBox) || hit3D.collider.GetComponentInParent<WorldBox>() == exitingWorldBox) && IsAlongTransitionAxis(direction, transitionDir))
+                if (isExitingWorldBox && hit3D.collider.GetComponentInParent<WorldBox>() == exitingWorldBox && IsAlongTransitionAxis(direction, transitionDir))
                 {
                     continue;
                 }
 
-                if (isEnteringWorldBox && hit3D.collider != null && (hit3D.collider.gameObject == enteringWorldBox.gameObject || StandardBox.IsOwnedByWorldBox(hit3D.collider.transform, enteringWorldBox) || hit3D.collider.GetComponentInParent<WorldBox>() == enteringWorldBox))
+                if (isEnteringWorldBox && hit3D.collider != null && (hit3D.collider.gameObject == enteringWorldBox.gameObject || hit3D.collider.GetComponentInParent<WorldBox>() == enteringWorldBox))
                 {
                     continue;
                 }
 
                 WorldBox hitWorldBox3D = hit3D.collider != null ? hit3D.collider.GetComponentInParent<WorldBox>() : null;
-                if (hitWorldBox3D != null && StandardBox.IsOwnedByWorldBox(box.transform, hitWorldBox3D))
+                if (hitWorldBox3D != null)
                 {
                     BoxPushDirection castDir = VectorToDirection(direction);
                     if (PushableBoxService.IsTouchingInnerBoundsForExiting(hitWorldBox3D.InnerBounds, box.Bounds, castDir, 0.04f))
                     {
                         continue;
                     }
-                }
 
-                if (hitWorldBox3D != null && !StandardBox.IsOwnedByWorldBox(box.transform, hitWorldBox3D))
-                {
-                    BoxPushDirection pushDirFromVec = VectorToDirection(direction);
-                    if (hitWorldBox3D.GetOuterEntrance(pushDirFromVec.Opposite()) != null)
+                    if (hitWorldBox3D.GetOuterEntrance(castDir.Opposite()) != null)
                     {
-                        StandardBox hitStandardBox = hit3D.collider.GetComponentInParent<StandardBox>();
-                        if (hitStandardBox != null && !(hitStandardBox is WorldBox) && StandardBox.IsOwnedByWorldBox(hitStandardBox.transform, hitWorldBox3D))
-                        {
-                            continue;
-                        }
-
                         bool canGroupEnter = false;
-                        if (PushableBoxService.IsTouchingOuterBoundsForEntering(hitWorldBox3D.Bounds, box.Bounds, pushDirFromVec, 0.04f))
+                        if (PushableBoxService.IsTouchingOuterBoundsForEntering(hitWorldBox3D.Bounds, box.Bounds, castDir, 0.04f))
                         {
                             canGroupEnter = true;
                         }
@@ -800,7 +780,7 @@ public class PhysicalBoxService : ServiceBase<StandardBox>
                             for (int idx = 0; idx < ignoreBoxes.Count; idx++)
                             {
                                 StandardBox member = ignoreBoxes[idx];
-                                if (member != null && PushableBoxService.IsTouchingOuterBoundsForEntering(hitWorldBox3D.Bounds, member.Bounds, pushDirFromVec, 0.04f))
+                                if (member != null && PushableBoxService.IsTouchingOuterBoundsForEntering(hitWorldBox3D.Bounds, member.Bounds, castDir, 0.04f))
                                 {
                                     canGroupEnter = true;
                                     break;
@@ -1041,11 +1021,7 @@ public class PhysicalBoxService : ServiceBase<StandardBox>
             return false;
         }
 
-        // 若 below 是 WorldBox 自身，不收集非其子节点的 box。
-        if (below is WorldBox belowWorldBox && !StandardBox.IsOwnedByWorldBox(neighbor.transform, belowWorldBox))
-        {
-            return false;
-        }
+
 
         if (HasActiveLinearPushState(neighbor))
         {

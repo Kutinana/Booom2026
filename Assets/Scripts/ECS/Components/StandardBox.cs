@@ -21,8 +21,6 @@ public class StandardBox : MonoBehaviour, ISceneMovableItem
     private float lockedX;
     private bool hasLockedX;
 
-    /// <summary>当前所在 WorldBox（进入后设置，退出后清空），替代原来的 transform 父子关系。</summary>
-    [System.NonSerialized] public WorldBox CurrentWorldBox;
 
     public Vector3 CellOffset => cellOffset;
     public LayerMask CollisionMask => collisionMask;
@@ -275,13 +273,7 @@ public class StandardBox : MonoBehaviour, ISceneMovableItem
         }
     }
 
-    public static bool IsOwnedByWorldBox(Transform start, WorldBox worldBox)
-    {
-        if (start == null || worldBox == null) return false;
-        StandardBox box = start.GetComponentInParent<StandardBox>();
-        return box != null && box.CurrentWorldBox == worldBox;
-    }
-    [Header("Test")]
+
     public BoxPushDirection TestDirection;
     [ContextMenu("Test")]
     public void Test()

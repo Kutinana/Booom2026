@@ -3,7 +3,6 @@ using UnityEngine;
 
 public class PushableBoxService : ServiceBase<StandardBox>
 {
-    private const int MaxTeleportTargetBlockerClearAttempts = 8;
     private const float OuterEdgeBlockerTouchTolerance = 0.04f;
 
     private IUnRegister pushRequestUnRegister;
@@ -41,7 +40,7 @@ public class PushableBoxService : ServiceBase<StandardBox>
     }
 
     public BoxPushInitializeEvent InitializePush(StandardBox box, BoxPushDirection direction,
-        UnityEngine.GameObject pusher = null)
+        GameObject pusher = null)
     {
         bool canPush = CanPush(box, direction);
         BoxPushInitializeEvent initialize = new BoxPushInitializeEvent(box, direction, pusher, canPush);
@@ -49,13 +48,12 @@ public class PushableBoxService : ServiceBase<StandardBox>
         return initialize;
     }
 
-    public BoxPushAttemptEvent TryPush(StandardBox box, BoxPushDirection direction,
-        UnityEngine.GameObject pusher = null)
+    public BoxPushAttemptEvent TryPush(StandardBox box, BoxPushDirection direction, GameObject pusher = null)
     {
         return TryPush(box, direction, pusher, CanPush(box, direction));
     }
 
-    public BoxPushAttemptEvent TryPush(StandardBox box, BoxPushDirection direction, UnityEngine.GameObject pusher,
+    public BoxPushAttemptEvent TryPush(StandardBox box, BoxPushDirection direction, GameObject pusher,
         bool canPush)
     {
         canPush = canPush && box != null && IsRegistered(box);
@@ -120,26 +118,6 @@ public class PushableBoxService : ServiceBase<StandardBox>
         return false;
     }
 
-    private static bool IsBoxOwnedOrInsideWorldBox(StandardBox box, WorldBox worldBox)
-    {
-        if (box == null || worldBox == null)
-        {
-            return false;
-        }
-
-        if (box.CurrentWorldBox == worldBox)
-        {
-            return true;
-        }
-
-        Bounds innerBounds = worldBox.InnerBounds;
-        if (innerBounds.size == Vector3.zero)
-        {
-            return false;
-        }
-
-        return innerBounds.Contains(box.Bounds.center);
-    }
 
     public bool IsBoxTransitioning(StandardBox box)
     {
@@ -262,28 +240,25 @@ public class PushableBoxService : ServiceBase<StandardBox>
 
                 Vector3 nextCenter = center + axis * cellSize;
 
-                if (!StandardBox.IsOwnedByWorldBox(box.transform, worldBox))
+                if (!hasActiveEntering && IsTouchingOuterBoundsForEntering(entryBounds, boxBounds, pushDir,
+                        OuterEdgeBlockerTouchTolerance))
                 {
-                    if (!hasActiveEntering && IsTouchingOuterBoundsForEntering(entryBounds, boxBounds, pushDir,
-                            OuterEdgeBlockerTouchTolerance))
+                    if (!IsInnerDestinationBlocked(box, worldBox, pushDir, entryBounds, boxBounds))
                     {
-                        if (!IsInnerDestinationBlocked(box, worldBox, pushDir, entryBounds, boxBounds))
+                        StartTransition(box, worldBox, pushDir, isEntering: true, center, nextCenter, cellSize);
+                        continue;
+                    }
+                    else
+                    {
+                        if (!TryRefreshOuterContactExitBlocker(entryBounds, worldBox, box, boxBounds))
                         {
-                            StartTransition(box, worldBox, pushDir, isEntering: true, center, nextCenter, cellSize);
-                            continue;
-                        }
-                        else
-                        {
-                            if (!TryRefreshOuterContactExitBlocker(entryBounds, worldBox, box, boxBounds))
-                            {
-                                ClearBoxExitBlocker(worldBox, box);
-                            }
+                            ClearBoxExitBlocker(worldBox, box);
                         }
                     }
                 }
                 
                 // --- Inner -> Outer (Exiting) Transition Detection ---
-                if (innerBounds.size != Vector3.zero && IsBoxOwnedOrInsideWorldBox(box, worldBox))
+                if (innerBounds.size != Vector3.zero)
                 {
                     if (IsTouchingInnerBoundsForExiting(innerBounds, boxBounds, pushDir,
                             OuterEdgeBlockerTouchTolerance))
@@ -432,8 +407,7 @@ public class PushableBoxService : ServiceBase<StandardBox>
         extendedIgnore.AddRange(innerChain);
         foreach (StandardBox registered in this.components)
         {
-            if (registered != null && !(registered is WorldBox) &&
-                StandardBox.IsOwnedByWorldBox(registered.transform, worldBox))
+            if (registered != null && !(registered is WorldBox))
             {
                 if (!extendedIgnore.Contains(registered))
                     extendedIgnore.Add(registered);
@@ -627,23 +601,17 @@ public class PushableBoxService : ServiceBase<StandardBox>
         }
         else
         {
-            Transform entrance = worldBox.GetOuterEntrance(direction);
-            if (entrance == null)
-            {
-                return;
-            }
-
-            P_target_end = entrance.position;
+            P_target_start = worldBox.transform.position;
             if (box.AlignToGrid && box.Grid != null)
             {
                 Grid grid = box.Grid;
-                Vector3Int cell = grid.WorldToCell(P_target_end);
+                Vector3Int cell = grid.WorldToCell(P_target_start);
                 Vector3 snapped = grid.CellToWorld(cell) + Vector3.Scale(grid.cellSize, box.CellOffset);
-                snapped.z = P_target_end.z;
-                P_target_end = snapped;
+                snapped.z = P_target_start.z;
+                P_target_start = snapped;
             }
 
-            P_target_start = P_target_end - axis * cellSize;
+            P_target_end = P_target_start + axis * cellSize;
 
             Bounds targetBounds = boxBounds;
             targetBounds.center = P_target_end;
@@ -826,14 +794,11 @@ public class PushableBoxService : ServiceBase<StandardBox>
             StandardBox member = state.InnerChain[i];
             if (member != null)
             {
-                if (StandardBox.IsOwnedByWorldBox(member.transform, state.WorldBox))
+                Vector3 finalPos = state.InnerChainStartPositions[i] + axis * state.Width;
+                member.MoveTo(finalPos);
+                if (ServiceBase.TryGet(out SceneMovableInteractionService sceneMovable))
                 {
-                    Vector3 finalPos = state.InnerChainStartPositions[i] + axis * state.Width;
-                    member.MoveTo(finalPos);
-                    if (ServiceBase.TryGet(out SceneMovableInteractionService sceneMovable))
-                    {
-                        sceneMovable.RefreshItemImpactBaseline(member);
-                    }
+                    sceneMovable.RefreshItemImpactBaseline(member);
                 }
 
                 if (ServiceBase.TryGet(out PhysicalBoxService pbService))
@@ -882,7 +847,6 @@ public class PushableBoxService : ServiceBase<StandardBox>
 
     private static void MoveBoxToOuter(StandardBox box, Vector3 targetPosition)
     {
-        box.CurrentWorldBox = null;
         box.MoveTo(targetPosition);
         if (ServiceBase.TryGet(out PhysicalBoxService physicalBoxService))
         {
@@ -978,7 +942,6 @@ public class PushableBoxService : ServiceBase<StandardBox>
 
     private static void MoveBoxToInner(StandardBox box, Vector3 targetPosition, WorldBox worldBox)
     {
-        box.CurrentWorldBox = worldBox;
         box.MoveTo(targetPosition);
         if (ServiceBase.TryGet(out PhysicalBoxService physicalBoxService))
         {
@@ -1004,8 +967,6 @@ public class PushableBoxService : ServiceBase<StandardBox>
             blockerService.Clear(worldBox, box);
         }
     }
-
-
 
     private static bool TryGetOuterContactDirection(
         Bounds outerBounds,
@@ -1071,49 +1032,5 @@ public class PushableBoxService : ServiceBase<StandardBox>
         }
 
         return Mathf.Abs(vertical ? grid.cellSize.y : grid.cellSize.x);
-    }
-
-    private static bool TryGetInnerTargetPositionForBox(BoxPushDirection direction, Bounds innerBounds, StandardBox box,
-        Bounds boxBounds, out Vector3 position)
-    {
-        position = innerBounds.center;
-        if (innerBounds.size == Vector3.zero || boxBounds.size == Vector3.zero)
-        {
-            return false;
-        }
-
-        Vector3 extents = boxBounds.extents;
-
-        switch (direction)
-        {
-            case BoxPushDirection.Left:
-                position.x = innerBounds.min.x - extents.x;
-                position.y = innerBounds.center.y;
-                break;
-            case BoxPushDirection.Right:
-                position.x = innerBounds.max.x + extents.x;
-                position.y = innerBounds.center.y;
-                break;
-            case BoxPushDirection.Down:
-                position.x = innerBounds.center.x;
-                position.y = innerBounds.min.y - extents.y;
-                break;
-            case BoxPushDirection.Up:
-                position.x = innerBounds.center.x;
-                position.y = innerBounds.max.y + extents.y;
-                break;
-        }
-
-        // Snap to grid
-        if (box != null && box.AlignToGrid && box.Grid != null)
-        {
-            Grid grid = box.Grid;
-            Vector3Int cell = grid.WorldToCell(position);
-            Vector3 snapped = grid.CellToWorld(cell) + Vector3.Scale(grid.cellSize, box.CellOffset);
-            snapped.z = position.z;
-            position = snapped;
-        }
-
-        return true;
     }
 }
