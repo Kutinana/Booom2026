@@ -675,7 +675,7 @@ public class PhysicalBoxService : ServiceBase<StandardBox>
                 if (hitWorldBox2D != null)
                 {
                     BoxPushDirection castDir = VectorToDirection(direction);
-                    if (PushableBoxService.IsTouchingInnerBoundsForExiting(hitWorldBox2D.InnerBounds, box.Bounds, castDir, 0.04f))
+                    if (PushableBoxService.IsTouchingOuterBoundsForExiting(hitWorldBox2D.OuterBounds, box.Bounds, castDir, 0.04f))
                     {
                         continue;
                     }
@@ -763,7 +763,7 @@ public class PhysicalBoxService : ServiceBase<StandardBox>
                 if (hitWorldBox3D != null)
                 {
                     BoxPushDirection castDir = VectorToDirection(direction);
-                    if (PushableBoxService.IsTouchingInnerBoundsForExiting(hitWorldBox3D.InnerBounds, box.Bounds, castDir, 0.04f))
+                    if (PushableBoxService.IsTouchingOuterBoundsForExiting(hitWorldBox3D.OuterBounds, box.Bounds, castDir, 0.04f))
                     {
                         continue;
                     }

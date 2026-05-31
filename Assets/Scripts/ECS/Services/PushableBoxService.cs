@@ -151,14 +151,13 @@ public class PushableBoxService : ServiceBase<StandardBox>
         return false;
     }
 
-    public void CheckAndTryTeleportAllPushableBoxesWithOuterBoundsToInner(Bounds outerBounds, WorldBox worldBox)
+    public void UpdateTransitions(WorldBox worldBox)
     {
         if (worldBox == null)
         {
             return;
         }
 
-        // 1. Update existing transitions
         for (int i = activeTransitions.Count - 1; i >= 0; i--)
         {
             var state = activeTransitions[i];
@@ -167,18 +166,39 @@ public class PushableBoxService : ServiceBase<StandardBox>
                 UpdateBoxTransition(state);
             }
         }
+    }
 
-        // Get services
-        if (!ServiceBase.TryGet(out PhysicalBoxService physicalBoxService))
+    private Vector3 GetAxis(BoxPushDirection direction)
+    {
+        switch (direction)
         {
-            return;
+            case BoxPushDirection.Right: return Vector3.right;
+            case BoxPushDirection.Left: return Vector3.left;
+            case BoxPushDirection.Up: return Vector3.up;
+            case BoxPushDirection.Down: return Vector3.down;
+            default: return Vector3.zero;
         }
+    }
 
-        Bounds innerBounds = worldBox.InnerBounds;
-        Bounds entryBounds = worldBox.Bounds; // 使用 2D 物理 Bounds 确保精确判定
+    private float GetCellSize(StandardBox box, BoxPushDirection direction)
+    {
+        if (box.Grid != null)
+        {
+            return Mathf.Abs(direction == BoxPushDirection.Left || direction == BoxPushDirection.Right
+                ? box.Grid.cellSize.x
+                : box.Grid.cellSize.y);
+        }
+        return 1f;
+    }
 
-        // 2. Scan all registered boxes for new transitions.
-        // 阻止同 WorldBox 的新 entering transition 在上一 transition 完成前启动。
+    public void TryTriggerEntering(WorldBox worldBox)
+    {
+        if (worldBox == null) return;
+        if (!ServiceBase.TryGet(out PhysicalBoxService physicalBoxService)) return;
+
+        Bounds entryBounds = worldBox.Bounds;
+        if (entryBounds.size == Vector3.zero) return;
+
         bool hasActiveEntering = false;
         for (int i = 0; i < activeTransitions.Count; i++)
         {
@@ -189,64 +209,35 @@ public class PushableBoxService : ServiceBase<StandardBox>
             }
         }
 
-        foreach (StandardBox box in this.components)
-        {
-            if (box == null || box == worldBox || box.gameObject.scene != worldBox.gameObject.scene)
-            {
-                continue;
-            }
+        if (hasActiveEntering) return;
 
-            if (IsBoxTransitioning(box))
-            {
-                continue;
-            }
+        Vector2 center = entryBounds.center;
+        Vector2 size = entryBounds.size;
+        size.x += OuterEdgeBlockerTouchTolerance * 2f;
+        size.y += OuterEdgeBlockerTouchTolerance * 2f;
+
+        Collider2D[] hits = Physics2D.OverlapBoxAll(center, size, 0f);
+        foreach (Collider2D hit in hits)
+        {
+            StandardBox box = hit.GetComponentInParent<StandardBox>();
+            if (box == null || box == worldBox || box.gameObject.scene != worldBox.gameObject.scene) continue;
+            if (IsBoxTransitioning(box)) continue;
 
             Bounds boxBounds = box.Bounds;
-            if (boxBounds.size == Vector3.zero)
-            {
-                continue;
-            }
+            if (boxBounds.size == Vector3.zero) continue;
 
-            var center = boxBounds.center;
-
-            // --- Outer -> Inner (Entering) Transition Detection ---
             if (physicalBoxService.TryGetLinearPushDirection(box, out BoxPushDirection pushDir))
             {
-                Vector3 axis = Vector3.zero;
-                float cellSize = 1f;
-
-                switch (pushDir)
+                if (IsTouchingOuterBoundsForEntering(entryBounds, boxBounds, pushDir, OuterEdgeBlockerTouchTolerance))
                 {
-                    case BoxPushDirection.Right:
-                        axis = Vector3.right;
-                        break;
-                    case BoxPushDirection.Left:
-                        axis = Vector3.left;
-                        break;
-                    case BoxPushDirection.Up:
-                        axis = Vector3.up;
-                        break;
-                    case BoxPushDirection.Down:
-                        axis = Vector3.down;
-                        break;
-                }
+                    Vector3 axis = GetAxis(pushDir);
+                    float cellSize = GetCellSize(box, pushDir);
+                    Vector3 nextCenter = boxBounds.center + axis * cellSize;
 
-                if (box.Grid != null)
-                {
-                    cellSize = Mathf.Abs(pushDir == BoxPushDirection.Left || pushDir == BoxPushDirection.Right
-                        ? box.Grid.cellSize.x
-                        : box.Grid.cellSize.y);
-                }
-
-                Vector3 nextCenter = center + axis * cellSize;
-
-                if (!hasActiveEntering && IsTouchingOuterBoundsForEntering(entryBounds, boxBounds, pushDir,
-                        OuterEdgeBlockerTouchTolerance))
-                {
                     if (!IsInnerDestinationBlocked(box, worldBox, pushDir, entryBounds, boxBounds))
                     {
-                        StartTransition(box, worldBox, pushDir, isEntering: true, center, nextCenter, cellSize);
-                        continue;
+                        StartTransition(box, worldBox, pushDir, isEntering: true, boxBounds.center, nextCenter, cellSize);
+                        break;
                     }
                     else
                     {
@@ -256,17 +247,41 @@ public class PushableBoxService : ServiceBase<StandardBox>
                         }
                     }
                 }
-                
-                // --- Inner -> Outer (Exiting) Transition Detection ---
-                if (innerBounds.size != Vector3.zero)
+            }
+        }
+    }
+
+    public void TryTriggerExiting(WorldBox worldBox, Bounds outerBounds)
+    {
+        if (worldBox == null || outerBounds.size == Vector3.zero) return;
+        if (!ServiceBase.TryGet(out PhysicalBoxService physicalBoxService)) return;
+
+        Vector2 center = outerBounds.center;
+        Vector2 size = outerBounds.size;
+        size.x += OuterEdgeBlockerTouchTolerance * 2f;
+        size.y += OuterEdgeBlockerTouchTolerance * 2f;
+
+        Collider2D[] hits = Physics2D.OverlapBoxAll(center, size, 0f);
+        foreach (Collider2D hit in hits)
+        {
+            StandardBox box = hit.GetComponentInParent<StandardBox>();
+            if (box == null || box == worldBox || box.gameObject.scene != worldBox.gameObject.scene) continue;
+            if (IsBoxTransitioning(box)) continue;
+
+            Bounds boxBounds = box.Bounds;
+            if (boxBounds.size == Vector3.zero) continue;
+
+            if (physicalBoxService.TryGetLinearPushDirection(box, out BoxPushDirection pushDir))
+            {
+                if (IsTouchingOuterBoundsForExiting(outerBounds, boxBounds, pushDir, OuterEdgeBlockerTouchTolerance))
                 {
-                    if (IsTouchingInnerBoundsForExiting(innerBounds, boxBounds, pushDir,
-                            OuterEdgeBlockerTouchTolerance))
+                    Vector3 axis = GetAxis(pushDir);
+                    float cellSize = GetCellSize(box, pushDir);
+                    Vector3 nextCenter = boxBounds.center + axis * cellSize;
+
+                    if (!IsOuterDestinationBlocked(box, worldBox, pushDir))
                     {
-                        if (!IsOuterDestinationBlocked(box, worldBox, pushDir))
-                        {
-                            StartTransition(box, worldBox, pushDir, isEntering: false, center, nextCenter, cellSize);
-                        }
+                        StartTransition(box, worldBox, pushDir, isEntering: false, boxBounds.center, nextCenter, cellSize);
                     }
                 }
             }
@@ -299,27 +314,27 @@ public class PushableBoxService : ServiceBase<StandardBox>
         }
     }
 
-    public static bool IsTouchingInnerBoundsForExiting(Bounds innerBounds, Bounds boxBounds, BoxPushDirection direction,
+    public static bool IsTouchingOuterBoundsForExiting(Bounds outerBounds, Bounds boxBounds, BoxPushDirection direction,
         float threshold)
     {
         switch (direction)
         {
             case BoxPushDirection.Right:
-                return boxBounds.max.x >= innerBounds.max.x - threshold &&
-                       boxBounds.min.y < innerBounds.max.y &&
-                       boxBounds.max.y > innerBounds.min.y;
+                return boxBounds.max.x >= outerBounds.max.x - threshold &&
+                       boxBounds.min.y < outerBounds.max.y &&
+                       boxBounds.max.y > outerBounds.min.y;
             case BoxPushDirection.Left:
-                return boxBounds.min.x <= innerBounds.min.x + threshold &&
-                       boxBounds.min.y < innerBounds.max.y &&
-                       boxBounds.max.y > innerBounds.min.y;
+                return boxBounds.min.x <= outerBounds.min.x + threshold &&
+                       boxBounds.min.y < outerBounds.max.y &&
+                       boxBounds.max.y > outerBounds.min.y;
             case BoxPushDirection.Up:
-                return boxBounds.max.y >= innerBounds.max.y - threshold &&
-                       boxBounds.min.x < innerBounds.max.x &&
-                       boxBounds.max.x > innerBounds.min.x;
+                return boxBounds.max.y >= outerBounds.max.y - threshold &&
+                       boxBounds.min.x < outerBounds.max.x &&
+                       boxBounds.max.x > outerBounds.min.x;
             case BoxPushDirection.Down:
-                return boxBounds.min.y <= innerBounds.min.y + threshold &&
-                       boxBounds.min.x < innerBounds.max.x &&
-                       boxBounds.max.x > innerBounds.min.x;
+                return boxBounds.min.y <= outerBounds.min.y + threshold &&
+                       boxBounds.min.x < outerBounds.max.x &&
+                       boxBounds.max.x > outerBounds.min.x;
             default:
                 return false;
         }
@@ -430,7 +445,7 @@ public class PushableBoxService : ServiceBase<StandardBox>
                 return true;
 
             // If the member is at the exit boundary, check if its destination outside is blocked
-            if (IsTouchingInnerBoundsForExiting(worldBox.InnerBounds, member.Bounds, direction,
+            if (IsTouchingOuterBoundsForExiting(worldBox.OuterBounds, member.Bounds, direction,
                     OuterEdgeBlockerTouchTolerance))
             {
                 if (IsOuterDestinationBlocked(member, worldBox, direction))

@@ -104,7 +104,9 @@ public class WorldBox : StandardBox
         bool playerInOuterBounds = IntersectsXY(outerBounds, playerBounds);
         bool playerOverlapsInnerBounds = innerBounds.size != Vector3.zero && OverlapsXY(innerBounds, playerBounds);
 
-        pushableBoxService.CheckAndTryTeleportAllPushableBoxesWithOuterBoundsToInner(outerBounds, this);
+        pushableBoxService.UpdateTransitions(this);
+        pushableBoxService.TryTriggerEntering(this);
+        pushableBoxService.TryTriggerExiting(this, outerBounds);
 
         if (playerInOuterBounds)
         {

@@ -21,7 +21,6 @@ public class StandardBox : MonoBehaviour, ISceneMovableItem
     private float lockedX;
     private bool hasLockedX;
 
-
     public Vector3 CellOffset => cellOffset;
     public LayerMask CollisionMask => collisionMask;
     public Grid Grid => grid;
