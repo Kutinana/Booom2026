@@ -1793,7 +1793,7 @@ public class PhysicalBoxService : ServiceBase<StandardBox>
     public bool TryGetLinearPushDirection(StandardBox box, out BoxPushDirection direction)
     {
         direction = default;
-        if (box != null && linearPushes.TryGetValue(box, out LinearPushState state) && state.Active)
+        if (box != null && linearPushes.TryGetValue(box, out LinearPushState state) && state.Active && !state.ReleaseTransition)
         {
             // follower state 也返回方向，让 PushableBoxService 能检测到 chain follower 是否需要进入 WorldBox 过渡。
             direction = state.Direction;
