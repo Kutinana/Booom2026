@@ -199,17 +199,9 @@ public class PushableBoxService : ServiceBase<StandardBox>
         Bounds entryBounds = worldBox.Bounds;
         if (entryBounds.size == Vector3.zero) return;
 
-        bool hasActiveEntering = false;
-        for (int i = 0; i < activeTransitions.Count; i++)
-        {
-            if (activeTransitions[i].WorldBox == worldBox && activeTransitions[i].IsEntering)
-            {
-                hasActiveEntering = true;
-                break;
-            }
-        }
-
-        if (hasActiveEntering) return;
+        // We used to limit hasActiveEntering here to prevent overlap,
+        // but that caused subsequent boxes in a continuous push to physically enter the portal without transitioning, getting permanently stuck.
+        // Now, we allow multiple entering transitions and resolve overlaps using the phantom blocker / innerChain logic.
 
         Vector2 center = entryBounds.center;
         Vector2 size = entryBounds.size;
@@ -597,6 +589,27 @@ public class PushableBoxService : ServiceBase<StandardBox>
             {
                 bool use2D = box.Collider2D != null;
                 bool use3D = box.Collider3D != null;
+                // 1. Find and force-complete any phantom transition targeting the same inner entrance.
+                phantomTransition = null;
+                for (int i = 0; i < activeTransitions.Count; i++)
+                {
+                    var otherTransition = activeTransitions[i];
+                    if (otherTransition.Box != box && 
+                        Vector3.Distance(otherTransition.P_target_end, P_target_end) < 0.1f)
+                    {
+                        phantomTransition = otherTransition;
+                        break;
+                    }
+                }
+
+                if (phantomTransition != null)
+                {
+                    CompleteTransition(phantomTransition);
+                    Physics2D.SyncTransforms();
+                    Physics.SyncTransforms();
+                }
+
+                // 2. Query the physical world for blockers at the destination.
                 if (blockerService.TryGetTeleportTargetStandardBoxBlocker(
                         movableTargetBounds,
                         worldBox,
@@ -611,6 +624,10 @@ public class PushableBoxService : ServiceBase<StandardBox>
                     {
                         innerChain = new System.Collections.Generic.List<StandardBox>();
                         physicalBoxService.CollectHorizontalChain(blocker, axis, innerChain);
+                        if (!innerChain.Contains(blocker))
+                        {
+                            innerChain.Add(blocker);
+                        }
                     }
                 }
             }
