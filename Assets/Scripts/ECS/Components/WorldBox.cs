@@ -21,6 +21,7 @@ public class WorldBox : StandardBox
     {
         public BoxPushDirection Direction;
         public Transform Entrance;
+        public bool HasPlatform;
     }
 
     public Collider OuterQuadCollider;
@@ -106,6 +107,11 @@ public class WorldBox : StandardBox
         pushableBoxService.TryTriggerEntering(this);
         pushableBoxService.TryTriggerExiting(this, outerBounds);
 
+        if (TryAutoDropPlayerFromTopEntrance(playerBounds))
+        {
+            return;
+        }
+
         if (playerInOuterBounds)
         {
             UpdateOuterEdgeExitBlocker(outerBounds, innerBounds, playerBounds);
@@ -165,6 +171,24 @@ public class WorldBox : StandardBox
         }
 
         return true;
+    }
+
+    private bool TryAutoDropPlayerFromTopEntrance(Bounds playerBounds)
+    {
+        const BoxPushDirection topSide = BoxPushDirection.Up;
+        if (CanPushFrom(topSide) || HasOuterEntrancePlatform(topSide) || GetOuterEntrance(topSide) == null)
+        {
+            return false;
+        }
+
+        Bounds worldBoxBounds = Bounds;
+        if (worldBoxBounds.size == Vector3.zero ||
+            !IsTouchingTopSide(worldBoxBounds, playerBounds, outerEdgeBlockerTouchTolerance))
+        {
+            return false;
+        }
+
+        return TeleportPlayerToOuterEntrance(topSide);
     }
 
     private void OnPushInitialized(BoxPushInitializeEvent e)
@@ -1060,6 +1084,24 @@ public class WorldBox : StandardBox
         return null;
     }
 
+    public bool HasOuterEntrancePlatform(BoxPushDirection direction)
+    {
+        if (OuterEntrances == null)
+        {
+            return false;
+        }
+
+        for (int i = 0; i < OuterEntrances.Length; i++)
+        {
+            if (OuterEntrances[i].Direction == direction)
+            {
+                return OuterEntrances[i].HasPlatform;
+            }
+        }
+
+        return false;
+    }
+
     private void MovePlayer(Vector3 position)
     {
         position -= playerController.CenterOffset;
@@ -1110,6 +1152,20 @@ public class WorldBox : StandardBox
         {
             pusherTransform.position = position;
         }
+    }
+
+    private static bool IsTouchingTopSide(Bounds lowerBounds, Bounds upperBounds, float tolerance)
+    {
+        if (lowerBounds.size == Vector3.zero || upperBounds.size == Vector3.zero)
+        {
+            return false;
+        }
+
+        float gap = upperBounds.min.y - lowerBounds.max.y;
+        return gap >= -tolerance &&
+               gap <= tolerance &&
+               upperBounds.min.x < lowerBounds.max.x &&
+               upperBounds.max.x > lowerBounds.min.x;
     }
 
     private static BoxPushDirection GetInnerEntryDirection(Bounds innerBounds, Bounds lastOutsidePlayerBounds)

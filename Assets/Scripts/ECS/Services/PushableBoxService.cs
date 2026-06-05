@@ -209,6 +209,11 @@ public class PushableBoxService : ServiceBase<StandardBox>
         size.y += OuterEdgeBlockerTouchTolerance * 2f;
 
         Collider2D[] hits = Physics2D.OverlapBoxAll(center, size, 0f);
+        if (TryTriggerTopAutoEntering(worldBox, entryBounds, hits))
+        {
+            return;
+        }
+
         foreach (Collider2D hit in hits)
         {
             StandardBox box = hit.GetComponentInParent<StandardBox>();
@@ -241,6 +246,125 @@ public class PushableBoxService : ServiceBase<StandardBox>
                 }
             }
         }
+    }
+
+    private bool TryTriggerTopAutoEntering(WorldBox worldBox, Bounds entryBounds, Collider2D[] hits)
+    {
+        if (worldBox.CanPushFrom(BoxPushDirection.Up) ||
+            worldBox.GetOuterEntrance(BoxPushDirection.Up) == null ||
+            hits == null)
+        {
+            return false;
+        }
+
+        for (int i = 0; i < hits.Length; i++)
+        {
+            Collider2D hit = hits[i];
+            if (hit == null || hit.isTrigger)
+            {
+                continue;
+            }
+
+            StandardBox box = hit.GetComponentInParent<StandardBox>();
+            if (box == null ||
+                box == worldBox ||
+                box is WorldBox ||
+                box.gameObject.scene != worldBox.gameObject.scene ||
+                IsBoxTransitioning(box))
+            {
+                continue;
+            }
+
+            Bounds boxBounds = box.Bounds;
+            if (boxBounds.size == Vector3.zero ||
+                !IsTouchingTopEntrance(entryBounds, boxBounds))
+            {
+                continue;
+            }
+
+            if (TryMoveBoxToTopOuterTarget(box, worldBox, entryBounds, boxBounds))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private bool TryMoveBoxToTopOuterTarget(StandardBox box, WorldBox worldBox, Bounds entryBounds, Bounds boxBounds)
+    {
+        Transform entrance = worldBox.GetOuterEntrance(BoxPushDirection.Up);
+        if (entrance == null)
+        {
+            return false;
+        }
+
+        Vector3 targetPosition = GetSnappedEntrancePosition(box, entrance.position);
+        if (IsTransitionTargetOccupied(box, targetPosition))
+        {
+            return false;
+        }
+
+        Bounds targetBounds = boxBounds;
+        targetBounds.center = targetPosition;
+
+        Bounds movableTargetBounds = targetBounds;
+        movableTargetBounds.Expand(-0.05f);
+
+        WorldBoxExitBlockerService blockerService = ServiceBase.Get<WorldBoxExitBlockerService>();
+        if (blockerService != null)
+        {
+            bool use2D = box.Collider2D != null;
+            bool use3D = box.Collider3D != null;
+
+            if (blockerService.TryRefreshBlockerForStaticInnerHit(
+                    worldBox,
+                    box,
+                    BoxPushDirection.Down,
+                    entryBounds,
+                    targetBounds,
+                    boxBounds,
+                    box.CollisionMask,
+                    use2D,
+                    use3D))
+            {
+                return false;
+            }
+
+            blockerService.Clear(worldBox, box);
+
+            if (blockerService.TryGetTeleportTargetStandardBoxBlocker(
+                    movableTargetBounds,
+                    worldBox,
+                    ignoredBox: box,
+                    box.CollisionMask,
+                    use2D,
+                    use3D,
+                    checkingInner: true,
+                    out _))
+            {
+                return false;
+            }
+        }
+
+        MoveBoxToInner(box, targetPosition, worldBox);
+        TypeEventSystem.Global.Send<OnOuterToInnerEvent>();
+        return true;
+    }
+
+    private bool IsTransitionTargetOccupied(StandardBox box, Vector3 targetPosition)
+    {
+        for (int i = 0; i < activeTransitions.Count; i++)
+        {
+            var transition = activeTransitions[i];
+            if (transition.Box != box &&
+                Vector3.Distance(transition.P_target_end, targetPosition) < 0.1f)
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     public void TryTriggerExiting(WorldBox worldBox, Bounds outerBounds)
@@ -489,6 +613,20 @@ public class PushableBoxService : ServiceBase<StandardBox>
 
         float cellSize = GetCellSize(box, direction);
         return overworldPos + axis * cellSize;
+    }
+
+    private Vector3 GetSnappedEntrancePosition(StandardBox box, Vector3 targetPosition)
+    {
+        if (box.AlignToGrid && box.Grid != null)
+        {
+            Grid grid = box.Grid;
+            Vector3Int cell = grid.WorldToCell(targetPosition);
+            Vector3 snapped = grid.CellToWorld(cell) + Vector3.Scale(grid.cellSize, box.CellOffset);
+            snapped.z = targetPosition.z;
+            return snapped;
+        }
+
+        return targetPosition;
     }
 
     private bool IsOuterDestinationBlocked(StandardBox box, WorldBox worldBox, BoxPushDirection direction, System.Collections.Generic.HashSet<StandardBox> visited)
@@ -1109,6 +1247,20 @@ public class PushableBoxService : ServiceBase<StandardBox>
         {
             blockerService.Clear(worldBox, box);
         }
+    }
+
+    private static bool IsTouchingTopEntrance(Bounds worldBoxBounds, Bounds boxBounds)
+    {
+        if (worldBoxBounds.size == Vector3.zero || boxBounds.size == Vector3.zero)
+        {
+            return false;
+        }
+
+        float gap = boxBounds.min.y - worldBoxBounds.max.y;
+        return gap >= -OuterEdgeBlockerTouchTolerance &&
+               gap <= OuterEdgeBlockerTouchTolerance &&
+               boxBounds.min.x < worldBoxBounds.max.x &&
+               boxBounds.max.x > worldBoxBounds.min.x;
     }
 
     private static bool TryGetOuterContactDirection(
