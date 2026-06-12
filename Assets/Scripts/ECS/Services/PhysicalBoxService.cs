@@ -725,7 +725,9 @@ public class PhysicalBoxService : ServiceBase<StandardBox>
                         continue;
                     }
 
-                    if (hitWorldBox2D.GetOuterEntrance(castDir.Opposite()) != null)
+                    BoxPushDirection entranceDirection = castDir.Opposite();
+                    if (hitWorldBox2D.GetOuterEntrance(entranceDirection) != null &&
+                        !hitWorldBox2D.HasOuterEntrancePlatform(entranceDirection))
                     {
                         bool canGroupEnter = false;
                         if (PushableBoxService.IsTouchingOuterBoundsForEntering(hitWorldBox2D.Bounds, box.Bounds, castDir, 0.04f))
@@ -821,7 +823,9 @@ public class PhysicalBoxService : ServiceBase<StandardBox>
                         continue;
                     }
 
-                    if (hitWorldBox3D.GetOuterEntrance(castDir.Opposite()) != null)
+                    BoxPushDirection entranceDirection = castDir.Opposite();
+                    if (hitWorldBox3D.GetOuterEntrance(entranceDirection) != null &&
+                        !hitWorldBox3D.HasOuterEntrancePlatform(entranceDirection))
                     {
                         bool canGroupEnter = false;
                         if (PushableBoxService.IsTouchingOuterBoundsForEntering(hitWorldBox3D.Bounds, box.Bounds, castDir, 0.04f))

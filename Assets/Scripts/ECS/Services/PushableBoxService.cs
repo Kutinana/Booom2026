@@ -251,6 +251,7 @@ public class PushableBoxService : ServiceBase<StandardBox>
     private bool TryTriggerTopAutoEntering(WorldBox worldBox, Bounds entryBounds, Collider2D[] hits)
     {
         if (worldBox.CanPushFrom(BoxPushDirection.Up) ||
+            worldBox.HasOuterEntrancePlatform(BoxPushDirection.Up) ||
             worldBox.GetOuterEntrance(BoxPushDirection.Up) == null ||
             hits == null)
         {
