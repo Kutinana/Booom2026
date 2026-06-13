@@ -1012,7 +1012,36 @@ public class PushableBoxService : ServiceBase<StandardBox>
             StandardBox member = state.InnerChain[i];
             if (member != null)
             {
-                member.MoveTo(state.InnerChainStartPositions[i] + axis * (progress * state.Width));
+                currentPos = member.transform.position;
+
+                if (Mathf.Abs(axis.x) > 0.5f && state.InnerChainStartPositions[i].y - currentPos.y > 0.05f)
+                {
+                    for (int j = i; j < state.InnerChain.Count; j++)
+                    {
+                        StandardBox detached = state.InnerChain[j];
+                        if (detached != null && ServiceBase.TryGet(out PhysicalBoxService pbService))
+                        {
+                            pbService.CancelLinearPush(detached);
+                            pbService.QueueGridAlignmentRelease(detached);
+                        }
+                    }
+                    state.InnerChain.RemoveRange(i, state.InnerChain.Count - i);
+                    state.InnerChainStartPositions.RemoveRange(i, state.InnerChainStartPositions.Count - i);
+                    break;
+                }
+
+                Vector3 targetPos = state.InnerChainStartPositions[i] + axis * (progress * state.Width);
+                if (Mathf.Abs(axis.x) > 0.5f)
+                {
+                    targetPos.y = currentPos.y;
+                    targetPos.z = currentPos.z;
+                }
+                else if (Mathf.Abs(axis.y) > 0.5f)
+                {
+                    targetPos.x = currentPos.x;
+                    targetPos.z = currentPos.z;
+                }
+                member.MoveTo(targetPos);
             }
         }
     }
@@ -1040,7 +1069,18 @@ public class PushableBoxService : ServiceBase<StandardBox>
             StandardBox member = state.InnerChain[i];
             if (member != null)
             {
+                Vector3 currentPos = member.transform.position;
                 Vector3 finalPos = state.InnerChainStartPositions[i] + axis * state.Width;
+                if (Mathf.Abs(axis.x) > 0.5f)
+                {
+                    finalPos.y = currentPos.y;
+                    finalPos.z = currentPos.z;
+                }
+                else if (Mathf.Abs(axis.y) > 0.5f)
+                {
+                    finalPos.x = currentPos.x;
+                    finalPos.z = currentPos.z;
+                }
                 member.MoveTo(finalPos);
                 if (ServiceBase.TryGet(out SceneMovableInteractionService sceneMovable))
                 {
@@ -1082,7 +1122,19 @@ public class PushableBoxService : ServiceBase<StandardBox>
             StandardBox member = state.InnerChain[i];
             if (member != null)
             {
-                member.MoveTo(state.InnerChainStartPositions[i]);
+                Vector3 currentPos = member.transform.position;
+                Vector3 cancelPos = state.InnerChainStartPositions[i];
+                if (state.Direction == BoxPushDirection.Right || state.Direction == BoxPushDirection.Left)
+                {
+                    cancelPos.y = currentPos.y;
+                    cancelPos.z = currentPos.z;
+                }
+                else if (state.Direction == BoxPushDirection.Up || state.Direction == BoxPushDirection.Down)
+                {
+                    cancelPos.x = currentPos.x;
+                    cancelPos.z = currentPos.z;
+                }
+                member.MoveTo(cancelPos);
                 
                 if (ServiceBase.TryGet(out PhysicalBoxService pbService))
                 {
