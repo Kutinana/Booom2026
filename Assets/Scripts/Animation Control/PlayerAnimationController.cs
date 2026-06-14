@@ -19,6 +19,10 @@ public class PlayerAnimationController : MonoBehaviour
     [Header("Sleep")]
     [SerializeField] private float sleepDelay = 60f;
 
+    [Header("Effects")]
+    [SerializeField] private GameObject landingDustPrefab;
+    [SerializeField] private Transform landingEffectPoint;
+
     private float noInputTimer;
     private bool isSleeping;
     private bool isDowned;
@@ -68,7 +72,7 @@ public class PlayerAnimationController : MonoBehaviour
             }
         }
 
-       
+
 
         bool isDying = controller.IsDying;
         if (isDying)
@@ -140,7 +144,7 @@ public class PlayerAnimationController : MonoBehaviour
         bool grounded = contacts.grounded;
 
         animator.SetBool("Grounded", grounded);
-        
+
         float walkIntention = Mathf.Abs(controller.MoveInput.x);
         animator.SetFloat("speed", isPushing ? 0f : walkIntention);
         animator.SetFloat("VerticalVelocity", velocity.y);
@@ -150,9 +154,11 @@ public class PlayerAnimationController : MonoBehaviour
         {
             frameSuppressCount--;
         }
-        else if (!wasGrounded && grounded && velocity.y <= landTriggerMaxVerticalVelocity)
+        else if (!wasGrounded && grounded &&
+          velocity.y <= landTriggerMaxVerticalVelocity)
         {
             animator.SetTrigger("Land");
+            SpawnLandingDust();
         }
 
         // Falling start detection
@@ -207,5 +213,17 @@ public class PlayerAnimationController : MonoBehaviour
         {
             spriteRenderer.flipX = velocity.x < 0f;
         }
+    }
+
+    private void SpawnLandingDust()
+    {
+        if (landingDustPrefab == null)
+            return;
+
+        Instantiate(
+            landingDustPrefab,
+            landingEffectPoint.position,
+            Quaternion.identity
+        );
     }
 }

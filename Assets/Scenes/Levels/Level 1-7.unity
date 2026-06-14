@@ -3507,18 +3507,23 @@ MonoBehaviour:
     serializedVersion: 2
     m_Bits: 4294967295
   ApplyGravity: 1
+  FreezeHorizontalMovement: 0
   TestDirection: 0
   OuterQuadCollider: {fileID: 1030242292}
   InnerQuadCollider: {fileID: 1261429945}
   OuterEntrances:
   - Direction: 0
     Entrance: {fileID: 1857928788}
+    HasPlatform: 0
   - Direction: 1
     Entrance: {fileID: 799451004}
+    HasPlatform: 0
   - Direction: 2
     Entrance: {fileID: 215454610}
+    HasPlatform: 0
   - Direction: 3
     Entrance: {fileID: 448511902}
+    HasPlatform: 0
   paddingX: 0.05
   paddingY: 0.05
   outerEdgeBlockerTouchTolerance: 0.04
@@ -4207,6 +4212,7 @@ MonoBehaviour:
     serializedVersion: 2
     m_Bits: 4294967295
   ApplyGravity: 1
+  FreezeHorizontalMovement: 0
   TestDirection: 0
 --- !u!61 &1579278815
 BoxCollider2D:
@@ -4292,7 +4298,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a6cea5ec2b10f7545830f661be27ba5c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  stuckThresholdX: 4
+  stuckThresholdMaxX: 0
+  stuckThresholdMinX: 0
 --- !u!1001 &1579495261
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -4869,180 +4876,6 @@ Tilemap:
     e31: 0
     e32: 0
     e33: 1
---- !u!1 &1822326667 stripped
-GameObject:
-  m_CorrespondingSourceObject: {fileID: 8767878138097856427, guid: b854b1a77dbb2a247a1b3b2101ba42ef, type: 3}
-  m_PrefabInstance: {fileID: 3749238731496271431}
-  m_PrefabAsset: {fileID: 0}
---- !u!114 &1822326671 stripped
-MonoBehaviour:
-  m_CorrespondingSourceObject: {fileID: 5530570425877885675, guid: b854b1a77dbb2a247a1b3b2101ba42ef, type: 3}
-  m_PrefabInstance: {fileID: 3749238731496271431}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1822326667}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: dacb42e4c622dbe45ad9a0b280211f0c, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
---- !u!212 &1822326672 stripped
-SpriteRenderer:
-  m_CorrespondingSourceObject: {fileID: 1587107450157002125, guid: b854b1a77dbb2a247a1b3b2101ba42ef, type: 3}
-  m_PrefabInstance: {fileID: 3749238731496271431}
-  m_PrefabAsset: {fileID: 0}
---- !u!114 &1822326674
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1822326667}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 781d6b398990c2146a548b15ec6ce342, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  controller: {fileID: 1822326671}
-  spriteRenderer: {fileID: 1822326672}
-  animator: {fileID: 1822326675}
-  idleTriggerTime: 3
-  idleRandomInterval: {x: 3, y: 6}
-  landTriggerMaxVerticalVelocity: 0.001
---- !u!95 &1822326675
-Animator:
-  serializedVersion: 5
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1822326667}
-  m_Enabled: 1
-  m_Avatar: {fileID: 0}
-  m_Controller: {fileID: 9100000, guid: 62fb82ad82ec4d347a2c3f1afa9cd4d8, type: 2}
-  m_CullingMode: 0
-  m_UpdateMode: 0
-  m_ApplyRootMotion: 0
-  m_LinearVelocityBlending: 0
-  m_StabilizeFeet: 0
-  m_WarningMessage: 
-  m_HasTransformHierarchy: 1
-  m_AllowConstantClipSamplingOptimization: 1
-  m_KeepAnimatorStateOnDisable: 0
-  m_WriteDefaultValuesOnDisable: 0
---- !u!114 &1822326676
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1822326667}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: e52de21a22b6dd44c9cc19f810c65059, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  m_Events:
-    m_Signals:
-    - {fileID: 11400000, guid: 2bdf5a615002f3c4e9235ff3df609f9e, type: 2}
-    - {fileID: 11400000, guid: fc36d15448aac7c4297e2d15ae325c44, type: 2}
-    - {fileID: 11400000, guid: 787d59038b08e7749be11e5051c7b8a8, type: 2}
-    - {fileID: 11400000, guid: 266ac5aee26d1b248b3f17d73cad692d, type: 2}
-    - {fileID: 11400000, guid: e8378095138402349857595ab8ae651c, type: 2}
-    m_Events:
-    - m_PersistentCalls:
-        m_Calls:
-        - m_Target: {fileID: 1822326671}
-          m_TargetAssemblyTypeName: PlayerController, Assembly-CSharp
-          m_MethodName: FakeJump
-          m_Mode: 1
-          m_Arguments:
-            m_ObjectArgument: {fileID: 0}
-            m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
-            m_IntArgument: 0
-            m_FloatArgument: 0
-            m_StringArgument: 
-            m_BoolArgument: 0
-          m_CallState: 2
-    - m_PersistentCalls:
-        m_Calls:
-        - m_Target: {fileID: 1822326671}
-          m_TargetAssemblyTypeName: PlayerController, Assembly-CSharp
-          m_MethodName: SwitchAnimationTo
-          m_Mode: 5
-          m_Arguments:
-            m_ObjectArgument: {fileID: 0}
-            m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
-            m_IntArgument: 0
-            m_FloatArgument: 0
-            m_StringArgument: Confusion
-            m_BoolArgument: 0
-          m_CallState: 2
-    - m_PersistentCalls:
-        m_Calls:
-        - m_Target: {fileID: 1822326671}
-          m_TargetAssemblyTypeName: PlayerController, Assembly-CSharp
-          m_MethodName: SwitchAnimationTo
-          m_Mode: 5
-          m_Arguments:
-            m_ObjectArgument: {fileID: 0}
-            m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
-            m_IntArgument: 0
-            m_FloatArgument: 0
-            m_StringArgument: Idle
-            m_BoolArgument: 0
-          m_CallState: 2
-    - m_PersistentCalls:
-        m_Calls:
-        - m_Target: {fileID: 1822326671}
-          m_TargetAssemblyTypeName: PlayerController, Assembly-CSharp
-          m_MethodName: SwitchAnimationTo
-          m_Mode: 5
-          m_Arguments:
-            m_ObjectArgument: {fileID: 0}
-            m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
-            m_IntArgument: 0
-            m_FloatArgument: 0
-            m_StringArgument: Tap
-            m_BoolArgument: 0
-          m_CallState: 2
-    - m_PersistentCalls:
-        m_Calls:
-        - m_Target: {fileID: 1822326671}
-          m_TargetAssemblyTypeName: PlayerController, Assembly-CSharp
-          m_MethodName: SwitchAnimationTo
-          m_Mode: 5
-          m_Arguments:
-            m_ObjectArgument: {fileID: 0}
-            m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
-            m_IntArgument: 0
-            m_FloatArgument: 0
-            m_StringArgument: Happy
-            m_BoolArgument: 0
-          m_CallState: 2
---- !u!114 &1822326677
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1822326667}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 6a5a63ace266e7649bc36038ca86bbd4, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  targetPlayer: {fileID: 1822326671}
-  viewCamera: {fileID: 524263883}
-  portalInner: {fileID: 1261429943}
-  portalOuter: {fileID: 1030242289}
-  nestingDepth: 1
-  maxRayDistance: 80
-  raycastLayers:
-    serializedVersion: 2
-    m_Bits: 1
-  requirePortalPlaneHit: 1
-  invertPortalPlaneNormal: 0
-  portalHalfExtentsLocal: {x: 50, y: 50}
 --- !u!1001 &1842107980
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -5505,50 +5338,6 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 0}
     m_Modifications:
-    - target: {fileID: 2688996201221799278, guid: b854b1a77dbb2a247a1b3b2101ba42ef, type: 3}
-      propertyPath: m_Radius
-      value: 0.18
-      objectReference: {fileID: 0}
-    - target: {fileID: 2688996201221799278, guid: b854b1a77dbb2a247a1b3b2101ba42ef, type: 3}
-      propertyPath: m_Offset.y
-      value: -0.07
-      objectReference: {fileID: 0}
-    - target: {fileID: 5530570425877885675, guid: b854b1a77dbb2a247a1b3b2101ba42ef, type: 3}
-      propertyPath: gravity
-      value: 20
-      objectReference: {fileID: 0}
-    - target: {fileID: 5530570425877885675, guid: b854b1a77dbb2a247a1b3b2101ba42ef, type: 3}
-      propertyPath: animator
-      value: 
-      objectReference: {fileID: 1822326675}
-    - target: {fileID: 5530570425877885675, guid: b854b1a77dbb2a247a1b3b2101ba42ef, type: 3}
-      propertyPath: moveSpeed
-      value: 2.3
-      objectReference: {fileID: 0}
-    - target: {fileID: 5530570425877885675, guid: b854b1a77dbb2a247a1b3b2101ba42ef, type: 3}
-      propertyPath: cellOffset.x
-      value: 0.5
-      objectReference: {fileID: 0}
-    - target: {fileID: 5530570425877885675, guid: b854b1a77dbb2a247a1b3b2101ba42ef, type: 3}
-      propertyPath: maxFallSpeed
-      value: 15
-      objectReference: {fileID: 0}
-    - target: {fileID: 5530570425877885675, guid: b854b1a77dbb2a247a1b3b2101ba42ef, type: 3}
-      propertyPath: jumpGridHeight
-      value: 2.3
-      objectReference: {fileID: 0}
-    - target: {fileID: 6086128289500971824, guid: b854b1a77dbb2a247a1b3b2101ba42ef, type: 3}
-      propertyPath: m_LocalScale.x
-      value: 1
-      objectReference: {fileID: 0}
-    - target: {fileID: 6086128289500971824, guid: b854b1a77dbb2a247a1b3b2101ba42ef, type: 3}
-      propertyPath: m_LocalScale.y
-      value: 1
-      objectReference: {fileID: 0}
-    - target: {fileID: 6086128289500971824, guid: b854b1a77dbb2a247a1b3b2101ba42ef, type: 3}
-      propertyPath: m_LocalScale.z
-      value: 1
-      objectReference: {fileID: 0}
     - target: {fileID: 6086128289500971824, guid: b854b1a77dbb2a247a1b3b2101ba42ef, type: 3}
       propertyPath: m_LocalPosition.x
       value: -2.51
@@ -5596,19 +5385,7 @@ PrefabInstance:
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
-    m_AddedComponents:
-    - targetCorrespondingSourceObject: {fileID: 8767878138097856427, guid: b854b1a77dbb2a247a1b3b2101ba42ef, type: 3}
-      insertIndex: -1
-      addedObject: {fileID: 1822326675}
-    - targetCorrespondingSourceObject: {fileID: 8767878138097856427, guid: b854b1a77dbb2a247a1b3b2101ba42ef, type: 3}
-      insertIndex: -1
-      addedObject: {fileID: 1822326674}
-    - targetCorrespondingSourceObject: {fileID: 8767878138097856427, guid: b854b1a77dbb2a247a1b3b2101ba42ef, type: 3}
-      insertIndex: -1
-      addedObject: {fileID: 1822326676}
-    - targetCorrespondingSourceObject: {fileID: 8767878138097856427, guid: b854b1a77dbb2a247a1b3b2101ba42ef, type: 3}
-      insertIndex: -1
-      addedObject: {fileID: 1822326677}
+    m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: b854b1a77dbb2a247a1b3b2101ba42ef, type: 3}
 --- !u!1001 &4645570709743947149
 PrefabInstance:

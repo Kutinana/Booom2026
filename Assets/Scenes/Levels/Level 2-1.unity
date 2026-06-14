@@ -1898,7 +1898,7 @@ Tilemap:
     second:
       serializedVersion: 2
       m_TileIndex: 8
-      m_TileSpriteIndex: 10
+      m_TileSpriteIndex: 13
       m_TileMatrixIndex: 0
       m_TileColorIndex: 0
       m_TileObjectToInstantiateIndex: 65535
@@ -2028,7 +2028,7 @@ Tilemap:
     second:
       serializedVersion: 2
       m_TileIndex: 38
-      m_TileSpriteIndex: 9
+      m_TileSpriteIndex: 10
       m_TileMatrixIndex: 0
       m_TileColorIndex: 0
       m_TileObjectToInstantiateIndex: 65535
@@ -2048,7 +2048,7 @@ Tilemap:
     second:
       serializedVersion: 2
       m_TileIndex: 6
-      m_TileSpriteIndex: 8
+      m_TileSpriteIndex: 9
       m_TileMatrixIndex: 0
       m_TileColorIndex: 0
       m_TileObjectToInstantiateIndex: 65535
@@ -2058,7 +2058,7 @@ Tilemap:
     second:
       serializedVersion: 2
       m_TileIndex: 5
-      m_TileSpriteIndex: 7
+      m_TileSpriteIndex: 8
       m_TileMatrixIndex: 0
       m_TileColorIndex: 0
       m_TileObjectToInstantiateIndex: 65535
@@ -2328,7 +2328,7 @@ Tilemap:
     second:
       serializedVersion: 2
       m_TileIndex: 42
-      m_TileSpriteIndex: 6
+      m_TileSpriteIndex: 7
       m_TileMatrixIndex: 0
       m_TileColorIndex: 0
       m_TileObjectToInstantiateIndex: 65535
@@ -2753,6 +2753,8 @@ Tilemap:
     m_Data: {fileID: 0}
   - m_RefCount: 0
     m_Data: {fileID: 0}
+  - m_RefCount: 0
+    m_Data: {fileID: 0}
   - m_RefCount: 1
     m_Data: {fileID: 979475796, guid: 42a595ec7bb3cd544908d026ca2b538e, type: 3}
   - m_RefCount: 1
@@ -2762,13 +2764,11 @@ Tilemap:
   - m_RefCount: 1
     m_Data: {fileID: -1468964842, guid: e2dd5fe05695caa4c94e0bb9d189e961, type: 3}
   - m_RefCount: 1
-    m_Data: {fileID: 1035155733, guid: e2dd5fe05695caa4c94e0bb9d189e961, type: 3}
-  - m_RefCount: 1
     m_Data: {fileID: -557358222, guid: e2dd5fe05695caa4c94e0bb9d189e961, type: 3}
   - m_RefCount: 1
     m_Data: {fileID: -1491599133, guid: 42a595ec7bb3cd544908d026ca2b538e, type: 3}
-  - m_RefCount: 0
-    m_Data: {fileID: 0}
+  - m_RefCount: 1
+    m_Data: {fileID: 1035155733, guid: e2dd5fe05695caa4c94e0bb9d189e961, type: 3}
   - m_RefCount: 1
     m_Data: {fileID: 1805070851, guid: e2dd5fe05695caa4c94e0bb9d189e961, type: 3}
   - m_RefCount: 1
@@ -3647,16 +3647,20 @@ MonoBehaviour:
     serializedVersion: 2
     m_Bits: 4294967295
   ApplyGravity: 1
+  FreezeHorizontalMovement: 0
   TestDirection: 0
   OuterQuadCollider: {fileID: 1030242292}
   InnerQuadCollider: {fileID: 1261429945}
   OuterEntrances:
   - Direction: 0
     Entrance: {fileID: 1857928788}
+    HasPlatform: 0
   - Direction: 2
     Entrance: {fileID: 215454610}
+    HasPlatform: 0
   - Direction: 3
     Entrance: {fileID: 448511902}
+    HasPlatform: 0
   paddingX: 0.05
   paddingY: 0.05
   outerEdgeBlockerTouchTolerance: 0.04
@@ -4345,6 +4349,7 @@ MonoBehaviour:
     serializedVersion: 2
     m_Bits: 4294967295
   ApplyGravity: 1
+  FreezeHorizontalMovement: 0
   TestDirection: 0
 --- !u!61 &1579278815
 BoxCollider2D:
@@ -4430,7 +4435,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a6cea5ec2b10f7545830f661be27ba5c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  stuckThresholdX: 4
+  stuckThresholdMaxX: 0
+  stuckThresholdMinX: 0
 --- !u!1001 &1579495261
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -5541,18 +5547,6 @@ PrefabInstance:
       propertyPath: m_Name
       value: Player
       objectReference: {fileID: 0}
-    - target: {fileID: 452336962305602038, guid: 62fc16d8d198cd84cbb242151229510a, type: 3}
-      propertyPath: viewCamera
-      value: 
-      objectReference: {fileID: 524263883}
-    - target: {fileID: 452336962305602038, guid: 62fc16d8d198cd84cbb242151229510a, type: 3}
-      propertyPath: portalInner
-      value: 
-      objectReference: {fileID: 1261429943}
-    - target: {fileID: 452336962305602038, guid: 62fc16d8d198cd84cbb242151229510a, type: 3}
-      propertyPath: portalOuter
-      value: 
-      objectReference: {fileID: 1030242289}
     - target: {fileID: 4362150817705134289, guid: 62fc16d8d198cd84cbb242151229510a, type: 3}
       propertyPath: m_LocalPosition.x
       value: -2.871
