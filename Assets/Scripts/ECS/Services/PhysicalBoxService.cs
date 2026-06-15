@@ -274,6 +274,11 @@ public class PhysicalBoxService : ServiceBase<StandardBox>
         fallSpeed = Mathf.Min(maxFallSpeed, fallSpeed + gravity * dt);
         fallSpeeds[box] = fallSpeed;
 
+        if (fallSpeed > PushContactTolerance)
+        {
+            CancelLinearPush(box);
+        }
+
         float distance = fallSpeed * dt;
         Vector3 from = box.transform.position;
         float resolved = ResolveVertical(box, distance, out RayHit verticalHit);
@@ -767,10 +772,18 @@ public class PhysicalBoxService : ServiceBase<StandardBox>
                     continue;
                 }
 
-                if (ignoreBoxes != null)
+                StandardBox hitBox = hit2D.collider.GetComponentInParent<StandardBox>();
+                if (hitBox != null)
                 {
-                    StandardBox hitBox = hit2D.collider.GetComponentInParent<StandardBox>();
-                    if (hitBox != null && ignoreBoxes.Contains(hitBox))
+                    if (IsFalling(hitBox))
+                    {
+                        continue;
+                    }
+                    if (Mathf.Abs(direction.x) < 0.001f && Mathf.Abs(hitBox.transform.position.y - box.transform.position.y) < 0.1f)
+                    {
+                        continue;
+                    }
+                    if (ignoreBoxes != null && ignoreBoxes.Contains(hitBox))
                     {
                         continue;
                     }
@@ -858,10 +871,18 @@ public class PhysicalBoxService : ServiceBase<StandardBox>
                     continue;
                 }
 
-                if (ignoreBoxes != null)
+                StandardBox hitBox = hit3D.collider.GetComponentInParent<StandardBox>();
+                if (hitBox != null)
                 {
-                    StandardBox hitBox = hit3D.collider.GetComponentInParent<StandardBox>();
-                    if (hitBox != null && ignoreBoxes.Contains(hitBox))
+                    if (IsFalling(hitBox))
+                    {
+                        continue;
+                    }
+                    if (Mathf.Abs(direction.x) < 0.001f && Mathf.Abs(hitBox.transform.position.y - box.transform.position.y) < 0.1f)
+                    {
+                        continue;
+                    }
+                    if (ignoreBoxes != null && ignoreBoxes.Contains(hitBox))
                     {
                         continue;
                     }
@@ -1032,6 +1053,11 @@ public class PhysicalBoxService : ServiceBase<StandardBox>
     private bool IsChainCandidate(StandardBox neighbor, StandardBox below, bool positiveDirection, List<StandardBox> outGroup)
     {
         if (neighbor == null || neighbor == below)
+        {
+            return false;
+        }
+
+        if (IsFalling(neighbor))
         {
             return false;
         }
@@ -1533,6 +1559,11 @@ public class PhysicalBoxService : ServiceBase<StandardBox>
     private bool IsStackCandidate(StandardBox stacked, StandardBox below, float belowTop, List<StandardBox> outGroup)
     {
         if (stacked == null || stacked == below)
+        {
+            return false;
+        }
+
+        if (IsFalling(stacked))
         {
             return false;
         }
