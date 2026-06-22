@@ -29,7 +29,19 @@ public class GameManager : MonoSingleton<GameManager>
 
     private void Update()
     {
+#if EXHIBITION_BUILD
+        if (!m_IsExhibitionResetting && 
+            (Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.RightControl)) && 
+            (Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift)) && 
+            Input.GetKeyDown(KeyCode.R))
+        {
+            StartCoroutine(ExhibitionResetRoutine());
+            return;
+        }
+#endif
+
         var flow = SceneFlowController.Instance;
+
         if (flow == null || !flow.IsConfigured || flow.IsTransitioning)
         {
             return;
@@ -193,4 +205,60 @@ public class GameManager : MonoSingleton<GameManager>
 
         return true;
     }
+
+#if EXHIBITION_BUILD
+    private bool m_IsExhibitionResetting = false;
+
+    private System.Collections.IEnumerator ExhibitionResetRoutine()
+    {
+        m_IsExhibitionResetting = true;
+
+        // 1. 用 SceneFlow 的过渡动画黑屏
+        var view = FindObjectOfType<Kuchinashi.SceneFlow.SceneTransitionViewBehaviour>();
+        if (view != null)
+        {
+            yield return view.EnterCover();
+        }
+
+        yield return new WaitForSeconds(1f);
+
+        // 清理本地数据
+        var path = Application.persistentDataPath;
+        if (System.IO.Directory.Exists(path))
+        {
+            foreach (var dir in System.IO.Directory.GetDirectories(path))
+            {
+                try
+                {
+                    System.IO.Directory.Delete(dir, true);
+                }
+                catch (Exception e)
+                {
+                    Debug.LogWarning($"[Exhibition] Skip deleting directory {dir}: {e.Message}");
+                }
+            }
+            foreach (var file in System.IO.Directory.GetFiles(path))
+            {
+                try
+                {
+                    System.IO.File.Delete(file);
+                }
+                catch (Exception e)
+                {
+                    Debug.LogWarning($"[Exhibition] Skip deleting file {file}: {e.Message}");
+                }
+            }
+        }
+
+        // 2. 重新加载 BaseScene
+        // 使用 Single 模式加载，Unity 会在底层自动卸载当前所有的其他场景，从而完美避开“不能卸载最后一个场景”的限制。
+        yield return UnityEngine.SceneManagement.SceneManager.UnloadSceneAsync(UnityEngine.SceneManagement.SceneManager.GetActiveScene());
+
+        yield return UnityEngine.SceneManagement.SceneManager.LoadSceneAsync("BaseScene", UnityEngine.SceneManagement.LoadSceneMode.Single);
+
+        // 如果需要控制退出黑屏，可以在 BaseScene 中自己处理，或者这里强行抛弃 view（view 很可能已经随着旧场景卸载被销毁了）。
+        // 因此全程黑屏完美过渡到了 BaseScene 的初始状态。
+        m_IsExhibitionResetting = false;
+    }
+#endif
 }
