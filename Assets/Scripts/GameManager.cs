@@ -12,6 +12,7 @@ public class GameManager : MonoSingleton<GameManager>
     private const string LevelScenePrefix = "Level ";
     private const string Level1_6SceneName = "Level 1-6";
     private const string Level2_6SceneName = "Level 2-6";
+    private const string TutorialSceneName = "Level-Tutorial";
 
     [SerializeField] private GameConfig m_GameConfig;
 
@@ -71,6 +72,11 @@ public class GameManager : MonoSingleton<GameManager>
         if (IsWorldHubScene(content))
         {
             TypeEventSystem.Global.Send(new TryQuitGameRequestedEvent());
+            return;
+        }
+
+        if (content == TutorialSceneName)
+        {
             return;
         }
 
