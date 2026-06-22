@@ -84,9 +84,9 @@ public partial class PlayerController : MonoBehaviour, ISceneMovableItem, IPoint
     public bool IsDying => m_CachedIsDying;
 
     /// <summary>
-    /// 为 <c>true</c> 时不读取键盘产生的移动、跳跃与平台下落输入；重力与已有速度仍正常结算。
+    /// 当玩家输入被全局服务或自身动画阻止时返回 true。不再支持外部直接设置，应使用 <see cref="PlayerService.RetainDisableMovementInput"/>。
     /// </summary>
-    public bool MovementInputDisabled { get; set; }
+    public bool MovementInputDisabled => m_PlayerService != null && m_PlayerService.IsMovementInputDisabled;
 
     private Grid grid;
     private Rigidbody body3D;

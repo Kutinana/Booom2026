@@ -74,6 +74,11 @@ public class LevelManager : MonoBehaviour
 
     private void OnDisable()
     {
+        if (ServiceBase.TryGet(out PlayerService service))
+        {
+            service.ReleaseDisableMovementInput(this);
+        }
+
         if (m_PostAllStarsRoutine != null)
         {
             StopCoroutine(m_PostAllStarsRoutine);
@@ -169,7 +174,7 @@ public class LevelManager : MonoBehaviour
             PlayerController player = playerService.Player;
             if (disablePlayerInputWhenStarsComplete)
             {
-                player.MovementInputDisabled = true;
+                playerService.RetainDisableMovementInput(this);
             }
 
             player.SwitchAnimationTo("Happy");

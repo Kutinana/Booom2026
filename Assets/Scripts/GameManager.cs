@@ -68,6 +68,12 @@ public class GameManager : MonoSingleton<GameManager>
             return;
         }
 
+        if (IsCinematicLocked)
+        {
+            TrySkipCinematic();
+            return;
+        }
+
         var content = flow.CurrentContentSceneName;
         if (IsWorldHubScene(content))
         {
@@ -87,6 +93,25 @@ public class GameManager : MonoSingleton<GameManager>
 
         string targetWorld = ResolveWorldSceneForLevel(content);
         flow.TryRequestSwitchContent(targetWorld);
+    }
+
+    private readonly System.Collections.Generic.HashSet<object> m_CinematicLocks = new System.Collections.Generic.HashSet<object>();
+
+    public bool IsCinematicLocked => m_CinematicLocks.Count > 0;
+
+    public void RetainCinematicLock(object token)
+    {
+        if (token != null) m_CinematicLocks.Add(token);
+    }
+
+    public void ReleaseCinematicLock(object token)
+    {
+        if (token != null) m_CinematicLocks.Remove(token);
+    }
+
+    private void TrySkipCinematic()
+    {
+        // TODO: 之后加跳过对话或 timeline 的功能
     }
 
     public static bool IsWorldHubScene(string contentSceneName)

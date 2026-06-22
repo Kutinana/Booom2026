@@ -102,12 +102,14 @@ public sealed class DialogueSequencePlayer : MonoBehaviour
         movementLockedThisSession = false;
         blackEdgesUsedThisSession = false;
 
+        if (GameManager.Instance != null)
+            GameManager.Instance.RetainCinematicLock(this);
+
         if (lockMovementInput)
         {
-            PlayerController p = ResolvePlayer();
-            if (p != null)
+            if (ServiceBase.TryGet(out PlayerService service))
             {
-                p.MovementInputDisabled = true;
+                service.RetainDisableMovementInput(this);
                 movementLockedThisSession = true;
             }
         }
@@ -129,15 +131,17 @@ public sealed class DialogueSequencePlayer : MonoBehaviour
 
         sessionActive = false;
 
+        if (GameManager.Instance != null)
+            GameManager.Instance.ReleaseCinematicLock(this);
+
         if (blackEdgesUsedThisSession && blackEdges != null)
             blackEdges.InverseLinearTransition(blackEdgeFadeSeconds);
 
         if (movementLockedThisSession)
         {
             movementLockedThisSession = false;
-            PlayerController p = ResolvePlayer();
-            if (p != null)
-                p.MovementInputDisabled = false;
+            if (ServiceBase.TryGet(out PlayerService service))
+                service.ReleaseDisableMovementInput(this);
         }
     }
 
@@ -148,6 +152,9 @@ public sealed class DialogueSequencePlayer : MonoBehaviour
 
         sessionActive = false;
 
+        if (GameManager.Instance != null)
+            GameManager.Instance.ReleaseCinematicLock(this);
+
         if (dialogueSystem != null)
             dialogueSystem.OnDialogueEnded -= OnHostedDialogueEnded;
 
@@ -157,9 +164,8 @@ public sealed class DialogueSequencePlayer : MonoBehaviour
         if (movementLockedThisSession)
         {
             movementLockedThisSession = false;
-            PlayerController p = ResolvePlayer();
-            if (p != null)
-                p.MovementInputDisabled = false;
+            if (ServiceBase.TryGet(out PlayerService service))
+                service.ReleaseDisableMovementInput(this);
         }
 
         SessionEnded?.Invoke();

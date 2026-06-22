@@ -77,7 +77,11 @@ public class TutorialManager : MonoBehaviour
             dialogueSystem.OnDialogueEnded -= OnDialogueEnded;
         }
 
-        player.MovementInputDisabled = false;
+        if (ServiceBase.TryGet(out PlayerService service))
+            service.ReleaseDisableMovementInput(this);
+        
+        if (GameManager.Instance != null)
+            GameManager.Instance.ReleaseCinematicLock(this);
         UnsubscribePlayerTap();
     }
 
@@ -93,8 +97,11 @@ public class TutorialManager : MonoBehaviour
     {
         timelinePausedForDialogue = false;
 
-        if (player != null)
-            player.MovementInputDisabled = false;
+        if (ServiceBase.TryGet(out PlayerService service))
+            service.ReleaseDisableMovementInput(this);
+
+        if (GameManager.Instance != null)
+            GameManager.Instance.ReleaseCinematicLock(this);
 
         if (timelineDirector.playableAsset == tutorial)
         {
@@ -108,7 +115,11 @@ public class TutorialManager : MonoBehaviour
 
     public void StartTutorial(PlayableAsset asset)
     {
-        player.MovementInputDisabled = true;
+        if (ServiceBase.TryGet(out PlayerService service))
+            service.RetainDisableMovementInput(this);
+
+        if (GameManager.Instance != null)
+            GameManager.Instance.RetainCinematicLock(this);
 
         if (asset is PlayableAsset tutorialAsset)
         {

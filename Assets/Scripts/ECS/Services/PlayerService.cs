@@ -52,6 +52,35 @@ public class PlayerService : ServiceBase
     /// </summary>
     public bool IsDying { get; private set; }
 
+    private readonly System.Collections.Generic.HashSet<object> m_MovementDisableTokens = new System.Collections.Generic.HashSet<object>();
+
+    /// <summary>
+    /// 是否由于被任何系统锁定或处于死亡状态而禁用玩家输入。
+    /// </summary>
+    public bool IsMovementInputDisabled => m_MovementDisableTokens.Count > 0 || IsDying;
+
+    /// <summary>
+    /// 全局请求禁用玩家移动输入（使用调用者对象作为 token，支持多次调用幂等）。
+    /// </summary>
+    public void RetainDisableMovementInput(object token)
+    {
+        if (token != null)
+        {
+            m_MovementDisableTokens.Add(token);
+        }
+    }
+
+    /// <summary>
+    /// 释放全局禁用玩家移动输入的请求。
+    /// </summary>
+    public void ReleaseDisableMovementInput(object token)
+    {
+        if (token != null)
+        {
+            m_MovementDisableTokens.Remove(token);
+        }
+    }
+
     private IUnRegister deathUnRegister;
     private Coroutine pendingReload;
 
@@ -133,7 +162,6 @@ public class PlayerService : ServiceBase
         }
 
         IsDying = true;
-        Player.MovementInputDisabled = true;
 #if UNITY_EDITOR
         Debug.Log($"[PlayerService] Player died: {e.Reason} (source: {(e.Source != null ? e.Source.name : "null")})");
 #endif

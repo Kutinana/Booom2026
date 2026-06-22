@@ -131,10 +131,16 @@ public sealed class TryQuitGameRequestUIHandler : MonoBehaviour
 
     void SetPlayerMovementEnabled(bool enabled)
     {
-        var player = m_Player != null ? m_Player : FindFirstObjectByType<PlayerController>();
-        if (player != null)
+        if (ServiceBase.TryGet(out PlayerService playerService))
         {
-            player.MovementInputDisabled = !enabled;
+            if (enabled)
+            {
+                playerService.ReleaseDisableMovementInput(this);
+            }
+            else
+            {
+                playerService.RetainDisableMovementInput(this);
+            }
         }
     }
 }
