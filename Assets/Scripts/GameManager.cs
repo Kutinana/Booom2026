@@ -33,11 +33,33 @@ public class GameManager : MonoSingleton<GameManager>
 #if EXHIBITION_BUILD
         if (!m_IsExhibitionResetting && 
             (Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.RightControl)) && 
-            (Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift)) && 
-            Input.GetKeyDown(KeyCode.R))
+            (Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift)))
         {
-            StartCoroutine(ExhibitionResetRoutine());
-            return;
+            if (Input.GetKeyDown(KeyCode.R))
+            {
+                StartCoroutine(ExhibitionResetRoutine());
+                return;
+            }
+
+            var flowForExhibition = SceneFlowController.Instance;
+            if (flowForExhibition != null && flowForExhibition.IsConfigured && !flowForExhibition.IsTransitioning)
+            {
+                if (Input.GetKeyDown(KeyCode.Alpha1))
+                {
+                    flowForExhibition.TryRequestSwitchContent(StartContentSceneName);
+                    return;
+                }
+                if (Input.GetKeyDown(KeyCode.Alpha2))
+                {
+                    flowForExhibition.TryRequestSwitchContent(World2ContentSceneName);
+                    return;
+                }
+                if (Input.GetKeyDown(KeyCode.Alpha3))
+                {
+                    flowForExhibition.TryRequestSwitchContent(MenuSceneName);
+                    return;
+                }
+            }
         }
 #endif
 
