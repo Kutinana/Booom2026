@@ -17,6 +17,7 @@ using UnityEngine;
 public class LevelBoxController : MonoBehaviour
 {
     private const float ForwardHalfPlaneEpsilon = 0.02f;
+    private const float ProximityFallbackRadius = 0.75f;
     private const string WorldOneSceneName = "World 1";
     private const string LevelOneSixSceneName = "Level 1-6";
 
@@ -226,8 +227,11 @@ public class LevelBoxController : MonoBehaviour
                 continue;
             }
 
-            // 仅保留玩家「面朝」那一侧的箱子（左 / 右半平面）
-            if (Vector2.Dot(fromPlayer, playerFacing) <= ForwardHalfPlaneEpsilon)
+            // 如果距离在 fallback 范围内（0.75 内），无视朝向
+            bool isVeryClose = dSq <= ProximityFallbackRadius * ProximityFallbackRadius;
+
+            // 仅保留玩家「面朝」那一侧的箱子（左 / 右半平面），极近距离除外
+            if (!isVeryClose && Vector2.Dot(fromPlayer, playerFacing) <= ForwardHalfPlaneEpsilon)
             {
                 continue;
             }
