@@ -3845,6 +3845,7 @@ MonoBehaviour:
   OuterEntrances:
   - Direction: 0
     Entrance: {fileID: 1857928788}
+    HasPlatform: 0
   paddingX: 0.03
   paddingY: 0.03
   outerEdgeBlockerTouchTolerance: 0.04
@@ -5195,6 +5196,8 @@ MonoBehaviour:
   idleRandomInterval: {x: 3, y: 6}
   landTriggerMaxVerticalVelocity: 0.001
   sleepDelay: 60
+  landingDustPrefab: {fileID: 0}
+  landingEffectPoint: {fileID: 0}
 --- !u!95 &1822326675
 Animator:
   serializedVersion: 5
@@ -5689,6 +5692,10 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 0}
     m_Modifications:
+    - target: {fileID: 1587107450157002125, guid: b854b1a77dbb2a247a1b3b2101ba42ef, type: 3}
+      propertyPath: m_FlipX
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 2688996201221799278, guid: b854b1a77dbb2a247a1b3b2101ba42ef, type: 3}
       propertyPath: m_Radius
       value: 0.18
@@ -5697,6 +5704,10 @@ PrefabInstance:
       propertyPath: m_Offset.y
       value: -0.07
       objectReference: {fileID: 0}
+    - target: {fileID: 4108998480148167781, guid: b854b1a77dbb2a247a1b3b2101ba42ef, type: 3}
+      propertyPath: animator
+      value: 
+      objectReference: {fileID: 1822326675}
     - target: {fileID: 5530570425877885675, guid: b854b1a77dbb2a247a1b3b2101ba42ef, type: 3}
       propertyPath: gravity
       value: 20

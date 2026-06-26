@@ -252,6 +252,7 @@ MonoBehaviour:
     serializedVersion: 2
     m_Bits: 4294967295
   ApplyGravity: 1
+  FreezeHorizontalMovement: 0
   TestDirection: 0
 --- !u!95 &26682266
 Animator:
@@ -6750,6 +6751,7 @@ MonoBehaviour:
     serializedVersion: 2
     m_Bits: 4294967295
   ApplyGravity: 1
+  FreezeHorizontalMovement: 0
   TestDirection: 0
 --- !u!95 &283119825
 Animator:
@@ -51342,10 +51344,10 @@ Camera:
   m_LensShift: {x: 0, y: 0}
   m_NormalizedViewPortRect:
     serializedVersion: 2
-    x: 0.20507812
+    x: 0
     y: 0
-    width: 0.35972223
-    height: 0.35972223
+    width: 1
+    height: 1
   near clip plane: 0.3
   far clip plane: 1000
   field of view: 8
@@ -51689,6 +51691,7 @@ MonoBehaviour:
     serializedVersion: 2
     m_Bits: 4294967295
   ApplyGravity: 1
+  FreezeHorizontalMovement: 0
   TestDirection: 0
 --- !u!95 &537830385
 Animator:
@@ -52200,6 +52203,7 @@ MonoBehaviour:
     serializedVersion: 2
     m_Bits: 4294967295
   ApplyGravity: 1
+  FreezeHorizontalMovement: 0
   TestDirection: 0
 --- !u!95 &646129903
 Animator:
@@ -69004,6 +69008,7 @@ MonoBehaviour:
     serializedVersion: 2
     m_Bits: 4294967295
   ApplyGravity: 1
+  FreezeHorizontalMovement: 0
   TestDirection: 0
 --- !u!95 &1052682585
 Animator:
@@ -71831,6 +71836,7 @@ MonoBehaviour:
     serializedVersion: 2
     m_Bits: 4294967295
   ApplyGravity: 1
+  FreezeHorizontalMovement: 0
   TestDirection: 0
 --- !u!95 &1072902833
 Animator:
@@ -82266,6 +82272,7 @@ MonoBehaviour:
     serializedVersion: 2
     m_Bits: 4294967295
   ApplyGravity: 1
+  FreezeHorizontalMovement: 0
   TestDirection: 0
 --- !u!95 &1208435956
 Animator:
@@ -82470,6 +82477,7 @@ MonoBehaviour:
     serializedVersion: 2
     m_Bits: 4294967295
   ApplyGravity: 1
+  FreezeHorizontalMovement: 0
   TestDirection: 0
 --- !u!95 &1212743127
 Animator:
@@ -88000,6 +88008,7 @@ MonoBehaviour:
     serializedVersion: 2
     m_Bits: 4294967295
   ApplyGravity: 1
+  FreezeHorizontalMovement: 0
   TestDirection: 0
 --- !u!95 &1275827399
 Animator:
@@ -88181,18 +88190,23 @@ MonoBehaviour:
     serializedVersion: 2
     m_Bits: 4294967295
   ApplyGravity: 0
+  FreezeHorizontalMovement: 0
   TestDirection: 0
   OuterQuadCollider: {fileID: 1030242292}
   InnerQuadCollider: {fileID: 1261429945}
   OuterEntrances:
   - Direction: 0
     Entrance: {fileID: 1857928788}
+    HasPlatform: 0
   - Direction: 1
     Entrance: {fileID: 799451004}
+    HasPlatform: 0
   - Direction: 2
     Entrance: {fileID: 215454610}
+    HasPlatform: 0
   - Direction: 3
     Entrance: {fileID: 448511902}
+    HasPlatform: 0
   paddingX: 0.03
   paddingY: 0.03
   outerEdgeBlockerTouchTolerance: 0.04
@@ -94463,6 +94477,7 @@ MonoBehaviour:
     serializedVersion: 2
     m_Bits: 4294967295
   ApplyGravity: 1
+  FreezeHorizontalMovement: 0
   TestDirection: 0
 --- !u!114 &1415818183
 MonoBehaviour:
@@ -100270,6 +100285,7 @@ MonoBehaviour:
     serializedVersion: 2
     m_Bits: 4294967295
   ApplyGravity: 1
+  FreezeHorizontalMovement: 0
   TestDirection: 0
 --- !u!61 &1579278815
 BoxCollider2D:
@@ -121204,6 +121220,8 @@ MonoBehaviour:
   idleRandomInterval: {x: 3, y: 6}
   landTriggerMaxVerticalVelocity: 0.001
   sleepDelay: 60
+  landingDustPrefab: {fileID: 0}
+  landingEffectPoint: {fileID: 0}
 --- !u!95 &1822326675
 Animator:
   serializedVersion: 5
@@ -126479,6 +126497,8 @@ MonoBehaviour:
   idleRandomInterval: {x: 3, y: 6}
   landTriggerMaxVerticalVelocity: 0.001
   sleepDelay: 60
+  landingDustPrefab: {fileID: 0}
+  landingEffectPoint: {fileID: 0}
 --- !u!95 &1841475417
 Animator:
   serializedVersion: 5
@@ -126954,6 +126974,7 @@ MonoBehaviour:
     serializedVersion: 2
     m_Bits: 4294967295
   ApplyGravity: 1
+  FreezeHorizontalMovement: 0
   TestDirection: 0
 --- !u!95 &1882593043
 Animator:
@@ -128203,6 +128224,10 @@ PrefabInstance:
       propertyPath: m_Offset.y
       value: -0.07
       objectReference: {fileID: 0}
+    - target: {fileID: 4108998480148167781, guid: b854b1a77dbb2a247a1b3b2101ba42ef, type: 3}
+      propertyPath: animator
+      value: 
+      objectReference: {fileID: 1841475417}
     - target: {fileID: 5530570425877885675, guid: b854b1a77dbb2a247a1b3b2101ba42ef, type: 3}
       propertyPath: gravity
       value: 20
@@ -129167,6 +129192,10 @@ PrefabInstance:
       propertyPath: m_Offset.y
       value: -0.07
       objectReference: {fileID: 0}
+    - target: {fileID: 4108998480148167781, guid: b854b1a77dbb2a247a1b3b2101ba42ef, type: 3}
+      propertyPath: animator
+      value: 
+      objectReference: {fileID: 1822326675}
     - target: {fileID: 5530570425877885675, guid: b854b1a77dbb2a247a1b3b2101ba42ef, type: 3}
       propertyPath: gravity
       value: 20

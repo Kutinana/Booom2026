@@ -14,6 +14,10 @@ GameObject:
   - component: {fileID: 2688996201221799278}
   - component: {fileID: 1801223662763720382}
   - component: {fileID: 7542670279873231518}
+  - component: {fileID: 5669518489010216750}
+  - component: {fileID: 4108998480148167781}
+  - component: {fileID: 6386160951961049177}
+  - component: {fileID: 7338291626869271377}
   m_Layer: 0
   m_Name: Circle
   m_TagString: Player
@@ -31,7 +35,7 @@ Transform:
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: -3.16, y: 1.79, z: 0}
-  m_LocalScale: {x: 0.5, y: 0.5, z: 0.5}
+  m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 1
   m_Children: []
   m_Father: {fileID: 0}
@@ -77,9 +81,9 @@ SpriteRenderer:
   m_SortingLayerID: 0
   m_SortingLayer: 0
   m_SortingOrder: 0
-  m_Sprite: {fileID: -2413806693520163455, guid: a86470a33a6bf42c4b3595704624658b, type: 3}
+  m_Sprite: {fileID: 1044663113, guid: 25000853f4ff9c344b12d64e1b16c3cd, type: 3}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
-  m_FlipX: 0
+  m_FlipX: 1
   m_FlipY: 0
   m_DrawMode: 0
   m_Size: {x: 1, y: 1}
@@ -100,21 +104,26 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: dacb42e4c622dbe45ad9a0b280211f0c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  animator: {fileID: 0}
+  animator: {fileID: 5669518489010216750}
   cellOffset: {x: 0.5, y: 0.5, z: 0}
-  moveSpeed: 2.5
-  jumpGridHeight: 2.5
-  gravity: 28
-  maxFallSpeed: 18
+  CenterOffset: {x: 0, y: 0, z: 0}
+  moveSpeed: 2.3
+  jumpGridHeight: 2.3
+  gravity: 20
+  maxFallSpeed: 15
   retainedVelocityDrag: 18
   retainedVelocityStopSpeed: 0.05
+  coyoteTime: 0.08
   collisionMask:
     serializedVersion: 2
     m_Bits: 4294967295
   skinWidth: 0.02
   raysPerSide: 3
-  pushHoldThreshold: 0.12
-  pushCooldown: 0.35
+  groundedMaxUpwardSpeedToRemainGrounded: 0.001
+  pushSpeedMultiplier: 0.4
+  pushStallProgressThreshold: 0.01
+  pushStallTimeout: 0.1
+  debugWorldBoxInnerExitEdge: 0
   platformDropDuration: 0.25
   platformTopNormalThreshold: 0.5
   platformLandingTolerance: 0.03
@@ -150,9 +159,9 @@ CircleCollider2D:
   m_IsTrigger: 0
   m_UsedByEffector: 0
   m_UsedByComposite: 0
-  m_Offset: {x: 0, y: 0}
+  m_Offset: {x: 0, y: -0.07}
   serializedVersion: 2
-  m_Radius: 0.5
+  m_Radius: 0.18
 --- !u!50 &1801223662763720382
 Rigidbody2D:
   serializedVersion: 4
@@ -192,3 +201,159 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 6d61f07c44570dd43a2afcc9c8dd8623, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+--- !u!95 &5669518489010216750
+Animator:
+  serializedVersion: 5
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8767878138097856427}
+  m_Enabled: 1
+  m_Avatar: {fileID: 0}
+  m_Controller: {fileID: 9100000, guid: 62fb82ad82ec4d347a2c3f1afa9cd4d8, type: 2}
+  m_CullingMode: 0
+  m_UpdateMode: 0
+  m_ApplyRootMotion: 0
+  m_LinearVelocityBlending: 0
+  m_StabilizeFeet: 0
+  m_WarningMessage: 
+  m_HasTransformHierarchy: 1
+  m_AllowConstantClipSamplingOptimization: 1
+  m_KeepAnimatorStateOnDisable: 0
+  m_WriteDefaultValuesOnDisable: 0
+--- !u!114 &4108998480148167781
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8767878138097856427}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 781d6b398990c2146a548b15ec6ce342, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  controller: {fileID: 5530570425877885675}
+  spriteRenderer: {fileID: 1587107450157002125}
+  animator: {fileID: 5669518489010216750}
+  idleTriggerTime: 3
+  idleRandomInterval: {x: 3, y: 6}
+  landTriggerMaxVerticalVelocity: 0.001
+  sleepDelay: 60
+  landingDustPrefab: {fileID: 93798503508562157, guid: ada6c4c2842d56a41828e402e6206bca, type: 3}
+  landingEffectPoint: {fileID: 6086128289500971824}
+--- !u!114 &6386160951961049177
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8767878138097856427}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e52de21a22b6dd44c9cc19f810c65059, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  m_Events:
+    m_Signals:
+    - {fileID: 11400000, guid: 2bdf5a615002f3c4e9235ff3df609f9e, type: 2}
+    - {fileID: 11400000, guid: fc36d15448aac7c4297e2d15ae325c44, type: 2}
+    - {fileID: 11400000, guid: 787d59038b08e7749be11e5051c7b8a8, type: 2}
+    - {fileID: 11400000, guid: 266ac5aee26d1b248b3f17d73cad692d, type: 2}
+    - {fileID: 11400000, guid: e8378095138402349857595ab8ae651c, type: 2}
+    m_Events:
+    - m_PersistentCalls:
+        m_Calls:
+        - m_Target: {fileID: 5530570425877885675}
+          m_TargetAssemblyTypeName: PlayerController, Assembly-CSharp
+          m_MethodName: FakeJump
+          m_Mode: 1
+          m_Arguments:
+            m_ObjectArgument: {fileID: 0}
+            m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+            m_IntArgument: 0
+            m_FloatArgument: 0
+            m_StringArgument: 
+            m_BoolArgument: 0
+          m_CallState: 2
+    - m_PersistentCalls:
+        m_Calls:
+        - m_Target: {fileID: 5530570425877885675}
+          m_TargetAssemblyTypeName: PlayerController, Assembly-CSharp
+          m_MethodName: SwitchAnimationTo
+          m_Mode: 5
+          m_Arguments:
+            m_ObjectArgument: {fileID: 0}
+            m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+            m_IntArgument: 0
+            m_FloatArgument: 0
+            m_StringArgument: Confusion
+            m_BoolArgument: 0
+          m_CallState: 2
+    - m_PersistentCalls:
+        m_Calls:
+        - m_Target: {fileID: 5530570425877885675}
+          m_TargetAssemblyTypeName: PlayerController, Assembly-CSharp
+          m_MethodName: SwitchAnimationTo
+          m_Mode: 5
+          m_Arguments:
+            m_ObjectArgument: {fileID: 0}
+            m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+            m_IntArgument: 0
+            m_FloatArgument: 0
+            m_StringArgument: Idle
+            m_BoolArgument: 0
+          m_CallState: 2
+    - m_PersistentCalls:
+        m_Calls:
+        - m_Target: {fileID: 5530570425877885675}
+          m_TargetAssemblyTypeName: PlayerController, Assembly-CSharp
+          m_MethodName: SwitchAnimationTo
+          m_Mode: 5
+          m_Arguments:
+            m_ObjectArgument: {fileID: 0}
+            m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+            m_IntArgument: 0
+            m_FloatArgument: 0
+            m_StringArgument: Tap
+            m_BoolArgument: 0
+          m_CallState: 2
+    - m_PersistentCalls:
+        m_Calls:
+        - m_Target: {fileID: 5530570425877885675}
+          m_TargetAssemblyTypeName: PlayerController, Assembly-CSharp
+          m_MethodName: SwitchAnimationTo
+          m_Mode: 5
+          m_Arguments:
+            m_ObjectArgument: {fileID: 0}
+            m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+            m_IntArgument: 0
+            m_FloatArgument: 0
+            m_StringArgument: Happy
+            m_BoolArgument: 0
+          m_CallState: 2
+--- !u!114 &7338291626869271377
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8767878138097856427}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6a5a63ace266e7649bc36038ca86bbd4, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  targetPlayer: {fileID: 5530570425877885675}
+  viewCamera: {fileID: 0}
+  portalInner: {fileID: 0}
+  portalOuter: {fileID: 0}
+  nestingDepth: 1
+  maxRayDistance: 80
+  raycastLayers:
+    serializedVersion: 2
+    m_Bits: 1
+  requirePortalPlaneHit: 1
+  invertPortalPlaneNormal: 0
+  portalHalfExtentsLocal: {x: 50, y: 50}
