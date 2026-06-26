@@ -5505,9 +5505,6 @@ MonoBehaviour:
   - Direction: 1
     Entrance: {fileID: 799451004}
     HasPlatform: 0
-  - Direction: 3
-    Entrance: {fileID: 448511902}
-    HasPlatform: 0
   paddingX: 0.05
   paddingY: 0.05
   outerEdgeBlockerTouchTolerance: 0.04
