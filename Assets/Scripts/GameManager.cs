@@ -303,6 +303,8 @@ public class GameManager : MonoSingleton<GameManager>
             }
         }
 
+        Kuchinashi.DataSystem.UserConfig.Clear();
+
         // 2. 重新加载 BaseScene
         // 使用 Single 模式加载，Unity 会在底层自动卸载当前所有的其他场景，从而完美避开“不能卸载最后一个场景”的限制。
         yield return UnityEngine.SceneManagement.SceneManager.UnloadSceneAsync(UnityEngine.SceneManagement.SceneManager.GetActiveScene());
