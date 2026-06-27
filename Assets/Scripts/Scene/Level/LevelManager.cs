@@ -79,6 +79,11 @@ public class LevelManager : MonoBehaviour
             service.ReleaseDisableMovementInput(this);
         }
 
+        if (GameManager.Instance != null)
+        {
+            GameManager.Instance.ReleaseLevelResetLock(this);
+        }
+
         if (m_PostAllStarsRoutine != null)
         {
             StopCoroutine(m_PostAllStarsRoutine);
@@ -159,6 +164,12 @@ public class LevelManager : MonoBehaviour
         }
 
         m_StarsRequirementMet = true;
+
+        if (GameManager.Instance != null)
+        {
+            GameManager.Instance.RetainLevelResetLock(this);
+        }
+
         PersistLevelFinishedToSave();
         OnLevelStarsRequirementMet();
         onStarsRequirementMet?.Invoke();

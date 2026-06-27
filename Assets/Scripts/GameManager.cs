@@ -72,6 +72,11 @@ public class GameManager : MonoSingleton<GameManager>
 
         if (Input.GetKeyDown(KeyCode.R))
         {
+            if (IsLevelResetLocked)
+            {
+                return;
+            }
+
             string reloadContentSceneName = flow.CurrentContentSceneName;
             if (flow.TryRequestReloadCurrentContent())
             {
@@ -118,8 +123,10 @@ public class GameManager : MonoSingleton<GameManager>
     }
 
     private readonly System.Collections.Generic.HashSet<object> m_CinematicLocks = new System.Collections.Generic.HashSet<object>();
+    private readonly System.Collections.Generic.HashSet<object> m_LevelResetLocks = new System.Collections.Generic.HashSet<object>();
 
     public bool IsCinematicLocked => m_CinematicLocks.Count > 0;
+    public bool IsLevelResetLocked => m_LevelResetLocks.Count > 0;
 
     public void RetainCinematicLock(object token)
     {
@@ -129,6 +136,16 @@ public class GameManager : MonoSingleton<GameManager>
     public void ReleaseCinematicLock(object token)
     {
         if (token != null) m_CinematicLocks.Remove(token);
+    }
+
+    public void RetainLevelResetLock(object token)
+    {
+        if (token != null) m_LevelResetLocks.Add(token);
+    }
+
+    public void ReleaseLevelResetLock(object token)
+    {
+        if (token != null) m_LevelResetLocks.Remove(token);
     }
 
     private void TrySkipCinematic()
