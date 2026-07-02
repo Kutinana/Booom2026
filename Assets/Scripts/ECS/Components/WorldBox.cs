@@ -106,6 +106,7 @@ public class WorldBox : StandardBox
         pushableBoxService.UpdateTransitions(this);
         pushableBoxService.TryTriggerEntering(this);
         pushableBoxService.TryTriggerExiting(this, outerBounds);
+        pushableBoxService.TryTriggerGravityTransitions(this, outerBounds);
 
         if (TryAutoDropPlayerFromTopEntrance(playerBounds))
         {

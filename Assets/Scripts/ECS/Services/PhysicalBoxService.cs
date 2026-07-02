@@ -25,6 +25,16 @@ public class PhysicalBoxService : ServiceBase<StandardBox>
 
     public float LinearPushSpeed => linearPushSpeed;
 
+    public bool TryGetFallSpeed(StandardBox box, out float speed)
+    {
+        return fallSpeeds.TryGetValue(box, out speed);
+    }
+
+    public void SetFallSpeed(StandardBox box, float speed)
+    {
+        if (box != null) fallSpeeds[box] = speed;
+    }
+
     private readonly Dictionary<StandardBox, float> fallSpeeds = new Dictionary<StandardBox, float>();
     private readonly Dictionary<StandardBox, LinearPushState> linearPushes = new Dictionary<StandardBox, LinearPushState>();
     private readonly Dictionary<StandardBox, Vector3> previousPositions = new Dictionary<StandardBox, Vector3>();

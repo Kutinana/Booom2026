@@ -413,6 +413,48 @@ public class PushableBoxService : ServiceBase<StandardBox>
         }
     }
 
+    public void TryTriggerGravityTransitions(WorldBox worldBox, Bounds outerBounds)
+    {
+        if (worldBox == null) return;
+        if (!ServiceBase.TryGet(out PhysicalBoxService pbService)) return;
+
+        foreach (StandardBox box in RegisteredComponents)
+        {
+            if (box == null || box == worldBox || box.gameObject.scene != worldBox.gameObject.scene) continue;
+            
+            if (IsBoxTransitioning(box)) continue;
+
+            if (!pbService.TryGetFallSpeed(box, out float fallSpeed) || fallSpeed <= 0f) continue;
+
+            Bounds boxBounds = box.Bounds;
+            if (boxBounds.size == Vector3.zero) continue;
+
+            UnityEngine.Debug.Log($"[GravityTransition] Falling Box: {box.name}, fallSpeed: {fallSpeed}, boxBounds.min.y: {boxBounds.min.y:F3}, outerBounds.min.y: {outerBounds.min.y:F3}, boxBounds.x: [{boxBounds.min.x:F3}, {boxBounds.max.x:F3}], outerBounds.x: [{outerBounds.min.x:F3}, {outerBounds.max.x:F3}]");
+
+            // Box is falling out of the bottom of outerBounds
+            if (boxBounds.min.y <= outerBounds.min.y + OuterEdgeBlockerTouchTolerance &&
+                boxBounds.min.x < outerBounds.max.x &&
+                boxBounds.max.x > outerBounds.min.x)
+            {
+                UnityEngine.Debug.Log($"[GravityTransition] Box {box.name} crossed bottom threshold! Checking if destination is blocked...");
+                if (IsOuterDestinationBlocked(box, worldBox, BoxPushDirection.Down, null))
+                {
+                    UnityEngine.Debug.Log($"[GravityTransition] Box {box.name} is BLOCKED at outer destination.");
+                    continue; 
+                }
+                
+                UnityEngine.Debug.Log($"[GravityTransition] Box {box.name} is NOT blocked, triggering StartTransition downwards.");
+                float cellSize = GetCellSize(box, BoxPushDirection.Down);
+                Vector3 axis = Vector3.down;
+                Vector3 pushOrigin = box.transform.position; 
+                Vector3 nextCenter = pushOrigin + axis * cellSize;
+
+                StartTransition(box, worldBox, BoxPushDirection.Down, isEntering: false, 
+                                pushOrigin, nextCenter, cellSize, fallSpeed, fallSpeed);
+            }
+        }
+    }
+
     public static bool IsTouchingOuterBoundsForEntering(Bounds outerBounds, Bounds boxBounds,
         BoxPushDirection direction, float threshold)
     {
@@ -719,7 +761,7 @@ public class PushableBoxService : ServiceBase<StandardBox>
     }
 
     private void StartTransition(StandardBox box, WorldBox worldBox, BoxPushDirection direction, bool isEntering,
-        Vector3 startPos, Vector3 endPos, float cellSize)
+        Vector3 startPos, Vector3 endPos, float cellSize, float overrideSpeed = -1f, float preservedFallSpeed = 0f)
     {
         BoxTransitionState phantomTransition = null;
         System.Collections.Generic.List<StandardBox> innerChain = null;
@@ -925,7 +967,9 @@ public class PushableBoxService : ServiceBase<StandardBox>
             P_target_end = P_target_end,
             Width = cellSize,
             OriginalRenderer = origRenderer,
-            StartCell = box.AlignToGrid && box.Grid != null ? box.Grid.WorldToCell(P_start) : default
+            StartCell = box.AlignToGrid && box.Grid != null ? box.Grid.WorldToCell(P_start) : default,
+            OverrideSpeed = overrideSpeed,
+            PreservedFallSpeed = preservedFallSpeed
         };
 
         if (innerChain != null)
@@ -954,43 +998,62 @@ public class PushableBoxService : ServiceBase<StandardBox>
             return;
         }
 
-        Vector3 currentPos = state.Box.transform.position;
         Vector3 totalVector = state.P_end - state.P_start;
         float totalDist = totalVector.magnitude;
-
         if (totalDist <= Mathf.Epsilon)
         {
             CancelTransition(state);
             return;
         }
 
-        Vector3 currentVector = currentPos - state.P_start;
-        Vector3 totalDir = totalVector.normalized;
-        float dot = Vector3.Dot(currentVector, totalDir);
-        float progress = Mathf.Clamp01(dot / totalDist);
+        float progress = 0f;
+        Vector3 currentPos = state.Box.transform.position;
 
-        if (progress >= 0.99f)
+        if (state.OverrideSpeed > 0f)
         {
-            CompleteTransition(state);
-            return;
-        }
+            // Autonomous Gravity Transition: Progress is driven entirely by time
+            state.Progress += (state.OverrideSpeed / totalDist) * Time.fixedDeltaTime;
+            progress = Mathf.Clamp01(state.Progress);
 
-        if (dot < -0.05f)
-        {
-            CancelTransition(state);
-            return;
-        }
-
-        if (progress <= 0.05f)
-        {
-            if (ServiceBase.TryGet(out PhysicalBoxService pbService))
+            if (progress >= 0.99f)
             {
-                if (!pbService.TryGetActiveLinearPushInfo(state.Box, out _, out _))
+                CompleteTransition(state);
+                return;
+            }
+        }
+        else
+        {
+            // Linear Push Transition: Progress is driven by the physical box's movement
+            Vector3 currentVector = currentPos - state.P_start;
+            Vector3 totalDir = totalVector.normalized;
+            float dot = Vector3.Dot(currentVector, totalDir);
+            progress = Mathf.Clamp01(dot / totalDist);
+
+            if (progress >= 0.99f)
+            {
+                CompleteTransition(state);
+                return;
+            }
+
+            if (dot < -0.05f)
+            {
+                CancelTransition(state);
+                return;
+            }
+
+            if (progress <= 0.05f)
+            {
+                if (ServiceBase.TryGet(out PhysicalBoxService pbService))
                 {
-                    CancelTransition(state);
-                    return;
+                    if (!pbService.TryGetActiveLinearPushInfo(state.Box, out _, out _))
+                    {
+                        CancelTransition(state);
+                        return;
+                    }
                 }
             }
+            
+            state.Progress = progress;
         }
 
         if (state.VisualClone != null)
@@ -1091,6 +1154,7 @@ public class PushableBoxService : ServiceBase<StandardBox>
                 {
                     pbService.CancelLinearPush(member);
                     pbService.QueueGridAlignmentRelease(member);
+                    if (state.PreservedFallSpeed > 0f) pbService.SetFallSpeed(member, state.PreservedFallSpeed);
                 }
             }
         }
@@ -1106,6 +1170,11 @@ public class PushableBoxService : ServiceBase<StandardBox>
             else
             {
                 MoveBoxToOuter(state.Box, state.P_target_end);
+            }
+
+            if (state.PreservedFallSpeed > 0f && ServiceBase.TryGet(out PhysicalBoxService physicalBoxService))
+            {
+                physicalBoxService.SetFallSpeed(state.Box, state.PreservedFallSpeed);
             }
         }
     }
@@ -1193,6 +1262,10 @@ public class PushableBoxService : ServiceBase<StandardBox>
 
         // Entering 完成判定：box 的 grid cell 变化即认为已进入
         public Vector3Int StartCell;
+
+        public float Progress = 0f;
+        public float OverrideSpeed = -1f;
+        public float PreservedFallSpeed = 0f;
     }
 
 
