@@ -1074,6 +1074,9 @@ MonoBehaviour:
   - Level 1-M1
   - Level 1-18
   - Level 1-23
+  - Level 1-24
+  - Level 1-25
+  - Level 1-26
 --- !u!1 &1579343231
 GameObject:
   m_ObjectHideFlags: 0
