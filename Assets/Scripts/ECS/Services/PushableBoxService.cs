@@ -1155,6 +1155,11 @@ public class PushableBoxService : ServiceBase<StandardBox>
                     pbService.CancelLinearPush(member);
                     pbService.QueueGridAlignmentRelease(member);
                     if (state.PreservedFallSpeed > 0f) pbService.SetFallSpeed(member, state.PreservedFallSpeed);
+
+                    if (!pbService.IsGrounded(member))
+                    {
+                        pbService.SetFallSpeed(member, 0.001f + 0.01f);
+                    }
                 }
             }
         }
@@ -1172,9 +1177,17 @@ public class PushableBoxService : ServiceBase<StandardBox>
                 MoveBoxToOuter(state.Box, state.P_target_end);
             }
 
-            if (state.PreservedFallSpeed > 0f && ServiceBase.TryGet(out PhysicalBoxService physicalBoxService))
+            if (ServiceBase.TryGet(out PhysicalBoxService pbService))
             {
-                physicalBoxService.SetFallSpeed(state.Box, state.PreservedFallSpeed);
+                if (state.PreservedFallSpeed > 0f)
+                {
+                    pbService.SetFallSpeed(state.Box, state.PreservedFallSpeed);
+                }
+
+                if (!pbService.IsGrounded(state.Box))
+                {
+                    pbService.SetFallSpeed(state.Box, 0.001f + 0.01f);
+                }
             }
         }
     }
