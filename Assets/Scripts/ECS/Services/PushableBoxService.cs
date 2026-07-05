@@ -429,21 +429,16 @@ public class PushableBoxService : ServiceBase<StandardBox>
             Bounds boxBounds = box.Bounds;
             if (boxBounds.size == Vector3.zero) continue;
 
-            UnityEngine.Debug.Log($"[GravityTransition] Falling Box: {box.name}, fallSpeed: {fallSpeed}, boxBounds.min.y: {boxBounds.min.y:F3}, outerBounds.min.y: {outerBounds.min.y:F3}, boxBounds.x: [{boxBounds.min.x:F3}, {boxBounds.max.x:F3}], outerBounds.x: [{outerBounds.min.x:F3}, {outerBounds.max.x:F3}]");
-
             // Box is falling out of the bottom of outerBounds
             if (boxBounds.min.y <= outerBounds.min.y + OuterEdgeBlockerTouchTolerance &&
                 boxBounds.min.x < outerBounds.max.x &&
                 boxBounds.max.x > outerBounds.min.x)
             {
-                UnityEngine.Debug.Log($"[GravityTransition] Box {box.name} crossed bottom threshold! Checking if destination is blocked...");
                 if (IsOuterDestinationBlocked(box, worldBox, BoxPushDirection.Down, null))
                 {
-                    UnityEngine.Debug.Log($"[GravityTransition] Box {box.name} is BLOCKED at outer destination.");
                     continue; 
                 }
                 
-                UnityEngine.Debug.Log($"[GravityTransition] Box {box.name} is NOT blocked, triggering StartTransition downwards.");
                 float cellSize = GetCellSize(box, BoxPushDirection.Down);
                 Vector3 axis = Vector3.down;
                 Vector3 pushOrigin = box.transform.position; 
