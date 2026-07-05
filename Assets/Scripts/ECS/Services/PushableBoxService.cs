@@ -851,11 +851,14 @@ public class PushableBoxService : ServiceBase<StandardBox>
                 {
                     if (ServiceBase.TryGet(out PhysicalBoxService physicalBoxService))
                     {
-                        innerChain = new System.Collections.Generic.List<StandardBox>();
-                        physicalBoxService.CollectHorizontalChain(blocker, axis, innerChain);
-                        if (!innerChain.Contains(blocker))
+                        if (!physicalBoxService.IsFalling(blocker))
                         {
-                            innerChain.Add(blocker);
+                            innerChain = new System.Collections.Generic.List<StandardBox>();
+                            physicalBoxService.CollectHorizontalChain(blocker, axis, innerChain);
+                            if (!innerChain.Contains(blocker))
+                            {
+                                innerChain.Add(blocker);
+                            }
                         }
                     }
                 }
@@ -919,11 +922,14 @@ public class PushableBoxService : ServiceBase<StandardBox>
                 {
                     if (ServiceBase.TryGet(out PhysicalBoxService physicalBoxService))
                     {
-                        innerChain = new System.Collections.Generic.List<StandardBox>();
-                        physicalBoxService.CollectHorizontalChain(blocker, axis, innerChain);
-                        if (!innerChain.Contains(blocker))
+                        if (!physicalBoxService.IsFalling(blocker))
                         {
-                            innerChain.Add(blocker);
+                            innerChain = new System.Collections.Generic.List<StandardBox>();
+                            physicalBoxService.CollectHorizontalChain(blocker, axis, innerChain);
+                            if (!innerChain.Contains(blocker))
+                            {
+                                innerChain.Add(blocker);
+                            }
                         }
                     }
                 }
@@ -1154,11 +1160,13 @@ public class PushableBoxService : ServiceBase<StandardBox>
                 {
                     pbService.CancelLinearPush(member);
                     pbService.QueueGridAlignmentRelease(member);
-                    if (state.PreservedFallSpeed > 0f) pbService.SetFallSpeed(member, state.PreservedFallSpeed);
 
                     if (!pbService.IsGrounded(member))
                     {
-                        pbService.SetFallSpeed(member, 0.001f + 0.01f);
+                        if (!pbService.TryGetFallSpeed(member, out float currentFallSpeed) || currentFallSpeed <= 0f)
+                        {
+                            pbService.SetFallSpeed(member, 0.001f + 0.01f);
+                        }
                     }
                 }
             }
@@ -1186,7 +1194,10 @@ public class PushableBoxService : ServiceBase<StandardBox>
 
                 if (!pbService.IsGrounded(state.Box))
                 {
-                    pbService.SetFallSpeed(state.Box, 0.001f + 0.01f);
+                    if (!pbService.TryGetFallSpeed(state.Box, out float currentFallSpeed) || currentFallSpeed <= 0f)
+                    {
+                        pbService.SetFallSpeed(state.Box, 0.001f + 0.01f);
+                    }
                 }
             }
         }

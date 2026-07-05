@@ -328,7 +328,7 @@ public class PhysicalBoxService : ServiceBase<StandardBox>
         SendEvent(new BoxFallStateEvent(box, !landed, landed, box.transform.position));
     }
 
-    private bool IsGrounded(StandardBox box)
+    internal bool IsGrounded(StandardBox box)
     {
         return Cast(box, Vector3.down, skinWidth * 2f, out RayHit hit);
     }
