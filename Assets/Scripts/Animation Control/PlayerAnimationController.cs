@@ -22,6 +22,8 @@ public class PlayerAnimationController : MonoBehaviour
     [Header("Effects")]
     [SerializeField] private GameObject landingDustPrefab;
     [SerializeField] private Transform landingEffectPoint;
+    [SerializeField] private GameObject JumpParticlePrefab;
+    [SerializeField] private Transform JumpParticlePoint;
 
     private float noInputTimer;
     private bool isSleeping;
@@ -93,6 +95,8 @@ public class PlayerAnimationController : MonoBehaviour
         UpdateMovementAnimation(contacts, velocity, isPushing);
         UpdateIdleVariation(contacts, velocity, isPushing);
         UpdateFlip(velocity, isPushing);
+
+
     }
 
     private void UpdateDownState(PlayerController.ContactState contacts, Vector2 velocity, bool isPushing)
@@ -223,6 +227,17 @@ public class PlayerAnimationController : MonoBehaviour
         Instantiate(
             landingDustPrefab,
             landingEffectPoint.position,
+            Quaternion.identity
+        );
+    }
+    public void SpawnJumpParticle()
+    {
+        if (landingDustPrefab == null)
+            return;
+
+        Instantiate(
+            JumpParticlePrefab,
+            JumpParticlePoint.position,
             Quaternion.identity
         );
     }

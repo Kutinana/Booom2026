@@ -243,6 +243,8 @@ MonoBehaviour:
   sleepDelay: 60
   landingDustPrefab: {fileID: 93798503508562157, guid: ada6c4c2842d56a41828e402e6206bca, type: 3}
   landingEffectPoint: {fileID: 6086128289500971824}
+  JumpParticlePrefab: {fileID: 2349516296339469946, guid: 527793cc90eff1540a935e89cbfd7c49, type: 3}
+  JumpParticlePoint: {fileID: 6086128289500971824}
 --- !u!114 &6386160951961049177
 MonoBehaviour:
   m_ObjectHideFlags: 0

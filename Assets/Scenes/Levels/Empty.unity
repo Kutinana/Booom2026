@@ -786,6 +786,63 @@ MonoBehaviour:
     serializedVersion: 2
     m_Bits: 1
   m_MaxRayIntersections: 0
+--- !u!1001 &538983479
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 0}
+    m_Modifications:
+    - target: {fileID: 4143857164246605063, guid: 91d503b89652eaf40b1466c5f6ac177f, type: 3}
+      propertyPath: m_Name
+      value: Particle System
+      objectReference: {fileID: 0}
+    - target: {fileID: 9090380352731970670, guid: 91d503b89652eaf40b1466c5f6ac177f, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 9090380352731970670, guid: 91d503b89652eaf40b1466c5f6ac177f, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 9090380352731970670, guid: 91d503b89652eaf40b1466c5f6ac177f, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 9090380352731970670, guid: 91d503b89652eaf40b1466c5f6ac177f, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 9090380352731970670, guid: 91d503b89652eaf40b1466c5f6ac177f, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 9090380352731970670, guid: 91d503b89652eaf40b1466c5f6ac177f, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 9090380352731970670, guid: 91d503b89652eaf40b1466c5f6ac177f, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 9090380352731970670, guid: 91d503b89652eaf40b1466c5f6ac177f, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 9090380352731970670, guid: 91d503b89652eaf40b1466c5f6ac177f, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 9090380352731970670, guid: 91d503b89652eaf40b1466c5f6ac177f, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: 91d503b89652eaf40b1466c5f6ac177f, type: 3}
 --- !u!1 &799451003
 GameObject:
   m_ObjectHideFlags: 0
@@ -2787,18 +2844,23 @@ MonoBehaviour:
     serializedVersion: 2
     m_Bits: 4294967295
   ApplyGravity: 1
+  FreezeHorizontalMovement: 0
   TestDirection: 0
   OuterQuadCollider: {fileID: 1030242292}
   InnerQuadCollider: {fileID: 1261429945}
   OuterEntrances:
   - Direction: 0
     Entrance: {fileID: 1857928788}
+    HasPlatform: 0
   - Direction: 1
     Entrance: {fileID: 799451004}
+    HasPlatform: 0
   - Direction: 2
     Entrance: {fileID: 215454610}
+    HasPlatform: 0
   - Direction: 3
     Entrance: {fileID: 448511902}
+    HasPlatform: 0
   paddingX: 0.05
   paddingY: 0.05
   outerEdgeBlockerTouchTolerance: 0.04
@@ -3482,6 +3544,7 @@ MonoBehaviour:
     serializedVersion: 2
     m_Bits: 4294967295
   ApplyGravity: 1
+  FreezeHorizontalMovement: 0
   TestDirection: 0
 --- !u!61 &1579278815
 BoxCollider2D:
@@ -3567,7 +3630,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a6cea5ec2b10f7545830f661be27ba5c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  stuckThresholdX: 4
+  stuckThresholdMaxX: 0
+  stuckThresholdMinX: 0
 --- !u!1 &1644887817
 GameObject:
   m_ObjectHideFlags: 0
@@ -3965,6 +4029,9 @@ MonoBehaviour:
   idleTriggerTime: 3
   idleRandomInterval: {x: 3, y: 6}
   landTriggerMaxVerticalVelocity: 0.001
+  sleepDelay: 60
+  landingDustPrefab: {fileID: 0}
+  landingEffectPoint: {fileID: 0}
 --- !u!95 &1822326675
 Animator:
   serializedVersion: 5
@@ -4626,3 +4693,4 @@ SceneRoots:
   - {fileID: 143000326}
   - {fileID: 3749238731496271431}
   - {fileID: 349808165}
+  - {fileID: 538983479}

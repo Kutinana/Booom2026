@@ -13,6 +13,7 @@ public partial class PlayerController : MonoBehaviour, ISceneMovableItem, IPoint
     private const float AxisNormalBlockThreshold = 0.85f;
     private const int MaxOverlapResolveIterations = 6;
     private const float OverlapResolveEpsilon = 0.001f;
+    private PlayerAnimationController playerAnimationController;
 
     [System.Serializable]
     public struct ContactState
@@ -140,6 +141,7 @@ public partial class PlayerController : MonoBehaviour, ISceneMovableItem, IPoint
             body2D.gravityScale = 0f;
             body2D.bodyType = RigidbodyType2D.Kinematic;
         }
+        playerAnimationController=GetComponent<PlayerAnimationController>();
     }
 
     private void OnDestroy()
@@ -235,6 +237,7 @@ public partial class PlayerController : MonoBehaviour, ISceneMovableItem, IPoint
         if (Input.GetKeyDown(KeyCode.Space) || Input.GetKeyDown(KeyCode.W) || Input.GetKeyDown(KeyCode.UpArrow))
         {
             jumpQueued = true;
+            playerAnimationController.SpawnJumpParticle();
         }
 
         HandlePlatformInput();
