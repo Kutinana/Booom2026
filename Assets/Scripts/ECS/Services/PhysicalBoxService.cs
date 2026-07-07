@@ -387,20 +387,48 @@ public class PhysicalBoxService : ServiceBase<StandardBox>
             return false;
         }
 
+        // 初始重叠豁免
+        if (OverlapsXY(previousItemBounds, playerBounds))
+        {
+            float initialOverlapH = GetHorizontalOverlap(previousItemBounds, playerBounds);
+            float initialOverlapV = GetVerticalOverlap(previousItemBounds, playerBounds);
+            
+            // 要求在 XY 两个方向都有相对明显的重叠，以排除简单的贴贴/微小穿模
+            if (initialOverlapH > 0.05f && initialOverlapV > 0.05f)
+            {
+#if UNITY_EDITOR
+                Debug.Log($"[PhysicalBoxService] Exempting player impact: Initial bounds overlap significantly before movement. " +
+                          $"Box: {box.name}, OverlapH: {initialOverlapH:F3}, OverlapV: {initialOverlapV:F3}, " +
+                          $"BoxBounds(prev): {previousItemBounds}, PlayerBounds: {playerBounds}");
+#endif
+                return false;
+            }
+        }
+
         if (!TryGetSweptImpactFace(previousItemBounds, playerBounds, (Vector2)delta, out BoxPushDirection impactFace))
         {
             return false;
         }
 
         Vector2 itemVelocity = (Vector2)delta / Mathf.Max(dt, Mathf.Epsilon);
-        if (!IsActivePlayerImpact(previousItemBounds, playerBounds, itemVelocity, impactFace))
+        
+        bool isActive = IsActivePlayerImpact(previousItemBounds, playerBounds, itemVelocity, impactFace);
+        if (!isActive)
         {
+            // Debug.Log($"[PhysicalBoxService] Swept over player but not active impact. Box: {box.name}, Vel: {itemVelocity}, Face: {impactFace}");
             return false;
         }
 
         Bounds itemBounds = previousItemBounds;
         itemBounds.center += delta;
         Vector2 playerVelocity = player.Velocity;
+
+        Debug.LogWarning($"[PhysicalBoxService] TRIGGERING Player Impact (Crush)! " +
+                  $"Box: {box.name}, Delta: {delta}, " +
+                  $"ItemVelocity: {itemVelocity}, PlayerVelocity: {playerVelocity}, " +
+                  $"ImpactFace: {impactFace}, " +
+                  $"BoxBounds(prev): {previousItemBounds}, BoxBounds(now): {itemBounds}, PlayerBounds: {playerBounds}");
+
         SceneMovablePlayerImpactContext context = new SceneMovablePlayerImpactContext(
             box,
             player,

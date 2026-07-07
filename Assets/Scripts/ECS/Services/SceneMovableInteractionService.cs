@@ -183,8 +183,34 @@ public class SceneMovableInteractionService : ServiceBase
             }
 
             Vector2 itemVelocity = (Vector2)(itemBounds.center - previousBounds.center) / dt;
-            Vector2 relativeDelta = ((Vector2)(itemBounds.center - previousBounds.center)) - ((Vector2)(playerBounds.center - previousPlayerBounds.center));
+            Vector2 itemDelta = (Vector2)(itemBounds.center - previousBounds.center);
+            Vector2 playerDelta = (Vector2)(playerBounds.center - previousPlayerBounds.center);
+            Vector2 relativeDelta = itemDelta - playerDelta;
             Vector2 relativeVelocity = itemVelocity - playerVelocity;
+
+            // 防传送 Sweep 误判
+            if (itemDelta.sqrMagnitude > 4f || playerDelta.sqrMagnitude > 4f)
+            {
+#if UNITY_EDITOR
+                Debug.Log($"[SceneMovableInteractionService] Ignored teleport-like movement. Box: {item.Owner.name}, ItemDelta: {itemDelta.magnitude}, PlayerDelta: {playerDelta.magnitude}");
+#endif
+                continue;
+            }
+
+            // 初始重叠豁免
+            if (OverlapsXY(previousBounds, previousPlayerBounds))
+            {
+                float initialOverlapH = GetHorizontalOverlap(previousBounds, previousPlayerBounds);
+                float initialOverlapV = GetVerticalOverlap(previousBounds, previousPlayerBounds);
+                if (initialOverlapH > 0.05f && initialOverlapV > 0.05f)
+                {
+#if UNITY_EDITOR
+                    Debug.Log($"[SceneMovableInteractionService] Exempting player impact: Initial bounds overlap significantly before movement. " +
+                              $"Box: {item.Owner.name}, OverlapH: {initialOverlapH:F3}, OverlapV: {initialOverlapV:F3}");
+#endif
+                    continue;
+                }
+            }
 
             if (!TryGetSweptImpactFace(previousBounds, previousPlayerBounds, relativeDelta, out BoxPushDirection impactFace))
             {
@@ -195,6 +221,12 @@ public class SceneMovableInteractionService : ServiceBase
             {
                 continue;
             }
+
+            Debug.LogWarning($"[SceneMovableInteractionService] TRIGGERING Player Impact (Crush)! " +
+                      $"Box: {item.Owner.name}, ItemDelta: {itemDelta}, PlayerDelta: {playerDelta}, relativeDelta: {relativeDelta}, " +
+                      $"ItemVelocity: {itemVelocity}, " +
+                      $"ImpactFace: {impactFace}, " +
+                      $"BoxBounds(prev): {previousBounds}, BoxBounds(now): {itemBounds}, PlayerBounds: {playerBounds}");
 
             SceneMovablePlayerImpactContext context = new SceneMovablePlayerImpactContext(
                 item,
