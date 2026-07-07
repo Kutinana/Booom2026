@@ -278,7 +278,7 @@ public class PushableBoxService : ServiceBase<StandardBox>
 
             Bounds boxBounds = box.Bounds;
             if (boxBounds.size == Vector3.zero ||
-                !IsTouchingTopEntrance(entryBounds, boxBounds))
+                !IsTouchingTopEntrance(entryBounds, boxBounds, worldBox.TopEntranceCenterXTolerance))
             {
                 continue;
             }
@@ -1394,9 +1394,15 @@ public class PushableBoxService : ServiceBase<StandardBox>
         }
     }
 
-    private static bool IsTouchingTopEntrance(Bounds worldBoxBounds, Bounds boxBounds)
+    private static bool IsTouchingTopEntrance(Bounds worldBoxBounds, Bounds boxBounds, float centerXTolerance)
     {
         if (worldBoxBounds.size == Vector3.zero || boxBounds.size == Vector3.zero)
+        {
+            return false;
+        }
+
+        if (centerXTolerance > 0f &&
+            Mathf.Abs(boxBounds.center.x - worldBoxBounds.center.x) > centerXTolerance)
         {
             return false;
         }
