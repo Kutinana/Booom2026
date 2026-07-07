@@ -742,6 +742,7 @@ public class PhysicalBoxService : ServiceBase<StandardBox>
 
                     BoxPushDirection entranceDirection = castDir.Opposite();
                     if (hitWorldBox2D.GetOuterEntrance(entranceDirection) != null &&
+                        !hitWorldBox2D.CanPushFrom(entranceDirection) &&
                         !hitWorldBox2D.HasOuterEntrancePlatform(entranceDirection))
                     {
                         bool canGroupEnter = false;
@@ -848,6 +849,7 @@ public class PhysicalBoxService : ServiceBase<StandardBox>
 
                     BoxPushDirection entranceDirection = castDir.Opposite();
                     if (hitWorldBox3D.GetOuterEntrance(entranceDirection) != null &&
+                        !hitWorldBox3D.CanPushFrom(entranceDirection) &&
                         !hitWorldBox3D.HasOuterEntrancePlatform(entranceDirection))
                     {
                         bool canGroupEnter = false;
