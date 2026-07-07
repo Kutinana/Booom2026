@@ -252,6 +252,7 @@ MonoBehaviour:
     serializedVersion: 2
     m_Bits: 4294967295
   ApplyGravity: 1
+  FreezeHorizontalMovement: 0
   TestDirection: 0
 --- !u!95 &26682266
 Animator:
@@ -1390,6 +1391,7 @@ MonoBehaviour:
     serializedVersion: 2
     m_Bits: 4294967295
   ApplyGravity: 1
+  FreezeHorizontalMovement: 0
   TestDirection: 0
 --- !u!95 &207265499
 Animator:
@@ -1718,6 +1720,7 @@ MonoBehaviour:
     serializedVersion: 2
     m_Bits: 4294967295
   ApplyGravity: 1
+  FreezeHorizontalMovement: 0
   TestDirection: 0
 --- !u!95 &232183065
 Animator:
@@ -2245,6 +2248,7 @@ MonoBehaviour:
     serializedVersion: 2
     m_Bits: 4294967295
   ApplyGravity: 1
+  FreezeHorizontalMovement: 0
   TestDirection: 0
 --- !u!95 &283119825
 Animator:
@@ -2808,6 +2812,7 @@ MonoBehaviour:
     serializedVersion: 2
     m_Bits: 4294967295
   ApplyGravity: 1
+  FreezeHorizontalMovement: 0
   TestDirection: 0
 --- !u!95 &382309936
 Animator:
@@ -46307,6 +46312,7 @@ MonoBehaviour:
     serializedVersion: 2
     m_Bits: 4294967295
   ApplyGravity: 1
+  FreezeHorizontalMovement: 0
   TestDirection: 0
 --- !u!95 &442666490
 Animator:
@@ -46792,6 +46798,7 @@ MonoBehaviour:
     serializedVersion: 2
     m_Bits: 4294967295
   ApplyGravity: 1
+  FreezeHorizontalMovement: 0
   TestDirection: 0
 --- !u!95 &508971724
 Animator:
@@ -46926,10 +46933,10 @@ Camera:
   m_LensShift: {x: 0, y: 0}
   m_NormalizedViewPortRect:
     serializedVersion: 2
-    x: 0.18671875
+    x: 0
     y: 0
-    width: 0.31875
-    height: 0.31875
+    width: 1
+    height: 1
   near clip plane: 0.3
   far clip plane: 1000
   field of view: 8
@@ -47422,6 +47429,7 @@ MonoBehaviour:
     serializedVersion: 2
     m_Bits: 4294967295
   ApplyGravity: 1
+  FreezeHorizontalMovement: 0
   TestDirection: 0
 --- !u!95 &564640420
 Animator:
@@ -49022,6 +49030,7 @@ MonoBehaviour:
     serializedVersion: 2
     m_Bits: 4294967295
   ApplyGravity: 1
+  FreezeHorizontalMovement: 0
   TestDirection: 0
 --- !u!95 &879552988
 Animator:
@@ -49915,18 +49924,18 @@ Tilemap:
   - first: {x: -17, y: -26, z: 0}
     second:
       serializedVersion: 2
-      m_TileIndex: 33
-      m_TileSpriteIndex: 32
+      m_TileIndex: 43
+      m_TileSpriteIndex: 41
       m_TileMatrixIndex: 0
       m_TileColorIndex: 0
       m_TileObjectToInstantiateIndex: 65535
       dummyAlignment: 0
       m_AllTileFlags: 1073741825
-  - first: {x: -16, y: -26, z: 0}
+  - first: {x: -15, y: -26, z: 0}
     second:
       serializedVersion: 2
-      m_TileIndex: 43
-      m_TileSpriteIndex: 41
+      m_TileIndex: 44
+      m_TileSpriteIndex: 42
       m_TileMatrixIndex: 0
       m_TileColorIndex: 0
       m_TileObjectToInstantiateIndex: 65535
@@ -49935,8 +49944,8 @@ Tilemap:
   - first: {x: -14, y: -26, z: 0}
     second:
       serializedVersion: 2
-      m_TileIndex: 44
-      m_TileSpriteIndex: 42
+      m_TileIndex: 42
+      m_TileSpriteIndex: 40
       m_TileMatrixIndex: 0
       m_TileColorIndex: 0
       m_TileObjectToInstantiateIndex: 65535
@@ -51980,7 +51989,7 @@ Tilemap:
     m_Data: {fileID: 11400000, guid: 33f4188c1805796479b6f1bd82cd359e, type: 2}
   - m_RefCount: 2
     m_Data: {fileID: 11400000, guid: 029879cc7a3e2174fa565c82b60927e0, type: 2}
-  - m_RefCount: 5
+  - m_RefCount: 4
     m_Data: {fileID: 11400000, guid: 9098bc334f00eca4585768ac6d7fe1b8, type: 2}
   - m_RefCount: 1
     m_Data: {fileID: 11400000, guid: df779ed173bc0e14082a9f7ce2e66b9e, type: 2}
@@ -51998,7 +52007,7 @@ Tilemap:
     m_Data: {fileID: 11400000, guid: 5c39f24913466ce47a193fd083c25b45, type: 2}
   - m_RefCount: 1
     m_Data: {fileID: 11400000, guid: 86740624d9b376c4493e6fb89fb892db, type: 2}
-  - m_RefCount: 17
+  - m_RefCount: 18
     m_Data: {fileID: 11400000, guid: 4255575a29465ac46854ac1141d8020d, type: 2}
   - m_RefCount: 2
     m_Data: {fileID: 11400000, guid: c1facf68291e39348a8accdccb72abce, type: 2}
@@ -52151,7 +52160,7 @@ Tilemap:
     m_Data: {fileID: 615442501, guid: 42a595ec7bb3cd544908d026ca2b538e, type: 3}
   - m_RefCount: 1
     m_Data: {fileID: 554282650, guid: 42a595ec7bb3cd544908d026ca2b538e, type: 3}
-  - m_RefCount: 5
+  - m_RefCount: 4
     m_Data: {fileID: 1945020803, guid: 42a595ec7bb3cd544908d026ca2b538e, type: 3}
   - m_RefCount: 1
     m_Data: {fileID: -304780487, guid: 42a595ec7bb3cd544908d026ca2b538e, type: 3}
@@ -52167,7 +52176,7 @@ Tilemap:
     m_Data: {fileID: 1363225216, guid: 42a595ec7bb3cd544908d026ca2b538e, type: 3}
   - m_RefCount: 1
     m_Data: {fileID: 1762857736, guid: 42a595ec7bb3cd544908d026ca2b538e, type: 3}
-  - m_RefCount: 17
+  - m_RefCount: 18
     m_Data: {fileID: 1854862937, guid: 42a595ec7bb3cd544908d026ca2b538e, type: 3}
   - m_RefCount: 2
     m_Data: {fileID: -2105804259, guid: 42a595ec7bb3cd544908d026ca2b538e, type: 3}
@@ -52508,13 +52517,13 @@ CompositeCollider2D:
         Y: -129375000
       - X: -94375000
         Y: -130000000
-      - X: -75625000
+      - X: -80625000
         Y: -130000000
-      - X: -75000000
+      - X: -80000000
         Y: -129375000
-      - X: -75000000
+      - X: -80000000
         Y: -125625000
-      - X: -75625000
+      - X: -80625000
         Y: -125000000
       - X: -85000000
         Y: -125000000
@@ -52746,28 +52755,28 @@ CompositeCollider2D:
         Y: -99687504
       - X: -80000000
         Y: -100000000
-    - - X: -50000000
-        Y: -129375000
-      - X: -50000000
-        Y: -125625000
-      - X: -50625000
-        Y: -125000000
-      - X: -69375000
-        Y: -125000000
-      - X: -70000000
-        Y: -125625000
-      - X: -70000000
-        Y: -129375000
-      - X: -69375000
-        Y: -130000000
-      - X: -50625000
-        Y: -130000000
     - - X: -95000000
         Y: -125000000
       - X: -94375000
         Y: -125000000
       - X: -95000000
         Y: -125625000
+    - - X: -50000000
+        Y: -129375000
+      - X: -50000000
+        Y: -125625000
+      - X: -50625000
+        Y: -125000000
+      - X: -74375000
+        Y: -125000000
+      - X: -75000000
+        Y: -125625000
+      - X: -75000000
+        Y: -129375000
+      - X: -74375000
+        Y: -130000000
+      - X: -50625000
+        Y: -130000000
   m_CompositePaths:
     m_Paths:
     - - {x: 1.4999707, y: -11.5}
@@ -52826,10 +52835,10 @@ CompositeCollider2D:
     - - {x: -9.5625105, y: -13}
       - {x: -9.499979, y: -12.937521}
       - {x: -9.4374895, y: -13}
-      - {x: -7.562493, y: -12.999992}
-      - {x: -7.5, y: -12.9374895}
-      - {x: -7.500008, y: -12.562493}
-      - {x: -7.5625105, y: -12.5}
+      - {x: -8.062493, y: -12.999992}
+      - {x: -8, y: -12.9374895}
+      - {x: -8.000008, y: -12.562493}
+      - {x: -8.0625105, y: -12.5}
       - {x: -8.5, y: -12.49997}
       - {x: -8.50003, y: -11.5}
       - {x: -9.5, y: -11.49997}
@@ -52951,10 +52960,10 @@ CompositeCollider2D:
       - {x: -5, y: -12.9374895}
       - {x: -5.0000076, y: -12.562493}
       - {x: -5.062511, y: -12.5}
-      - {x: -6.937507, y: -12.500009}
-      - {x: -7, y: -12.5625105}
-      - {x: -6.999992, y: -12.937508}
-      - {x: -6.9374895, y: -13}
+      - {x: -7.437507, y: -12.500009}
+      - {x: -7.5, y: -12.5625105}
+      - {x: -7.499992, y: -12.937508}
+      - {x: -7.4374895, y: -13}
   m_VertexDistance: 0.0005
   m_OffsetDistance: 0.00005
   m_UseDelaunayMesh: 0
@@ -53209,6 +53218,7 @@ MonoBehaviour:
     serializedVersion: 2
     m_Bits: 4294967295
   ApplyGravity: 1
+  FreezeHorizontalMovement: 0
   TestDirection: 0
 --- !u!95 &1070902187
 Animator:
@@ -63648,6 +63658,7 @@ MonoBehaviour:
     serializedVersion: 2
     m_Bits: 4294967295
   ApplyGravity: 1
+  FreezeHorizontalMovement: 0
   TestDirection: 0
 --- !u!95 &1208435956
 Animator:
@@ -63852,6 +63863,7 @@ MonoBehaviour:
     serializedVersion: 2
     m_Bits: 4294967295
   ApplyGravity: 1
+  FreezeHorizontalMovement: 0
   TestDirection: 0
 --- !u!95 &1212743127
 Animator:
@@ -64417,16 +64429,20 @@ MonoBehaviour:
     serializedVersion: 2
     m_Bits: 4294967295
   ApplyGravity: 0
+  FreezeHorizontalMovement: 0
   TestDirection: 0
   OuterQuadCollider: {fileID: 1030242292}
   InnerQuadCollider: {fileID: 1261429945}
   OuterEntrances:
   - Direction: 0
     Entrance: {fileID: 1857928788}
+    HasPlatform: 0
   - Direction: 1
     Entrance: {fileID: 799451004}
+    HasPlatform: 0
   - Direction: 3
     Entrance: {fileID: 448511902}
+    HasPlatform: 0
   paddingX: 0.03
   paddingY: 0.03
   outerEdgeBlockerTouchTolerance: 0.04
@@ -65946,6 +65962,7 @@ MonoBehaviour:
     serializedVersion: 2
     m_Bits: 4294967295
   ApplyGravity: 1
+  FreezeHorizontalMovement: 0
   TestDirection: 0
 --- !u!114 &1415818183
 MonoBehaviour:
@@ -66181,6 +66198,7 @@ MonoBehaviour:
     serializedVersion: 2
     m_Bits: 4294967295
   ApplyGravity: 1
+  FreezeHorizontalMovement: 0
   TestDirection: 0
 --- !u!95 &1436700240
 Animator:
@@ -66397,6 +66415,7 @@ MonoBehaviour:
     serializedVersion: 2
     m_Bits: 4294967295
   ApplyGravity: 1
+  FreezeHorizontalMovement: 0
   TestDirection: 0
 --- !u!95 &1437545801
 Animator:
@@ -71490,6 +71509,7 @@ MonoBehaviour:
     serializedVersion: 2
     m_Bits: 4294967295
   ApplyGravity: 1
+  FreezeHorizontalMovement: 0
   TestDirection: 0
 --- !u!95 &1475633415
 Animator:
@@ -72258,6 +72278,7 @@ MonoBehaviour:
     serializedVersion: 2
     m_Bits: 4294967295
   ApplyGravity: 1
+  FreezeHorizontalMovement: 0
   TestDirection: 0
 --- !u!95 &1567969522
 Animator:
@@ -72533,6 +72554,7 @@ MonoBehaviour:
     serializedVersion: 2
     m_Bits: 4294967295
   ApplyGravity: 1
+  FreezeHorizontalMovement: 0
   TestDirection: 0
 --- !u!61 &1579278815
 BoxCollider2D:
@@ -72841,6 +72863,7 @@ MonoBehaviour:
     serializedVersion: 2
     m_Bits: 4294967295
   ApplyGravity: 1
+  FreezeHorizontalMovement: 0
   TestDirection: 0
 --- !u!95 &1596712151
 Animator:
@@ -83395,6 +83418,7 @@ MonoBehaviour:
     serializedVersion: 2
     m_Bits: 4294967295
   ApplyGravity: 1
+  FreezeHorizontalMovement: 0
   TestDirection: 0
 --- !u!95 &1763457394
 Animator:
@@ -83815,6 +83839,8 @@ MonoBehaviour:
   idleRandomInterval: {x: 3, y: 6}
   landTriggerMaxVerticalVelocity: 0.001
   sleepDelay: 60
+  landingDustPrefab: {fileID: 0}
+  landingEffectPoint: {fileID: 0}
 --- !u!95 &1822326675
 Animator:
   serializedVersion: 5
@@ -89069,6 +89095,7 @@ MonoBehaviour:
     serializedVersion: 2
     m_Bits: 4294967295
   ApplyGravity: 1
+  FreezeHorizontalMovement: 0
   TestDirection: 0
 --- !u!95 &1840469193
 Animator:
@@ -89658,6 +89685,7 @@ MonoBehaviour:
     serializedVersion: 2
     m_Bits: 4294967295
   ApplyGravity: 1
+  FreezeHorizontalMovement: 0
   TestDirection: 0
 --- !u!95 &1910272818
 Animator:
@@ -90610,7 +90638,7 @@ Transform:
   m_GameObject: {fileID: 2060870342}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: -7.25, y: -12.75, z: 0}
+  m_LocalPosition: {x: -7.75, y: -12.75, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
