@@ -175,6 +175,12 @@ public class AudioMng : MonoBehaviour
 
     public void PlaySfxWithDecay(string name, float volumeScale, Vector3 pos, float distScale)
     {
+        if (Player == null) 
+        {
+            PlaySfx(name, volumeScale); 
+            return;
+        }
+        
         float sqrDist = (Player.position - pos).sqrMagnitude;
         float sqrScale = distScale * distScale;
         float decayedVolume = sqrDist > sqrScale ? volumeScale  / (sqrDist * sqrScale) : volumeScale;
