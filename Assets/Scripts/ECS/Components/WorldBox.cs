@@ -184,7 +184,8 @@ public class WorldBox : StandardBox
 
         Bounds worldBoxBounds = Bounds;
         if (worldBoxBounds.size == Vector3.zero ||
-            !IsTouchingTopSide(worldBoxBounds, playerBounds, outerEdgeBlockerTouchTolerance))
+            !IsTouchingTopSide(worldBoxBounds, playerBounds, outerEdgeBlockerTouchTolerance,
+                topEntranceCenterXTolerance))
         {
             return false;
         }
@@ -311,7 +312,10 @@ public class WorldBox : StandardBox
 
     [SerializeField] private float paddingX = 0.03f;
     [SerializeField] private float paddingY = 0.03f;
-    [SerializeField, Min(0f)] private float outerEdgeBlockerTouchTolerance = 0.04f;
+    [SerializeField, Min(0f)] private float outerEdgeBlockerTouchTolerance = -0.1f;
+    [SerializeField, Min(0f)] private float topEntranceCenterXTolerance = 0.5f;
+
+    public float TopEntranceCenterXTolerance => topEntranceCenterXTolerance;
 
     private bool MovePlayerToInnerSide(BoxPushDirection direction, Bounds outerBounds, Bounds innerBounds, Bounds playerBounds)
     {
@@ -1155,9 +1159,16 @@ public class WorldBox : StandardBox
         }
     }
 
-    private static bool IsTouchingTopSide(Bounds lowerBounds, Bounds upperBounds, float tolerance)
+    private static bool IsTouchingTopSide(Bounds lowerBounds, Bounds upperBounds, float tolerance,
+        float centerXTolerance)
     {
         if (lowerBounds.size == Vector3.zero || upperBounds.size == Vector3.zero)
+        {
+            return false;
+        }
+
+        if (centerXTolerance > 0f &&
+            Mathf.Abs(upperBounds.center.x - lowerBounds.center.x) > centerXTolerance)
         {
             return false;
         }
