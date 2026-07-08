@@ -701,6 +701,10 @@ public class PushableBoxService : ServiceBase<StandardBox>
             }
             
             physicalBoxService.CollectHorizontalChain(blocker, axis, innerChain);
+            var stackScratch = new System.Collections.Generic.List<StandardBox>();
+            physicalBoxService.CollectVerticalStackForChain(innerChain, stackScratch);
+            innerChain.AddRange(stackScratch);
+
             for (int i = 0; i < innerChain.Count; i++)
             {
                 logicalPositions.Add(innerChain[i].transform.position);
@@ -892,6 +896,10 @@ public class PushableBoxService : ServiceBase<StandardBox>
             }
 
             physicalBoxService.CollectHorizontalChain(blocker, axis, outerChain);
+            var stackScratch = new System.Collections.Generic.List<StandardBox>();
+            physicalBoxService.CollectVerticalStackForChain(outerChain, stackScratch);
+            outerChain.AddRange(stackScratch);
+
             for (int i = 0; i < outerChain.Count; i++)
             {
                 logicalPositions.Add(outerChain[i].transform.position);
@@ -1039,6 +1047,10 @@ public class PushableBoxService : ServiceBase<StandardBox>
                                     break;
                                 }
                             }
+
+                            var stackScratch = new System.Collections.Generic.List<StandardBox>();
+                            physicalBoxService.CollectVerticalStackForChain(innerChain, stackScratch);
+                            innerChain.AddRange(stackScratch);
                             UnityEngine.Debug.Log($"[PushableBoxService] Entering box '{box.name}' teleporting to {P_target_end}. Found blocker '{blocker.name}'. Collected chain of size {innerChain.Count}.");
                         }
                         else
@@ -1128,6 +1140,10 @@ public class PushableBoxService : ServiceBase<StandardBox>
                                     break;
                                 }
                             }
+
+                            var stackScratch = new System.Collections.Generic.List<StandardBox>();
+                            physicalBoxService.CollectVerticalStackForChain(innerChain, stackScratch);
+                            innerChain.AddRange(stackScratch);
                             UnityEngine.Debug.Log($"[PushableBoxService] Exiting box '{box.name}' teleporting to {P_target_end}. Found blocker '{blocker.name}'. Collected chain of size {innerChain.Count}.");
                         }
                         else

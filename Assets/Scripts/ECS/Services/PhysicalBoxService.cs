@@ -1022,7 +1022,7 @@ public class PhysicalBoxService : ServiceBase<StandardBox>
     /// 对给定 chain 各成员，向上 BFS 收集纵向堆叠成员（chain 自身不包含在 outGroup 里）。
     /// 用于 chain 整组推动后，让上方堆叠 box（含横跨多个 chain 成员的）按 lower_only 同步跟随。
     /// </summary>
-    private void CollectVerticalStackForChain(List<StandardBox> chain, List<StandardBox> outGroup)
+    public void CollectVerticalStackForChain(List<StandardBox> chain, List<StandardBox> outGroup)
     {
         outGroup.Clear();
         if (chain == null || chain.Count == 0)
