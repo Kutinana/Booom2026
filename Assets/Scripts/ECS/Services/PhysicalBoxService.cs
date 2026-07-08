@@ -115,7 +115,7 @@ public class PhysicalBoxService : ServiceBase<StandardBox>
                 continue;
             }
 
-            if (hasPushableBoxService && pushableBoxService.IsBoxTransitioning(box))
+            if (hasPushableBoxService && pushableBoxService.ShouldSkipGravityForTransition(box))
             {
                 continue;
             }

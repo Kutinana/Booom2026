@@ -533,6 +533,14 @@ public class WorldBoxExitBlockerService : ServiceBase
             return false;
         }
 
+        if (ServiceBase.TryGet(out PhysicalBoxService physicalBoxService))
+        {
+            if (physicalBoxService.IsFalling(candidate) || !physicalBoxService.IsGrounded(candidate))
+            {
+                return false;
+            }
+        }
+
         return candidate.Bounds.size != Vector3.zero;
     }
 
@@ -545,20 +553,6 @@ public class WorldBoxExitBlockerService : ServiceBase
         out string rejectReason)
     {
         rejectReason = GetStaticBlockingRejectReason(hit, worldBox, queryBounds);
-
-        if (rejectReason == "scene movable item")
-        {
-            StandardBox standardBox = hit.GetComponentInParent<StandardBox>();
-
-            // 允许普通箱子作为“向下离开世界”时的阻挡
-            if (direction == BoxPushDirection.Down &&
-                standardBox != null &&
-                !(standardBox is WorldBox))
-            {
-                rejectReason = null;
-            }
-        }
-
         return rejectReason == null;
     }
 
@@ -625,6 +619,7 @@ public class WorldBoxExitBlockerService : ServiceBase
         bool use3D,
         string blockingTag)
     {
+        UnityEngine.Debug.Log($"[WorldBoxExitBlockerService] RefreshWall called! WorldBox: {worldBox?.name}, Owner: {owner?.name}, Direction: {direction}, BlockingTag: {blockingTag}");
         Bounds wallBounds = CalculateOuterWallBounds(worldBox, direction, outerBounds, actorBounds);
         TemporaryWall wall = GetOrCreateWall(worldBox, owner, out bool created);
         GameObject wallObject = wall.GameObject;
