@@ -348,6 +348,7 @@ public class PushableBoxService : ServiceBase<StandardBox>
             }
         }
 
+        UnityEngine.Debug.Log($"[PushableBoxService] TopAutoEntering: Box '{box.name}' instantly falling into WorldBox '{worldBox.name}' from top. TargetPos: {targetPosition}");
         MoveBoxToInner(box, targetPosition, worldBox);
         TypeEventSystem.Global.Send<OnOuterToInnerEvent>();
         return true;
@@ -507,7 +508,10 @@ public class PushableBoxService : ServiceBase<StandardBox>
         Bounds outerBounds, Bounds boxBounds, System.Collections.Generic.HashSet<StandardBox> visited = null)
     {
         if (visited == null) visited = new System.Collections.Generic.HashSet<StandardBox>();
-        if (!visited.Add(box)) return false; // Loop detected, not blocked by itself
+        if (!visited.Add(box))
+        {
+            return false; // Loop detected, not blocked by itself
+        }
 
         Transform entrance = worldBox.GetOuterEntrance(direction.Opposite());
         if (entrance == null)
@@ -555,21 +559,21 @@ public class PushableBoxService : ServiceBase<StandardBox>
 
         blockerService.Clear(worldBox, box);
 
-        // Find the immediate blocker at the entrance inside the WorldBox
-        if (!blockerService.TryGetTeleportTargetStandardBoxBlocker(
-                movableTargetBounds,
-                worldBox,
-                ignoredBox: box,
-                box.CollisionMask,
-                use2D,
-                use3D,
-                out StandardBox blocker))
+        var innerChain = new System.Collections.Generic.List<StandardBox>();
+        var logicalPositions = new System.Collections.Generic.List<Vector3>();
+        BoxTransitionState phantomTransition = null;
+
+        for (int i = 0; i < activeTransitions.Count; i++)
         {
-            // No blocker!
-            return false;
+            var otherTransition = activeTransitions[i];
+            if (otherTransition.Box != box && 
+                Vector3.Distance(otherTransition.P_target_end, movableTargetBounds.center) < 0.1f)
+            {
+                phantomTransition = otherTransition;
+                break;
+            }
         }
 
-        // Collect the inner chain starting from the blocker
         Vector3 axis = direction == BoxPushDirection.Right ? Vector3.right :
             direction == BoxPushDirection.Left ? Vector3.left :
             direction == BoxPushDirection.Up ? Vector3.up : Vector3.down;
@@ -579,8 +583,51 @@ public class PushableBoxService : ServiceBase<StandardBox>
             return true;
         }
 
-        var innerChain = new System.Collections.Generic.List<StandardBox>();
-        physicalBoxService.CollectHorizontalChain(blocker, axis, innerChain);
+        if (phantomTransition != null)
+        {
+            innerChain.Add(phantomTransition.Box);
+            logicalPositions.Add(phantomTransition.P_target_end);
+            
+            for (int i = 0; i < phantomTransition.InnerChain.Count; i++)
+            {
+                StandardBox phantomMember = phantomTransition.InnerChain[i];
+                innerChain.Add(phantomMember);
+                
+                Vector3 finalPos = phantomTransition.InnerChainStartPositions[i] + axis * phantomTransition.Width;
+                if (Mathf.Abs(axis.x) > 0.5f)
+                {
+                    finalPos.y = phantomMember.transform.position.y;
+                    finalPos.z = phantomMember.transform.position.z;
+                }
+                else if (Mathf.Abs(axis.y) > 0.5f)
+                {
+                    finalPos.x = phantomMember.transform.position.x;
+                    finalPos.z = phantomMember.transform.position.z;
+                }
+                logicalPositions.Add(finalPos);
+            }
+        }
+        else
+        {
+            // 2. Find the immediate physical blocker at the entrance inside the WorldBox
+            if (!blockerService.TryGetTeleportTargetStandardBoxBlocker(
+                    movableTargetBounds,
+                    worldBox,
+                    ignoredBox: box,
+                    box.CollisionMask,
+                    use2D,
+                    use3D,
+                    out StandardBox blocker))
+            {
+                return false;
+            }
+
+            physicalBoxService.CollectHorizontalChain(blocker, axis, innerChain);
+            for (int i = 0; i < innerChain.Count; i++)
+            {
+                logicalPositions.Add(innerChain[i].transform.position);
+            }
+        }
 
         // 扩展忽略列表：合并 innerChain 与所有 WorldBox 内部的 StandardBox
         var extendedIgnore = new System.Collections.Generic.List<StandardBox>();
@@ -605,10 +652,10 @@ public class PushableBoxService : ServiceBase<StandardBox>
                     ? member.Grid.cellSize.x
                     : member.Grid.cellSize.y);
 
-            if (physicalBoxService.CastSingle(member, member.transform.position, axis, memberCellSize, out _,
+            Vector3 logicalPos = logicalPositions[innerChain.IndexOf(member)];
+            if (physicalBoxService.CastSingle(member, logicalPos, axis, memberCellSize, out _,
                     extendedIgnore))
             {
-                UnityEngine.Debug.Log($"[PushableBoxService] IsInnerDestinationBlocked: innerChain member {member.name} is physically blocked!");
                 return true;
             }
 
@@ -616,10 +663,8 @@ public class PushableBoxService : ServiceBase<StandardBox>
             if (IsTouchingOuterBoundsForExiting(worldBox.OuterBounds, member.Bounds, direction,
                     OuterEdgeBlockerTouchTolerance))
             {
-                UnityEngine.Debug.Log($"[PushableBoxService] IsInnerDestinationBlocked: Box {member.name} is touching OuterBounds! Checking IsOuterDestinationBlocked.");
                 if (IsOuterDestinationBlocked(member, worldBox, direction, visited))
                 {
-                    UnityEngine.Debug.Log($"[PushableBoxService] IsInnerDestinationBlocked: Box {member.name} is blocked at outer destination!");
                     return true; // Blocked!
                 }
             }
@@ -670,10 +715,16 @@ public class PushableBoxService : ServiceBase<StandardBox>
     private bool IsOuterDestinationBlocked(StandardBox box, WorldBox worldBox, BoxPushDirection direction, System.Collections.Generic.HashSet<StandardBox> visited)
     {
         if (visited == null) visited = new System.Collections.Generic.HashSet<StandardBox>();
-        if (!visited.Add(box)) return false; // Loop detected, not blocked by itself
+        if (!visited.Add(box))
+        {
+            return false; // Loop detected, not blocked by itself
+        }
 
         Transform entrance = worldBox.GetOuterEntrance(direction);
-        if (entrance == null) return true;
+        if (entrance == null)
+        {
+            return true;
+        }
 
         Vector3 targetPosition = GetOuterTargetPosition(box, worldBox, direction);
 
@@ -699,26 +750,70 @@ public class PushableBoxService : ServiceBase<StandardBox>
             return true;
         }
 
-        if (!blockerService.TryGetTeleportTargetStandardBoxBlocker(
-                movableTargetBounds, worldBox, ignoredBox: box, worldBox.CollisionMask, use2D, use3D, checkingInner: false, out StandardBox blocker))
-        {
-            UnityEngine.Debug.Log($"[PushableBoxService] IsOuterDestinationBlocked: No blocker found at {movableTargetBounds.center}.");
-            return false;
-        }
+        // 1. Check if the destination is occupied by a phantom transition (visual clone)
+        var outerChain = new System.Collections.Generic.List<StandardBox>();
+        var logicalPositions = new System.Collections.Generic.List<Vector3>();
+        BoxTransitionState phantomTransition = null;
 
-        UnityEngine.Debug.Log($"[PushableBoxService] IsOuterDestinationBlocked: Found blocker {blocker.name} at {movableTargetBounds.center}. Collecting outerChain.");
-
-        if (!ServiceBase.TryGet(out PhysicalBoxService physicalBoxService))
+        for (int i = 0; i < activeTransitions.Count; i++)
         {
-            return true;
+            var otherTransition = activeTransitions[i];
+            if (otherTransition.Box != box && 
+                Vector3.Distance(otherTransition.P_target_end, movableTargetBounds.center) < 0.1f)
+            {
+                phantomTransition = otherTransition;
+                break;
+            }
         }
 
         Vector3 axis = direction == BoxPushDirection.Right ? Vector3.right :
             direction == BoxPushDirection.Left ? Vector3.left :
             direction == BoxPushDirection.Up ? Vector3.up : Vector3.down;
 
-        var outerChain = new System.Collections.Generic.List<StandardBox>();
-        physicalBoxService.CollectHorizontalChain(blocker, axis, outerChain);
+        if (!ServiceBase.TryGet(out PhysicalBoxService physicalBoxService))
+        {
+            return true;
+        }
+
+        if (phantomTransition != null)
+        {
+            outerChain.Add(phantomTransition.Box);
+            logicalPositions.Add(phantomTransition.P_target_end);
+            
+            for (int i = 0; i < phantomTransition.InnerChain.Count; i++)
+            {
+                StandardBox phantomMember = phantomTransition.InnerChain[i];
+                outerChain.Add(phantomMember);
+                
+                Vector3 finalPos = phantomTransition.InnerChainStartPositions[i] + axis * phantomTransition.Width;
+                if (Mathf.Abs(axis.x) > 0.5f)
+                {
+                    finalPos.y = phantomMember.transform.position.y;
+                    finalPos.z = phantomMember.transform.position.z;
+                }
+                else if (Mathf.Abs(axis.y) > 0.5f)
+                {
+                    finalPos.x = phantomMember.transform.position.x;
+                    finalPos.z = phantomMember.transform.position.z;
+                }
+                logicalPositions.Add(finalPos);
+            }
+        }
+        else
+        {
+            // 2. Find the immediate physical blocker
+            if (!blockerService.TryGetTeleportTargetStandardBoxBlocker(
+                    movableTargetBounds, worldBox, ignoredBox: box, worldBox.CollisionMask, use2D, use3D, checkingInner: false, out StandardBox blocker))
+            {
+                return false;
+            }
+
+            physicalBoxService.CollectHorizontalChain(blocker, axis, outerChain);
+            for (int i = 0; i < outerChain.Count; i++)
+            {
+                logicalPositions.Add(outerChain[i].transform.position);
+            }
+        }
 
         var extendedIgnore = new System.Collections.Generic.List<StandardBox>();
         extendedIgnore.AddRange(outerChain);
@@ -733,9 +828,9 @@ public class PushableBoxService : ServiceBase<StandardBox>
                     ? member.Grid.cellSize.x
                     : member.Grid.cellSize.y);
 
-            if (physicalBoxService.CastSingle(member, member.transform.position, axis, memberCellSize, out _, extendedIgnore))
+            Vector3 logicalPos = logicalPositions[outerChain.IndexOf(member)];
+            if (physicalBoxService.CastSingle(member, logicalPos, axis, memberCellSize, out _, extendedIgnore))
             {
-                UnityEngine.Debug.Log($"[PushableBoxService] IsOuterDestinationBlocked: outerChain member {member.name} is physically blocked (likely by Player or wall)!");
                 return true;
             }
 
@@ -743,10 +838,8 @@ public class PushableBoxService : ServiceBase<StandardBox>
             if (IsTouchingOuterBoundsForEntering(worldBox.OuterBounds, member.Bounds, direction,
                     OuterEdgeBlockerTouchTolerance))
             {
-                UnityEngine.Debug.Log($"[PushableBoxService] IsOuterDestinationBlocked: Box {member.name} is touching OuterBounds! Checking IsInnerDestinationBlocked.");
                 if (IsInnerDestinationBlocked(member, worldBox, direction, worldBox.OuterBounds, member.Bounds, visited))
                 {
-                    UnityEngine.Debug.Log($"[PushableBoxService] IsOuterDestinationBlocked: Box {member.name} is blocked at inner destination!");
                     return true; // Blocked!
                 }
             }
@@ -988,6 +1081,7 @@ public class PushableBoxService : ServiceBase<StandardBox>
             }
         }
 
+        UnityEngine.Debug.Log($"[PushableBoxService] StartTransition: Box '{box.name}' {(isEntering ? "entering" : "exiting")} WorldBox '{worldBox.name}' from direction {direction}. StartPos: {P_start}, TargetPos: {P_target_end}");
         activeTransitions.Add(state);
     }
 
@@ -1169,7 +1263,7 @@ public class PushableBoxService : ServiceBase<StandardBox>
 
         if (state.Box != null && state.WorldBox != null)
         {
-            Debug.Log($"[PushableBoxService] CompleteTransition: IsEntering={state.IsEntering}, box={state.Box.name}, target={state.P_target_end}, innerChainCount={state.InnerChain.Count}");
+            UnityEngine.Debug.Log($"[PushableBoxService] CompleteTransition: Box '{state.Box.name}' finished {(state.IsEntering ? "entering" : "exiting")} WorldBox '{state.WorldBox.name}'. Teleporting to target: {state.P_target_end}. InnerChainCount: {state.InnerChain.Count}");
             if (state.IsEntering)
             {
                 MoveBoxToInner(state.Box, state.P_target_end, state.WorldBox);
@@ -1236,7 +1330,7 @@ public class PushableBoxService : ServiceBase<StandardBox>
 
     private static void MoveBoxToOuter(StandardBox box, Vector3 targetPosition)
     {
-        Debug.Log($"[PushableBoxService] MoveBoxToOuter: Moving {box.name} to {targetPosition}");
+        UnityEngine.Debug.Log($"[PushableBoxService] MoveBoxToOuter: Teleporting Box '{box.name}' to outer world target {targetPosition}");
         box.MoveTo(targetPosition);
         if (ServiceBase.TryGet(out PhysicalBoxService physicalBoxService))
         {
