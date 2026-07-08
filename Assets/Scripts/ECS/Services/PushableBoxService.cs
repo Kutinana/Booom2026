@@ -408,16 +408,39 @@ public class PushableBoxService : ServiceBase<StandardBox>
                     float cellSize = GetCellSize(box, pushDir);
                     Vector3 nextCenter = pushOrigin + axis * cellSize;
 
-                    if (!IsOuterDestinationBlocked(box, worldBox, pushDir, null))
+                    Bounds nextBounds = boxBounds;
+                    nextBounds.center = nextCenter;
+
+                    bool crossesOutside = false;
+                    switch (pushDir)
                     {
-                        StartTransition(box, worldBox, pushDir, isEntering: false, pushOrigin, nextCenter, cellSize);
-                        break;
+                        case BoxPushDirection.Right:
+                            crossesOutside = nextBounds.max.x > outerBounds.max.x + OuterEdgeBlockerTouchTolerance;
+                            break;
+                        case BoxPushDirection.Left:
+                            crossesOutside = nextBounds.min.x < outerBounds.min.x - OuterEdgeBlockerTouchTolerance;
+                            break;
+                        case BoxPushDirection.Up:
+                            crossesOutside = nextBounds.max.y > outerBounds.max.y + OuterEdgeBlockerTouchTolerance;
+                            break;
+                        case BoxPushDirection.Down:
+                            crossesOutside = nextBounds.min.y < outerBounds.min.y - OuterEdgeBlockerTouchTolerance;
+                            break;
                     }
-                    else
+
+                    if (crossesOutside)
                     {
-                        if (!TryRefreshInnerContactExitBlocker(outerBounds, worldBox, box, boxBounds, pushDir))
+                        if (!IsOuterDestinationBlocked(box, worldBox, pushDir, null))
                         {
-                            ClearBoxExitBlocker(worldBox, box);
+                            StartTransition(box, worldBox, pushDir, isEntering: false, pushOrigin, nextCenter, cellSize);
+                            break;
+                        }
+                        else
+                        {
+                            if (!TryRefreshInnerContactExitBlocker(outerBounds, worldBox, box, boxBounds, pushDir))
+                            {
+                                ClearBoxExitBlocker(worldBox, box);
+                            }
                         }
                     }
                 }
@@ -633,6 +656,11 @@ public class PushableBoxService : ServiceBase<StandardBox>
                 return false;
             }
 
+            if (physicalBoxService.IsFalling(blocker) || !physicalBoxService.IsGrounded(blocker))
+            {
+                return false;
+            }
+            
             physicalBoxService.CollectHorizontalChain(blocker, axis, innerChain);
             for (int i = 0; i < innerChain.Count; i++)
             {
@@ -819,6 +847,11 @@ public class PushableBoxService : ServiceBase<StandardBox>
                 return false;
             }
 
+            if (physicalBoxService.IsFalling(blocker) || !physicalBoxService.IsGrounded(blocker))
+            {
+                return false;
+            }
+
             physicalBoxService.CollectHorizontalChain(blocker, axis, outerChain);
             for (int i = 0; i < outerChain.Count; i++)
             {
@@ -950,7 +983,7 @@ public class PushableBoxService : ServiceBase<StandardBox>
                 {
                     if (ServiceBase.TryGet(out PhysicalBoxService physicalBoxService))
                     {
-                        if (!physicalBoxService.IsFalling(blocker))
+                        if (!(physicalBoxService.IsFalling(blocker) || !physicalBoxService.IsGrounded(blocker)))
                         {
                             innerChain = new System.Collections.Generic.List<StandardBox>();
                             physicalBoxService.CollectHorizontalChain(blocker, axis, innerChain);
@@ -958,8 +991,26 @@ public class PushableBoxService : ServiceBase<StandardBox>
                             {
                                 innerChain.Add(blocker);
                             }
+
+                            for (int i = 0; i < innerChain.Count; i++)
+                            {
+                                if (!physicalBoxService.IsGrounded(innerChain[i]))
+                                {
+                                    innerChain.RemoveRange(i, innerChain.Count - i);
+                                    break;
+                                }
+                            }
+                            UnityEngine.Debug.Log($"[PushableBoxService] Entering box '{box.name}' teleporting to {P_target_end}. Found blocker '{blocker.name}'. Collected chain of size {innerChain.Count}.");
+                        }
+                        else
+                        {
+                            UnityEngine.Debug.Log($"[PushableBoxService] Entering box '{box.name}' found blocker '{blocker.name}' at {P_target_end}, but it is falling or suspended. Did not collect chain.");
                         }
                     }
+                }
+                else
+                {
+                    UnityEngine.Debug.Log($"[PushableBoxService] Entering box '{box.name}' teleporting to {P_target_end}. No blocker found at destination.");
                 }
             }
         }
@@ -1021,7 +1072,7 @@ public class PushableBoxService : ServiceBase<StandardBox>
                 {
                     if (ServiceBase.TryGet(out PhysicalBoxService physicalBoxService))
                     {
-                        if (!physicalBoxService.IsFalling(blocker))
+                        if (!(physicalBoxService.IsFalling(blocker) || !physicalBoxService.IsGrounded(blocker)))
                         {
                             innerChain = new System.Collections.Generic.List<StandardBox>();
                             physicalBoxService.CollectHorizontalChain(blocker, axis, innerChain);
@@ -1029,8 +1080,26 @@ public class PushableBoxService : ServiceBase<StandardBox>
                             {
                                 innerChain.Add(blocker);
                             }
+
+                            for (int i = 0; i < innerChain.Count; i++)
+                            {
+                                if (!physicalBoxService.IsGrounded(innerChain[i]))
+                                {
+                                    innerChain.RemoveRange(i, innerChain.Count - i);
+                                    break;
+                                }
+                            }
+                            UnityEngine.Debug.Log($"[PushableBoxService] Exiting box '{box.name}' teleporting to {P_target_end}. Found blocker '{blocker.name}'. Collected chain of size {innerChain.Count}.");
+                        }
+                        else
+                        {
+                            UnityEngine.Debug.Log($"[PushableBoxService] Exiting box '{box.name}' found blocker '{blocker.name}' at {P_target_end}, but it is falling or suspended. Did not collect chain.");
                         }
                     }
+                }
+                else
+                {
+                    UnityEngine.Debug.Log($"[PushableBoxService] Exiting box '{box.name}' teleporting to {P_target_end}. No blocker found at destination.");
                 }
             }
         }
@@ -1094,6 +1163,8 @@ public class PushableBoxService : ServiceBase<StandardBox>
 
         UnityEngine.Debug.Log($"[PushableBoxService] StartTransition: Box '{box.name}' {(isEntering ? "entering" : "exiting")} WorldBox '{worldBox.name}' from direction {direction}. StartPos: {P_start}, TargetPos: {P_target_end}");
         activeTransitions.Add(state);
+
+        ClearBoxExitBlocker(worldBox, box);
     }
 
     private void UpdateBoxTransition(BoxTransitionState state)
@@ -1260,14 +1331,6 @@ public class PushableBoxService : ServiceBase<StandardBox>
                 {
                     pbService.CancelLinearPush(member);
                     pbService.QueueGridAlignmentRelease(member);
-
-                    if (!pbService.IsGrounded(member))
-                    {
-                        if (!pbService.TryGetFallSpeed(member, out float currentFallSpeed) || currentFallSpeed <= 0f)
-                        {
-                            pbService.SetFallSpeed(member, 0.001f + 0.01f);
-                        }
-                    }
                 }
             }
         }
@@ -1290,14 +1353,6 @@ public class PushableBoxService : ServiceBase<StandardBox>
                 if (state.PreservedFallSpeed > 0f)
                 {
                     pbService.SetFallSpeed(state.Box, state.PreservedFallSpeed);
-                }
-
-                if (!pbService.IsGrounded(state.Box))
-                {
-                    if (!pbService.TryGetFallSpeed(state.Box, out float currentFallSpeed) || currentFallSpeed <= 0f)
-                    {
-                        pbService.SetFallSpeed(state.Box, 0.001f + 0.01f);
-                    }
                 }
             }
         }

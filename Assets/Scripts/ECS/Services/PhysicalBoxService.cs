@@ -741,11 +741,22 @@ public class PhysicalBoxService : ServiceBase<StandardBox>
                     continue;
                 }
 
-                if (ignoreBoxes != null && ServiceBase.TryGet(out WorldBoxExitBlockerService blockerService2D))
+                if (ServiceBase.TryGet(out WorldBoxExitBlockerService blockerService2D))
                 {
-                    if (blockerService2D.IsExitBlocker2D(hit2D.collider, out WorldBox wb) && ignoreBoxes.Contains(wb))
+                    if (blockerService2D.IsExitBlocker2D(hit2D.collider, out WorldBox wb, out BoxPushDirection wallDir))
                     {
-                        continue;
+                        bool castIsHorizontal = Mathf.Abs(direction.x) > 0.5f;
+                        bool wallIsHorizontal = wallDir == BoxPushDirection.Left || wallDir == BoxPushDirection.Right;
+
+                        if (castIsHorizontal != wallIsHorizontal)
+                        {
+                            continue;
+                        }
+
+                        if (ignoreBoxes != null && ignoreBoxes.Contains(wb))
+                        {
+                            continue;
+                        }
                     }
                 }
 
@@ -831,7 +842,7 @@ public class PhysicalBoxService : ServiceBase<StandardBox>
                 if (hit2D.distance < bestDistance)
                 {
                     bestDistance = hit2D.distance;
-                    hit = new RayHit(bestDistance, hitPlayer);
+                    hit = new RayHit(bestDistance, hitPlayer, hit2D.collider.name);
                 }
             }
         }
@@ -848,11 +859,22 @@ public class PhysicalBoxService : ServiceBase<StandardBox>
                     continue;
                 }
 
-                if (ignoreBoxes != null && ServiceBase.TryGet(out WorldBoxExitBlockerService blockerService3D))
+                if (ServiceBase.TryGet(out WorldBoxExitBlockerService blockerService3D))
                 {
-                    if (blockerService3D.IsExitBlocker3D(hit3D.collider, out WorldBox wb) && ignoreBoxes.Contains(wb))
+                    if (blockerService3D.IsExitBlocker3D(hit3D.collider, out WorldBox wb, out BoxPushDirection wallDir))
                     {
-                        continue;
+                        bool castIsHorizontal = Mathf.Abs(direction.x) > 0.5f;
+                        bool wallIsHorizontal = wallDir == BoxPushDirection.Left || wallDir == BoxPushDirection.Right;
+
+                        if (castIsHorizontal != wallIsHorizontal)
+                        {
+                            continue;
+                        }
+
+                        if (ignoreBoxes != null && ignoreBoxes.Contains(wb))
+                        {
+                            continue;
+                        }
                     }
                 }
 
@@ -931,7 +953,7 @@ public class PhysicalBoxService : ServiceBase<StandardBox>
                 if (hit3D.distance < bestDistance)
                 {
                     bestDistance = hit3D.distance;
-                    hit = new RayHit(bestDistance, hitPlayer);
+                    hit = new RayHit(bestDistance, hitPlayer, hit3D.collider.name);
                 }
             }
         }
@@ -1869,6 +1891,13 @@ public class PhysicalBoxService : ServiceBase<StandardBox>
             if (follower == null || follower == box) continue;
 
             Vector3 offset = follower.transform.position - box.transform.position;
+            if (follower.Grid != null)
+            {
+                float cx = follower.Grid.cellSize.x;
+                float cy = follower.Grid.cellSize.y;
+                if (cx > 0f) offset.x = Mathf.Round(offset.x / cx) * cx;
+                if (cy > 0f) offset.y = Mathf.Round(offset.y / cy) * cy;
+            }
             Vector3 correctFollowerOrigin = state.OriginCellPosition + offset;
 
             if (!linearPushes.TryGetValue(follower, out LinearPushState existingFollower))
@@ -2298,11 +2327,13 @@ public class PhysicalBoxService : ServiceBase<StandardBox>
     {
         public readonly float Distance;
         public readonly PlayerController Player;
+        public readonly string HitObjectName;
 
-        public RayHit(float distance, PlayerController player)
+        public RayHit(float distance, PlayerController player, string hitObjectName = null)
         {
             Distance = distance;
             Player = player;
+            HitObjectName = hitObjectName;
         }
     }
     public bool IsFalling(StandardBox box)

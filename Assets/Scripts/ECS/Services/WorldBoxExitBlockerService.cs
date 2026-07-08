@@ -257,33 +257,47 @@ public class WorldBoxExitBlockerService : ServiceBase
         RemoveWall(new BlockerKey(worldBox, owner));
     }
 
-    public bool IsExitBlocker2D(Collider2D col, out WorldBox worldBox)
+    public bool IsExitBlocker2D(Collider2D collider, out WorldBox worldBox, out BoxPushDirection direction)
     {
         worldBox = null;
-        if (col == null) return false;
+        direction = default;
+        if (collider == null)
+        {
+            return false;
+        }
+
         foreach (KeyValuePair<BlockerKey, TemporaryWall> pair in walls)
         {
-            if (pair.Value.Collider2D == col)
+            if (pair.Value.Collider2D == collider)
             {
                 worldBox = pair.Key.WorldBox;
+                direction = pair.Value.Direction;
                 return true;
             }
         }
+
         return false;
     }
 
-    public bool IsExitBlocker3D(Collider col, out WorldBox worldBox)
+    public bool IsExitBlocker3D(Collider collider, out WorldBox worldBox, out BoxPushDirection direction)
     {
         worldBox = null;
-        if (col == null) return false;
+        direction = default;
+        if (collider == null)
+        {
+            return false;
+        }
+
         foreach (KeyValuePair<BlockerKey, TemporaryWall> pair in walls)
         {
-            if (pair.Value.Collider3D == col)
+            if (pair.Value.Collider3D == collider)
             {
                 worldBox = pair.Key.WorldBox;
+                direction = pair.Value.Direction;
                 return true;
             }
         }
+
         return false;
     }
 
@@ -993,6 +1007,7 @@ public class WorldBoxExitBlockerService : ServiceBase
     {
         return hit != null && IsTemporaryWallTransform(hit.transform);
     }
+
 
     private bool IsTemporaryWallTransform(Transform start)
     {
