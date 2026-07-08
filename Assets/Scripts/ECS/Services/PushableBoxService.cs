@@ -238,7 +238,18 @@ public class PushableBoxService : ServiceBase<StandardBox>
                     }
                     else
                     {
-                        if (!TryRefreshOuterContactExitBlocker(entryBounds, worldBox, box, boxBounds))
+                        // We only spawn the temporary wall if the WorldBox cannot be physically pushed.
+                        // PhysicalBoxService.IsChainCandidate automatically allows pushing on entrance faces,
+                        // so we just need to ensure the WorldBox is active and not frozen horizontally.
+                        bool isFrozen = worldBox.FreezeHorizontalMovement && (pushDir == BoxPushDirection.Left || pushDir == BoxPushDirection.Right);
+                        if (!worldBox.IsSceneMovableActive || isFrozen)
+                        {
+                            if (!TryRefreshOuterContactExitBlocker(entryBounds, worldBox, box, boxBounds))
+                            {
+                                ClearBoxExitBlocker(worldBox, box);
+                            }
+                        }
+                        else
                         {
                             ClearBoxExitBlocker(worldBox, box);
                         }
