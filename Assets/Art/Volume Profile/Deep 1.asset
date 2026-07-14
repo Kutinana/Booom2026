@@ -29,7 +29,7 @@ MonoBehaviour:
     m_OverrideState: 0
     m_Value: 65472
   tint:
-    m_OverrideState: 0
+    m_OverrideState: 1
     m_Value: {r: 1, g: 1, b: 1, a: 1}
   highQualityFiltering:
     m_OverrideState: 0
@@ -143,8 +143,8 @@ MonoBehaviour:
         m_Curve:
         - serializedVersion: 3
           time: 0
-          value: 0.03594774
-          inSlope: 1
+          value: 0.019400299
+          inSlope: 0
           outSlope: 1
           tangentMode: 0
           weightedMode: 0
@@ -152,9 +152,9 @@ MonoBehaviour:
           outWeight: 0
         - serializedVersion: 3
           time: 1
-          value: 1
+          value: 0.54497355
           inSlope: 1
-          outSlope: 1
+          outSlope: 0
           tangentMode: 0
           weightedMode: 0
           inWeight: 0
@@ -174,8 +174,8 @@ MonoBehaviour:
         m_Curve:
         - serializedVersion: 3
           time: 0
-          value: 0.019607842
-          inSlope: 1
+          value: 0.047619045
+          inSlope: 0
           outSlope: 1
           tangentMode: 0
           weightedMode: 0
@@ -183,9 +183,9 @@ MonoBehaviour:
           outWeight: 0
         - serializedVersion: 3
           time: 1
-          value: 0.4675051
+          value: 0.728395
           inSlope: 1
-          outSlope: 1
+          outSlope: 0
           tangentMode: 0
           weightedMode: 0
           inWeight: 0
@@ -205,8 +205,8 @@ MonoBehaviour:
         m_Curve:
         - serializedVersion: 3
           time: 0
-          value: 0.055555582
-          inSlope: 1
+          value: 0
+          inSlope: 0
           outSlope: 1
           tangentMode: 0
           weightedMode: 0
@@ -214,9 +214,9 @@ MonoBehaviour:
           outWeight: 0
         - serializedVersion: 3
           time: 1
-          value: 0.2955975
+          value: 0.41798943
           inSlope: 1
-          outSlope: 1
+          outSlope: 0
           tangentMode: 0
           weightedMode: 0
           inWeight: 0
@@ -286,7 +286,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: d7fd9488000d3734a9e00ee676215985, type: 3}
-  m_Name: Sunset
+  m_Name: Deep 1
   m_EditorClassIdentifier: 
   components:
   - {fileID: -1593178874196163540}
@@ -316,7 +316,7 @@ MonoBehaviour:
     m_Value: {x: 0.5, y: 0.5}
   intensity:
     m_OverrideState: 1
-    m_Value: 0.479
+    m_Value: 0.452
   smoothness:
     m_OverrideState: 0
     m_Value: 0.2
