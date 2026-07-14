@@ -155,9 +155,26 @@ public class GameManager : MonoSingleton<GameManager>
 
     public static bool IsWorldHubScene(string contentSceneName)
     {
-        return contentSceneName == StartContentSceneName
-            || contentSceneName == World2ContentSceneName
-            || contentSceneName == MenuSceneName;
+        if (GameConfig.Current != null && GameConfig.Current.Worlds != null)
+        {
+            foreach (var w in GameConfig.Current.Worlds)
+            {
+                if (w == null) continue;
+                
+                if (string.Equals(w.Name, contentSceneName, StringComparison.OrdinalIgnoreCase)) 
+                    return true;
+                    
+                if (!string.IsNullOrEmpty(w.ScenePath))
+                {
+                    string nameFromPath = System.IO.Path.GetFileNameWithoutExtension(w.ScenePath);
+                    if (string.Equals(nameFromPath, contentSceneName, StringComparison.OrdinalIgnoreCase)) 
+                        return true;
+                }
+            }
+        }
+
+        // 保留主菜单作为特殊 Hub 场景的硬编码，以防它没配置在 Worlds 列表里
+        return contentSceneName == MenuSceneName;
     }
 
     /// <summary>

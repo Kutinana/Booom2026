@@ -19,6 +19,9 @@ MonoBehaviour:
   - Index: 1
     Name: 
     ScenePath: World 2
+  - Index: 2
+    Name: TestWorld
+    ScenePath: A Metroidvania World Draft
   Levels:
   - Index: 0
     Name: 
