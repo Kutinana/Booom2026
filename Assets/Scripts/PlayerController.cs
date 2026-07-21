@@ -178,7 +178,7 @@ public partial class PlayerController : MonoBehaviour, ISceneMovableItem, IPoint
             {
                 m_CurrentWorldIndex = world.Index;
                 Save bootSave = new Save().DeSerialize<Save>();
-                if (bootSave.WorldPlayerLastPositions != null && bootSave.WorldPlayerLastPositions.ContainsKey(m_CurrentWorldIndex))
+                if (HasWorldRestoreTarget(bootSave, m_CurrentWorldIndex))
                 {
                     StartCoroutine(RestoreWorldPlayerPositionDeferred());
                     return;

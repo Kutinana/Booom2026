@@ -13,8 +13,10 @@ MonoBehaviour:
   m_Name: CircuitOn 9
   m_EditorClassIdentifier: 
   m_AnimatedSprites:
-  - {fileID: 577861795, guid: 8330e43ff9b2c3f45a0ea0f8226e4c03, type: 3}
-  - {fileID: 1266185684, guid: 2c06e163c045eea46bebb8cb21830f58, type: 3}
+  - {fileID: 997263389, guid: d5248cf9d45946a46884b6a1485196de, type: 3}
+  - {fileID: -418131935, guid: d5248cf9d45946a46884b6a1485196de, type: 3}
+  - {fileID: 795443576, guid: d5248cf9d45946a46884b6a1485196de, type: 3}
+  - {fileID: 476704445, guid: d5248cf9d45946a46884b6a1485196de, type: 3}
   m_MinSpeed: 10
   m_MaxSpeed: 10
   m_AnimationStartTime: 0

@@ -1702,7 +1702,7 @@ MonoBehaviour:
     m_Bits: 1
   m_VolumeTrigger: {fileID: 0}
   m_VolumeFrameworkUpdateModeOption: 2
-  m_RenderPostProcessing: 0
+  m_RenderPostProcessing: 1
   m_Antialiasing: 0
   m_AntialiasingQuality: 2
   m_StopNaN: 0
@@ -4726,6 +4726,7 @@ MonoBehaviour:
   paddingX: 0.05
   paddingY: 0.05
   outerEdgeBlockerTouchTolerance: 0.04
+  topEntranceCenterXTolerance: 0.5
 --- !u!61 &1284175442
 BoxCollider2D:
   m_ObjectHideFlags: 0
@@ -6132,6 +6133,8 @@ MonoBehaviour:
   sleepDelay: 60
   landingDustPrefab: {fileID: 0}
   landingEffectPoint: {fileID: 0}
+  JumpParticlePrefab: {fileID: 0}
+  JumpParticlePoint: {fileID: 0}
 --- !u!95 &1822326675
 Animator:
   serializedVersion: 5

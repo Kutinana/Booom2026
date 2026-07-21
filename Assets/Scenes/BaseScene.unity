@@ -155,7 +155,7 @@ MonoBehaviour:
   priority: 0
   blendDistance: 0
   weight: 1
-  sharedProfile: {fileID: 11400000, guid: a87a83d5d149423419e118078549d324, type: 2}
+  sharedProfile: {fileID: 11400000, guid: 7572ea33dae667a40be793d0c5fcd85e, type: 2}
 --- !u!4 &72759801
 Transform:
   m_ObjectHideFlags: 0
@@ -849,7 +849,7 @@ MonoBehaviour:
   m_LoadInitialOnStart: 0
   m_WaitContentReadyOnInitialLoad: 0
   m_TransitionViewBehaviour: {fileID: 1638731509}
-  m_InspectorJumpSceneName: StartScene
+  m_InspectorJumpSceneName: A Metroidvania World Draft
 --- !u!4 &477928945
 Transform:
   m_ObjectHideFlags: 0
@@ -1882,7 +1882,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 0, y: 0}
+  m_AnchoredPosition: {x: -0.7, y: 0}
   m_SizeDelta: {x: 100, y: 100}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1680985829
