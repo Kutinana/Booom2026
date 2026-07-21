@@ -703,17 +703,9 @@ public class PushableBoxService : ServiceBase<StandardBox>
             }
         }
 
-        // 扩展忽略列表：合并 innerChain 与所有 WorldBox 内部的 StandardBox
+        // Cast 时忽略本链成员，避免互相命中；与 IsOuterDestinationBlocked 对 outerChain 的处理对称。
         var extendedIgnore = new System.Collections.Generic.List<StandardBox>();
         extendedIgnore.AddRange(innerChain);
-        foreach (StandardBox registered in this.components)
-        {
-            if (registered != null && !(registered is WorldBox))
-            {
-                if (!extendedIgnore.Contains(registered))
-                    extendedIgnore.Add(registered);
-            }
-        }
 
         // Check if any member in the inner chain is blocked
         foreach (StandardBox member in innerChain)
