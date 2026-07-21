@@ -385,7 +385,6 @@ public class PushableBoxService : ServiceBase<StandardBox>
                     box.CollisionMask,
                     use2D,
                     use3D,
-                    checkingInner: true,
                     out _))
             {
                 return false;
@@ -400,7 +399,7 @@ public class PushableBoxService : ServiceBase<StandardBox>
 
         UnityEngine.Debug.Log($"[PushableBoxService] TopGravityEntering: Box '{box.name}' falling into WorldBox '{worldBox.name}' from top with gravity-driven animation. FallSpeed: {fallSpeed}, TargetPos: {targetPosition}");
         StartTransition(box, worldBox, BoxPushDirection.Down, isEntering: true,
-                        pushOrigin, nextCenter, cellSize, overrideSpeed: -1f, preservedFallSpeed: fallSpeed, isGravityDriven: true);
+                        pushOrigin, nextCenter, cellSize, preservedFallSpeed: fallSpeed, isGravityDriven: true);
         return true;
     }
 
@@ -518,8 +517,8 @@ public class PushableBoxService : ServiceBase<StandardBox>
                 Vector3 pushOrigin = box.transform.position; 
                 Vector3 nextCenter = GetSnappedEntrancePosition(box, pushOrigin + axis * cellSize);
 
-                StartTransition(box, worldBox, BoxPushDirection.Down, isEntering: false, 
-                                pushOrigin, nextCenter, cellSize, overrideSpeed: -1f, preservedFallSpeed: fallSpeed, isGravityDriven: true);
+                StartTransition(box, worldBox, BoxPushDirection.Down, isEntering: false,
+                                pushOrigin, nextCenter, cellSize, preservedFallSpeed: fallSpeed, isGravityDriven: true);
             }
         }
     }
@@ -882,7 +881,7 @@ public class PushableBoxService : ServiceBase<StandardBox>
         {
             // 2. Find the immediate physical blocker
             if (!blockerService.TryGetTeleportTargetStandardBoxBlocker(
-                    movableTargetBounds, worldBox, ignoredBox: box, worldBox.CollisionMask, use2D, use3D, checkingInner: false, out StandardBox blocker))
+                    movableTargetBounds, worldBox, ignoredBox: box, worldBox.CollisionMask, use2D, use3D, out StandardBox blocker))
             {
                 return false;
             }
@@ -934,7 +933,7 @@ public class PushableBoxService : ServiceBase<StandardBox>
     }
 
     private void StartTransition(StandardBox box, WorldBox worldBox, BoxPushDirection direction, bool isEntering,
-        Vector3 startPos, Vector3 endPos, float cellSize, float overrideSpeed = -1f, float preservedFallSpeed = 0f, bool isGravityDriven = false)
+        Vector3 startPos, Vector3 endPos, float cellSize, float preservedFallSpeed = 0f, bool isGravityDriven = false)
     {
         BoxTransitionState phantomTransition = null;
         System.Collections.Generic.List<StandardBox> innerChain = null;
@@ -1019,7 +1018,6 @@ public class PushableBoxService : ServiceBase<StandardBox>
                         box.CollisionMask,
                         use2D,
                         use3D,
-                        checkingInner: true,
                         out StandardBox blocker))
                 {
                     if (ServiceBase.TryGet(out PhysicalBoxService physicalBoxService))
@@ -1124,7 +1122,6 @@ public class PushableBoxService : ServiceBase<StandardBox>
                         worldBox.CollisionMask,
                         use2D,
                         use3D,
-                        checkingInner: false,
                         out StandardBox physicalBlocker))
                 {
                     blocker = physicalBlocker;
@@ -1219,15 +1216,11 @@ public class PushableBoxService : ServiceBase<StandardBox>
             Direction = direction,
             IsEntering = isEntering,
             VisualClone = clone,
-            CloneRenderer = cloneRenderer,
             P_start = P_start,
             P_end = P_end,
             P_target_start = P_target_start,
             P_target_end = P_target_end,
             Width = cellSize,
-            OriginalRenderer = origRenderer,
-            StartCell = box.AlignToGrid && box.Grid != null ? box.Grid.WorldToCell(P_start) : default,
-            OverrideSpeed = overrideSpeed,
             PreservedFallSpeed = preservedFallSpeed,
             IsGravityDriven = isGravityDriven
         };
@@ -1286,52 +1279,38 @@ public class PushableBoxService : ServiceBase<StandardBox>
         float progress = 0f;
         Vector3 currentPos = state.Box.transform.position;
 
-        if (state.OverrideSpeed > 0f)
-        {
-            // Autonomous Gravity Transition: Progress is driven entirely by time
-            state.Progress += (state.OverrideSpeed / totalDist) * Time.fixedDeltaTime;
-            progress = Mathf.Clamp01(state.Progress);
+        // Progress is driven by the physical box's movement along P_start → P_end
+        // (linear push origin→next cell, or gravity fall for IsGravityDriven transitions).
+        Vector3 currentVector = currentPos - state.P_start;
+        Vector3 totalDir = totalVector.normalized;
+        float dot = Vector3.Dot(currentVector, totalDir);
+        progress = Mathf.Clamp01(dot / totalDist);
 
-            if (progress >= 0.99f)
-            {
-                CompleteTransition(state);
-                return;
-            }
+        if (progress >= 0.99f)
+        {
+            CompleteTransition(state);
+            return;
         }
-        else
+
+        if (dot < -0.05f)
         {
-            // Linear Push Transition: Progress is driven by the physical box's movement
-            Vector3 currentVector = currentPos - state.P_start;
-            Vector3 totalDir = totalVector.normalized;
-            float dot = Vector3.Dot(currentVector, totalDir);
-            progress = Mathf.Clamp01(dot / totalDist);
+            CancelTransition(state);
+            return;
+        }
 
-            if (progress >= 0.99f)
+        if (progress <= 0.05f && !state.IsGravityDriven)
+        {
+            if (ServiceBase.TryGet(out PhysicalBoxService pbService))
             {
-                CompleteTransition(state);
-                return;
-            }
-
-            if (dot < -0.05f)
-            {
-                CancelTransition(state);
-                return;
-            }
-
-            if (progress <= 0.05f && !state.IsGravityDriven)
-            {
-                if (ServiceBase.TryGet(out PhysicalBoxService pbService))
+                if (!pbService.TryGetActiveLinearPushInfo(state.Box, out _, out _))
                 {
-                    if (!pbService.TryGetActiveLinearPushInfo(state.Box, out _, out _))
-                    {
-                        CancelTransition(state);
-                        return;
-                    }
+                    CancelTransition(state);
+                    return;
                 }
             }
-            
-            state.Progress = progress;
         }
+
+        state.Progress = progress;
 
         if (state.VisualClone != null)
         {
@@ -1440,7 +1419,7 @@ public class PushableBoxService : ServiceBase<StandardBox>
             UnityEngine.Debug.Log($"[PushableBoxService] CompleteTransition: Box '{state.Box.name}' finished {(state.IsEntering ? "entering" : "exiting")} WorldBox '{state.WorldBox.name}'. Teleporting to target: {state.P_target_end}. InnerChainCount: {state.InnerChain.Count}");
             if (state.IsEntering)
             {
-                MoveBoxToInner(state.Box, state.P_target_end, state.WorldBox);
+                MoveBoxToInner(state.Box, state.P_target_end);
                 TypeEventSystem.Global.Send<OnOuterToInnerEvent>();
             }
             else
@@ -1523,15 +1502,14 @@ public class PushableBoxService : ServiceBase<StandardBox>
         public BoxPushDirection Direction;
         public bool IsEntering;
         public GameObject VisualClone;
-        public SpriteRenderer CloneRenderer;
 
+        /// <summary>Source-side interval: physical box moves from P_start toward P_end; progress = projection along this segment.</summary>
         public Vector3 P_start;
         public Vector3 P_end;
+        /// <summary>Destination-side interval: visual clone lerps from P_target_start to P_target_end with the same progress.</summary>
         public Vector3 P_target_start;
         public Vector3 P_target_end;
         public float Width;
-
-        public SpriteRenderer OriginalRenderer;
 
         public readonly System.Collections.Generic.List<StandardBox> InnerChain =
             new System.Collections.Generic.List<StandardBox>();
@@ -1539,12 +1517,9 @@ public class PushableBoxService : ServiceBase<StandardBox>
         public readonly System.Collections.Generic.List<Vector3> InnerChainStartPositions =
             new System.Collections.Generic.List<Vector3>();
 
-        // Entering 完成判定：box 的 grid cell 变化即认为已进入
-        public Vector3Int StartCell;
-
         public float Progress = 0f;
-        public float OverrideSpeed = -1f;
         public float PreservedFallSpeed = 0f;
+        /// <summary>When true, gravity continues to drive the physical box (and thus progress); linear-push cancel checks are skipped.</summary>
         public bool IsGravityDriven = false;
     }
 
@@ -1624,7 +1599,7 @@ public class PushableBoxService : ServiceBase<StandardBox>
             use3D);
     }
 
-    private static void MoveBoxToInner(StandardBox box, Vector3 targetPosition, WorldBox worldBox)
+    private static void MoveBoxToInner(StandardBox box, Vector3 targetPosition)
     {
         box.MoveTo(targetPosition);
         if (ServiceBase.TryGet(out PhysicalBoxService physicalBoxService))

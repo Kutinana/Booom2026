@@ -95,8 +95,6 @@ public class PlayerAnimationController : MonoBehaviour
         UpdateMovementAnimation(contacts, velocity, isPushing);
         UpdateIdleVariation(contacts, velocity, isPushing);
         UpdateFlip(velocity, isPushing);
-
-
     }
 
     private void UpdateDownState(PlayerController.ContactState contacts, Vector2 velocity, bool isPushing)

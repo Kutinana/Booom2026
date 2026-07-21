@@ -335,10 +335,9 @@ public class WorldBox : StandardBox
             bool use3D = playerCollider3D != null;
 
             // 入口处有 box：尝试将其向 entry 方向推动一格；能推动则可进入，不能则拒绝。
-            // 优先处理 owned box（checkingInner），其次是非 owned box。
             if (blockerService.TryGetTeleportTargetStandardBoxBlocker(
                 targetBounds, this, ignoredBox: null, CollisionMask,
-                use2D, use3D,  out StandardBox blocker))
+                use2D, use3D, out StandardBox blocker))
             {
 #if UNITY_EDITOR
                 Debug.Log($"[WorldBox] MovePlayerToInnerSide: blocker={blocker.name} pos={blocker.transform.position} direction={direction}", this);
@@ -449,27 +448,6 @@ public class WorldBox : StandardBox
             !TryRefreshExitBlocker(direction, outerBounds, innerBounds, playerBounds))
         {
             ClearExitBlocker();
-            TrySetPushableIfInnerBlockedByBox(direction, innerBounds, playerBounds);
-        }
-    }
-
-    private void TrySetPushableIfInnerBlockedByBox(BoxPushDirection direction, Bounds innerBounds, Bounds playerBounds)
-    {
-        if (!TryGetInnerTargetBounds(direction, outerBounds: CalculateBounds(OuterQuadCollider), innerBounds, playerBounds, out Bounds targetBounds))
-            return;
-
-        WorldBoxExitBlockerService service = GetExitBlockerService();
-        if (service == null) return;
-
-        bool use2D = playerCollider2D != null;
-        bool use3D = playerCollider3D != null;
-        if (service.TryGetTeleportTargetStandardBoxBlocker(
-            targetBounds, this, ignoredBox: null, CollisionMask,
-            use2D, use3D,  out _) ||
-            service.TryGetTeleportTargetStandardBoxBlocker(
-            targetBounds, this, ignoredBox: null, CollisionMask,
-            use2D, use3D,  out _))
-        {
         }
     }
 
@@ -622,43 +600,6 @@ public class WorldBox : StandardBox
         }
 
         exitBlockerService?.Clear(this);
-    }
-
-    private bool TryClearTeleportTargetStandardBoxBlocker(
-        Bounds targetBounds,
-        BoxPushDirection pushDirection,
-        GameObject pusher,
-        StandardBox ignoredBox,
-        bool use2D,
-        bool use3D,
-        bool checkingInner)
-    {
-        WorldBoxExitBlockerService service = GetExitBlockerService();
-        if (service == null)
-        {
-            return true;
-        }
-
-        if (!service.TryGetTeleportTargetStandardBoxBlocker(
-            targetBounds,
-            this,
-            ignoredBox,
-            CollisionMask,
-            use2D,
-            use3D,
-            checkingInner,
-            out StandardBox blocker))
-        {
-            return true;
-        }
-
-        if (TryPushEntranceBlocker(blocker, pushDirection))
-        {
-            return true;
-        }
-
-        TryPushWorldBoxFromBlockedTeleportTarget(pushDirection, pusher);
-        return false;
     }
 
     private bool TryPushWorldBoxFromBlockedTeleportTarget(BoxPushDirection pushDirection, GameObject pusher)
@@ -975,7 +916,7 @@ public class WorldBox : StandardBox
 
             if (blockerService.TryGetTeleportTargetStandardBoxBlocker(
                 targetBounds, this, ignoredBox: null, CollisionMask,
-                use2D, use3D, checkingInner: false, out StandardBox blocker))
+                use2D, use3D, out StandardBox blocker))
             {
                 if (!TryPushEntranceBlocker(blocker, pushDirection))
                 {
@@ -985,7 +926,7 @@ public class WorldBox : StandardBox
 
             if (blockerService.TryGetTeleportTargetStandardBoxBlocker(
                 targetBounds, this, ignoredBox: null, CollisionMask,
-                use2D, use3D, checkingInner: false, out _))
+                use2D, use3D, out _))
             {
                 return false;
             }
@@ -1017,7 +958,7 @@ public class WorldBox : StandardBox
 
             if (blockerService.TryGetTeleportTargetStandardBoxBlocker(
                 targetBounds, this, ignoredBox: null, CollisionMask,
-                use2D, use3D, checkingInner: false, out StandardBox blocker))
+                use2D, use3D, out StandardBox blocker))
             {
                 if (!TryPushEntranceBlocker(blocker, pushDirection))
                 {
@@ -1027,7 +968,7 @@ public class WorldBox : StandardBox
 
             if (blockerService.TryGetTeleportTargetStandardBoxBlocker(
                 targetBounds, this, ignoredBox: null, CollisionMask,
-                use2D, use3D, checkingInner: false, out _))
+                use2D, use3D, out _))
             {
                 return false;
             }

@@ -164,7 +164,7 @@ public class WorldBoxExitBlockerService : ServiceBase
         out StandardBox blocker)
     {
         return TryGetTeleportTargetStandardBoxBlockerInternal(targetBounds, worldBox, ignoredBox, blockingMask, use2D,
-            use3D, false, out blocker);
+            use3D, out blocker);
     }
 
     private bool TryGetTeleportTargetStandardBoxBlockerInternal(
@@ -174,7 +174,6 @@ public class WorldBoxExitBlockerService : ServiceBase
         LayerMask blockingMask,
         bool use2D,
         bool use3D,
-        bool checkingInner,
         out StandardBox blocker)
     {
         blocker = null;
@@ -207,20 +206,6 @@ public class WorldBoxExitBlockerService : ServiceBase
         }
 
         return false;
-    }
-
-    public bool TryGetTeleportTargetStandardBoxBlocker(
-        Bounds targetBounds,
-        WorldBox worldBox,
-        StandardBox ignoredBox,
-        LayerMask blockingMask,
-        bool use2D,
-        bool use3D,
-        bool checkingInner,
-        out StandardBox blocker)
-    {
-        return TryGetTeleportTargetStandardBoxBlockerInternal(targetBounds, worldBox, ignoredBox, blockingMask, use2D,
-            use3D, checkingInner, out blocker);
     }
 
     public void Clear(WorldBox worldBox)

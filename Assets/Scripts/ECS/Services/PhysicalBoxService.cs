@@ -1877,11 +1877,12 @@ public class PhysicalBoxService : ServiceBase<StandardBox>
 
             SendEvent(new BoxPhysicalPushEvent(box, direction, true, false, oldOrigin, newOrigin));
             // 注：此处不再对 box 自身发送 BoxPushAttemptEvent（box 已有 active state，OnPushAttempted 会直接跳过）。
-            // WorldBox 过渡由 PushableBoxService 在 CheckAndTryTeleportAllPushableBoxes 中通过 follower state 检测。
+            // WorldBox 过渡由 WorldBox.FixedUpdate → PushableBoxService.TryTriggerEntering/Exiting
+            // 通过 TryGetActiveLinearPushInfo（含 follower state）检测。
         }
 
         // === 为 chain 中非 root 的成员注册/更新 follower LinearPushState ===
-        // PushableBoxService.CheckAndTryTeleportAllPushableBoxesWithOuterBoundsToInner 通过
+        // PushableBoxService.TryTriggerEntering / TryTriggerExiting 通过
         // TryGetActiveLinearPushInfo 扫描，只有具备 active state 的 box 才会被检测。
         // chain follower box 由 root 带动，在此处将其 OriginCellPosition 与 root 完美对齐并同步，
         // 避免物理误差累积导致传送进度卡死。
