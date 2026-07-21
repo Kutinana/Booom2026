@@ -258,24 +258,8 @@ public class PushableBoxService : ServiceBase<StandardBox>
                         StartTransition(box, worldBox, pushDir, isEntering: true, pushOrigin, nextCenter, cellSize);
                         break;
                     }
-                    else
-                    {
-                        // We only spawn the temporary wall if the WorldBox cannot be physically pushed.
-                        // PhysicalBoxService.IsChainCandidate automatically allows pushing on entrance faces,
-                        // so we just need to ensure the WorldBox is active and not frozen horizontally.
-                        bool isFrozen = worldBox.FreezeHorizontalMovement && (pushDir == BoxPushDirection.Left || pushDir == BoxPushDirection.Right);
-                        if (!worldBox.IsSceneMovableActive || isFrozen)
-                        {
-                            if (!TryRefreshOuterContactExitBlocker(entryBounds, worldBox, box, boxBounds))
-                            {
-                                ClearBoxExitBlocker(worldBox, box);
-                            }
-                        }
-                        else
-                        {
-                            ClearBoxExitBlocker(worldBox, box);
-                        }
-                    }
+
+                    ApplyEnterBlockedFeedback(entryBounds, worldBox, box, boxBounds, pushDir);
                 }
             }
         }
@@ -362,9 +346,8 @@ public class PushableBoxService : ServiceBase<StandardBox>
             bool use2D = box.Collider2D != null;
             bool use3D = box.Collider3D != null;
 
-            if (blockerService.TryRefreshBlockerForStaticInnerHit(
+            if (blockerService.QueryInnerExitStaticallyBlocked(
                     worldBox,
-                    box,
                     BoxPushDirection.Down,
                     entryBounds,
                     targetBounds,
@@ -373,10 +356,21 @@ public class PushableBoxService : ServiceBase<StandardBox>
                     use2D,
                     use3D))
             {
+                // Trigger-failure feedback only — keep query paths side-effect free.
+                blockerService.TryRefreshBlockerForStaticInnerHit(
+                    worldBox,
+                    box,
+                    BoxPushDirection.Down,
+                    entryBounds,
+                    targetBounds,
+                    boxBounds,
+                    box.CollisionMask,
+                    use2D,
+                    use3D);
                 return false;
             }
 
-            blockerService.Clear(worldBox, box);
+            ClearBoxExitBlocker(worldBox, box);
 
             if (blockerService.TryGetTeleportTargetStandardBoxBlocker(
                     movableTargetBounds,
@@ -576,6 +570,11 @@ public class PushableBoxService : ServiceBase<StandardBox>
     }
 
 
+    /// <summary>
+    /// 只读：进入 WorldBox 的内侧落点是否被阻挡。不创建/清除 ExitBlocker 临时墙。
+    /// 刷墙请在 trigger 失败路径调用 <see cref="ApplyEnterBlockedFeedback"/> 或
+    /// <see cref="WorldBoxExitBlockerService.TryRefreshBlockerForStaticInnerHit"/>。
+    /// </summary>
     public bool IsInnerDestinationBlocked(StandardBox box, WorldBox worldBox, BoxPushDirection direction,
         Bounds outerBounds, Bounds boxBounds, System.Collections.Generic.HashSet<StandardBox> visited = null)
     {
@@ -615,9 +614,8 @@ public class PushableBoxService : ServiceBase<StandardBox>
 
         bool use2D = box.Collider2D != null;
         bool use3D = box.Collider3D != null;
-        if (blockerService.TryRefreshBlockerForStaticInnerHit(
+        if (blockerService.QueryInnerExitStaticallyBlocked(
                 worldBox,
-                box,
                 direction,
                 outerBounds,
                 targetBounds,
@@ -628,8 +626,6 @@ public class PushableBoxService : ServiceBase<StandardBox>
         {
             return true;
         }
-
-        blockerService.Clear(worldBox, box);
 
         var innerChain = new System.Collections.Generic.List<StandardBox>();
         var logicalPositions = new System.Collections.Generic.List<Vector3>();
@@ -790,6 +786,9 @@ public class PushableBoxService : ServiceBase<StandardBox>
         return targetPosition;
     }
 
+    /// <summary>
+    /// 只读：退出 WorldBox 的外侧落点是否被阻挡。不创建/清除 ExitBlocker 临时墙。
+    /// </summary>
     private bool IsOuterDestinationBlocked(StandardBox box, WorldBox worldBox, BoxPushDirection direction, System.Collections.Generic.HashSet<StandardBox> visited)
     {
         if (visited == null) visited = new System.Collections.Generic.HashSet<StandardBox>();
@@ -1523,6 +1522,34 @@ public class PushableBoxService : ServiceBase<StandardBox>
         public bool IsGravityDriven = false;
     }
 
+
+    /// <summary>
+    /// Enter trigger 失败时的反馈：WorldBox 不可吸收该推力时刷临时墙，否则清除。
+    /// 勿从 <see cref="IsInnerDestinationBlocked"/> 等纯查询路径调用。
+    /// </summary>
+    private static void ApplyEnterBlockedFeedback(
+        Bounds outerBounds,
+        WorldBox worldBox,
+        StandardBox box,
+        Bounds boxBounds,
+        BoxPushDirection pushDir)
+    {
+        // PhysicalBoxService.IsChainCandidate 在入口可进时不把 WorldBox 收进推链；
+        // 此处仅在 WorldBox 无法被推走时才用墙挡住入口。
+        bool isFrozen = worldBox.FreezeHorizontalMovement &&
+                        (pushDir == BoxPushDirection.Left || pushDir == BoxPushDirection.Right);
+        if (!worldBox.IsSceneMovableActive || isFrozen)
+        {
+            if (!TryRefreshOuterContactExitBlocker(outerBounds, worldBox, box, boxBounds))
+            {
+                ClearBoxExitBlocker(worldBox, box);
+            }
+        }
+        else
+        {
+            ClearBoxExitBlocker(worldBox, box);
+        }
+    }
 
     private static bool TryRefreshOuterContactExitBlocker(
         Bounds outerBounds,

@@ -57,6 +57,9 @@ public class WorldBoxExitBlockerService : ServiceBase
             use3D);
     }
 
+    /// <summary>
+    /// 若内侧落点有静态阻挡则创建/刷新临时墙。判定逻辑与 <see cref="QueryInnerExitStaticallyBlocked"/> 一致。
+    /// </summary>
     public bool TryRefreshBlockerForStaticInnerHit(
         WorldBox worldBox,
         UnityEngine.Object owner,
@@ -68,23 +71,16 @@ public class WorldBoxExitBlockerService : ServiceBase
         bool use2D,
         bool use3D)
     {
-        if (worldBox == null || outerBounds.size == Vector3.zero || innerTargetBounds.size == Vector3.zero)
-        {
-            return false;
-        }
-
-        if (!use2D && !use3D)
-        {
-            use2D = true;
-        }
-
-        if (!TryGetStaticBlockingColliderTag(innerTargetBounds, worldBox, direction, blockingMask, use2D, use3D,
+        if (!TryEvaluateStaticInnerBlock(
+                worldBox,
+                direction,
+                outerBounds,
+                innerTargetBounds,
+                actorBounds,
+                blockingMask,
+                use2D,
+                use3D,
                 out string blockingTag))
-        {
-            return false;
-        }
-
-        if (IsPlatformTag(blockingTag) && ShouldSkipOuterPlatformBlocker(direction, outerBounds, actorBounds))
         {
             return false;
         }
@@ -118,18 +114,44 @@ public class WorldBoxExitBlockerService : ServiceBase
     }
 
     /// <summary>
-    /// 只读判定内侧落点是否有静态阻挡（不创建临时墙），用于推箱子过程中检测出入口开闭状态。
+    /// 只读判定内侧落点是否有静态阻挡（不创建/清除临时墙）。
+    /// 供推箱挡路查询、chain 候选等纯查询路径使用；需要刷墙时请显式调用
+    /// <see cref="TryRefreshBlockerForStaticInnerHit"/>。
     /// </summary>
     public bool QueryInnerExitStaticallyBlocked(
         WorldBox worldBox,
         BoxPushDirection direction,
         Bounds outerBounds,
         Bounds innerTargetBounds,
-        Bounds playerBounds,
+        Bounds actorBounds,
         LayerMask blockingMask,
         bool use2D,
         bool use3D)
     {
+        return TryEvaluateStaticInnerBlock(
+            worldBox,
+            direction,
+            outerBounds,
+            innerTargetBounds,
+            actorBounds,
+            blockingMask,
+            use2D,
+            use3D,
+            out _);
+    }
+
+    private bool TryEvaluateStaticInnerBlock(
+        WorldBox worldBox,
+        BoxPushDirection direction,
+        Bounds outerBounds,
+        Bounds innerTargetBounds,
+        Bounds actorBounds,
+        LayerMask blockingMask,
+        bool use2D,
+        bool use3D,
+        out string blockingTag)
+    {
+        blockingTag = null;
         if (worldBox == null || outerBounds.size == Vector3.zero || innerTargetBounds.size == Vector3.zero)
         {
             return false;
@@ -141,13 +163,14 @@ public class WorldBoxExitBlockerService : ServiceBase
         }
 
         if (!TryGetStaticBlockingColliderTag(innerTargetBounds, worldBox, direction, blockingMask, use2D, use3D,
-                out string blockingTag))
+                out blockingTag))
         {
             return false;
         }
 
-        if (IsPlatformTag(blockingTag) && ShouldSkipOuterPlatformBlocker(direction, outerBounds, playerBounds))
+        if (IsPlatformTag(blockingTag) && ShouldSkipOuterPlatformBlocker(direction, outerBounds, actorBounds))
         {
+            blockingTag = null;
             return false;
         }
 
